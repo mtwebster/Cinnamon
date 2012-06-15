@@ -7,6 +7,10 @@
 #endif
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
 
 #include <clutter/clutter.h>
 #include <clutter/x11/clutter-x11.h>
@@ -36,6 +40,17 @@ extern GType gnome_cinnamon_plugin_get_type (void);
 #define OVERRIDES_SCHEMA "org.cinnamon.overrides"
 
 static gboolean is_gdm_mode = FALSE;
+
+static gboolean log_clutter = TRUE;
+static gboolean log_gjs = TRUE;
+
+static char *clutter_log_full_path[1024];
+static char *gjs_log_full_path[1024];
+static char *logdir_full_path[1024];
+
+static char *CLUTTER_LOG_NAME = "/clutter.log";
+static char *GJS_LOG_NAME = "/gjs.log";
+static char *LOG_DIR_NAME = "/.cinnamon/logs";
 
 static void
 cinnamon_dbus_init (gboolean replace)
@@ -214,10 +229,48 @@ default_log_handler (const char     *log_domain,
 
   tp_debug_sender_add_message (sender, &now, log_domain, log_level, message);
 
+  
   /* Filter out telepathy-glib logs, we don't want to flood Cinnamon's output
    * with those. */
-  if (!g_str_has_prefix (log_domain, "tp-glib"))
+  if (!g_str_has_prefix (log_domain, "tp-glib")) {
     g_log_default_handler (log_domain, log_level, message, data);
+
+    if (log_clutter)
+    {
+      FILE *logfile = fopen(clutter_log_full_path,"a");
+      if (logfile)
+      {
+        const char *level;
+        switch (log_level) {
+        case G_LOG_LEVEL_ERROR:
+          level = "ERROR";
+          break;
+        case G_LOG_LEVEL_CRITICAL:
+          level = "CRITICAL";
+          break;
+        case G_LOG_LEVEL_WARNING:
+          level = "WARNING";
+          break;
+        case G_LOG_LEVEL_MESSAGE:
+          level = "MESSAGE";
+          break;
+        case G_LOG_LEVEL_INFO:
+          level = "INFO";
+          break;
+        case G_LOG_LEVEL_DEBUG:
+          level = "DEBUG";
+          break;
+        default:
+          level = "???";
+          break;
+        }
+        char *line[2048];
+        sprintf(line, "<%s>:%s:%s: %s\n", g_date_time_format(g_date_time_new_now_local(), "%H:%M:%S"), level, log_domain, message);
+        fputs(line, logfile);
+        fclose(logfile);
+      }
+    }
+  }
 }
 
 static gboolean
@@ -228,6 +281,64 @@ print_version (const gchar    *option_name,
 {
   g_print ("Cinnamon %s\n", VERSION);
   exit (0);
+}
+
+static gboolean
+file_exists(const char * filename)
+{
+  FILE *file = fopen(filename, "r");
+  if (file)
+  {
+    fclose(file);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+void
+backup_logfile(const char * fn)
+{
+  char *backup_name[1024];
+  sprintf(backup_name, "%s.last", fn);
+  if (file_exists(backup_name))
+  {
+    g_remove(backup_name);
+  }
+  if (file_exists(fn))
+  {
+    char *cmd[1024];
+    sprintf(cmd, "/bin/cp -p \'%s\' \'%s\'", fn, backup_name);
+    system(cmd);
+  }
+}
+
+void
+init_logfiles(void)
+{
+  
+  const char *home_dir = g_getenv ("HOME");
+  if (!home_dir)
+  {
+    home_dir = g_get_home_dir();
+  }
+  sprintf(logdir_full_path, "%s%s", home_dir, LOG_DIR_NAME);
+  sprintf(clutter_log_full_path, "%s%s", logdir_full_path, CLUTTER_LOG_NAME);
+  sprintf(gjs_log_full_path, "%s%s", logdir_full_path, GJS_LOG_NAME);
+  if (log_clutter || log_gjs)
+  {
+    mode_t process_mask = umask(0);
+    int res = g_mkdir(logdir_full_path, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+    umask(process_mask);
+    if (res == 0 || errno == EEXIST)
+    {
+      if (log_clutter) {
+        backup_logfile(clutter_log_full_path);
+      }
+      if (log_gjs) {
+        backup_logfile(gjs_log_full_path);
+      }
+    }
+  }
 }
 
 GOptionEntry gnome_cinnamon_options[] = {
@@ -249,12 +360,13 @@ GOptionEntry gnome_cinnamon_options[] = {
 int
 main (int argc, char **argv)
 {
+  init_logfiles();
   GOptionContext *ctx;
   GError *error = NULL;
   CinnamonSessionType session_type;
   int ecode;
   TpDebugSender *sender;
-
+ 
   g_type_init ();
 
   bindtextdomain (GETTEXT_PACKAGE, LOCALEDIR);
@@ -269,6 +381,8 @@ main (int argc, char **argv)
       exit (1);
     }
 
+  
+  
   g_option_context_free (ctx);
 
   meta_plugin_type_register (gnome_cinnamon_plugin_get_type ());
@@ -283,7 +397,15 @@ main (int argc, char **argv)
   /* FIXME: Add gjs API to set this stuff and don't depend on the
    * environment.  These propagate to child processes.
    */
-  g_setenv ("GJS_DEBUG_OUTPUT", "stderr", TRUE);
+  if (log_gjs)
+  {
+    g_setenv ("GJS_DEBUG_OUTPUT", gjs_log_full_path, TRUE);
+  }
+  else
+  {
+    g_setenv ("GJS_DEBUG_OUTPUT", "stderr", TRUE);
+  }
+  
   g_setenv ("GJS_DEBUG_TOPICS", "JS ERROR;JS LOG", TRUE);
 
   cinnamon_dbus_init (meta_get_replace_current_wm ());
@@ -331,6 +453,5 @@ main (int argc, char **argv)
     }
 
   g_object_unref (sender);
-
   return ecode;
 }
