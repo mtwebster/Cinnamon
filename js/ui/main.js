@@ -35,6 +35,7 @@ const Magnifier = imports.ui.magnifier;
 const XdndHandler = imports.ui.xdndHandler;
 const StatusIconDispatcher = imports.ui.statusIconDispatcher;
 const Util = imports.misc.util;
+const ScreenShield = imports.ui.screenShield;
 
 const DEFAULT_BACKGROUND_COLOR = new Clutter.Color();
 DEFAULT_BACKGROUND_COLOR.from_pixel(0x2266bbff);
@@ -79,6 +80,7 @@ let _defaultCssStylesheet = null;
 let _cssStylesheet = null;
 let dynamicWorkspaces = null;
 let nWorks = null;
+let screenShield = null;
 
 let workspace_names = [];
 
@@ -243,7 +245,8 @@ function start() {
     overview = new Overview.Overview({ isDummy: false });
     expo = new Expo.Expo({ isDummy: false });
     magnifier = new Magnifier.Magnifier();
-    statusIconDispatcher = new StatusIconDispatcher.StatusIconDispatcher();  
+    statusIconDispatcher = new StatusIconDispatcher.StatusIconDispatcher();
+    screenShield = new ScreenShield.ScreenShield();
                     
     if (desktop_layout == LAYOUT_TRADITIONAL) {                                    
         panel = new Panel.Panel(true);           
@@ -799,6 +802,10 @@ function _findModal(actor) {
             return i;
     }
     return -1;
+}
+
+function isInModalStack(actor) {
+    return _findModal(actor) != -1;
 }
 
 /**
