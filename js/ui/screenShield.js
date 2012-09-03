@@ -8,7 +8,7 @@ const St = imports.gi.St;
 
 const GnomeSession = imports.misc.gnomeSession;
 const Lightbox = imports.ui.lightbox;
-const LoginDialog = imports.gdm.loginDialog;
+//const LoginDialog = imports.gdm.loginDialog;
 const Main = imports.ui.main;
 
 const SCREENSAVER_SCHEMA = 'org.gnome.desktop.screensaver';
@@ -40,22 +40,22 @@ ScreenShield.prototype = {
 
             this._onStatusChanged(proxy.status);
         }));
-        this._presence.connectSignal('StatusChanged', Lang.bind(this, function(proxy, senderName, [status]) {
+        this._presence.connect('StatusChanged', Lang.bind(this, function(proxy, senderName, [status]) {
             this._onStatusChanged(status);
         }));
 
         this._settings = new Gio.Settings({ schema: SCREENSAVER_SCHEMA });
 
-        this._group = new St.Widget({ x: 0,
-                                      y: 0 });
-        Main.uiGroup.add_actor(this._group);
+        //this._group = new St.Widget({ x: 0,
+    //                                  y: 0 });
+      //  Main.uiGroup.add_actor(this._group);
         let constraint = new Clutter.BindConstraint({ source: global.stage,
                                                       coordinate: Clutter.BindCoordinate.POSITION | Clutter.BindCoordinate.SIZE });
-        this._group.add_constraint(constraint);
-        this._group.connect('key-press-event', Lang.bind(this, this._onKeyPressEvent));
-        this._group.connect('button-press-event', Lang.bind(this, this._onButtonPressEvent));
-        this._lightbox = new Lightbox.Lightbox(this._group,
-                                               { inhibitEvents: true, fadeInTime: 10, fadeFactor: 1 });
+    //    this._group.add_constraint(constraint);
+  //      this._group.connect('key-press-event', Lang.bind(this, this._onKeyPressEvent));
+   //     this._group.connect('button-press-event', Lang.bind(this, this._onButtonPressEvent));
+   //     this._lightbox = new Lightbox.Lightbox(this._group,
+  //                                             { inhibitEvents: true, fadeInTime: 10, fadeFactor: 1 });
         this._background = Meta.BackgroundActor.new_for_screen(global.screen);
         this._background.hide();
         Main.uiGroup.add_actor(this._background);
