@@ -94,6 +94,109 @@ function ssidToLabel(ssid) {
     return label;
 }
 
+function Switch() {
+    this._init.apply(this, arguments);
+}
+
+Switch.prototype = {
+    _init: function(state) {
+        this.actor = new St.Button({ style_class: 'toggle-switch', reactive:true });
+        // Translators: this MUST be either "toggle-switch-us"
+        // (for toggle switches containing the English words
+        // "ON" and "OFF") or "toggle-switch-intl" (for toggle
+        // switches containing "O" and "|"). Other values will
+        // simply result in invisible toggle switches.
+        this.actor.add_style_class_name("toggle-switch-us");
+        this.setToggleState(state);
+    },
+
+    setToggleState: function(state) {
+        if (state)
+            this.actor.add_style_pseudo_class('checked');
+        else
+            this.actor.remove_style_pseudo_class('checked');
+        this.state = state;
+    },
+
+    toggle: function() {
+        this.setToggleState(!this.state);
+    }
+};
+
+function PopupRefreshSwitchMenuItem() {
+    this._init.apply(this, arguments);
+}
+
+PopupRefreshSwitchMenuItem.prototype = {
+    __proto__: PopupMenu.PopupBaseMenuItem.prototype,
+
+    _init: function(text, active, params) {
+        PopupMenu.PopupBaseMenuItem.prototype._init.call(this, params);
+
+        this.label = new St.Label({ text: text });
+        this._switch = new Switch(active);
+
+        this.addActor(this.label);
+        
+        this._refreshIcon = new St.Icon({ icon_name: 'emblem-synchronizing',
+                                 icon_type: St.IconType.SYMBOLIC,
+                                 icon_size: 12,
+                               });
+        this.refreshBin = new St.Button({reactive: true, x_align: St.Align.END});
+        this.refreshBin.child = this._refreshIcon;
+        this.addActor(this.refreshBin, { align: St.Align.END });
+        this._statusBin = new St.Bin({ x_align: St.Align.END, reactive: true });
+        this.addActor(this._statusBin,
+                      { expand: true, span: -1, align: St.Align.END });
+
+        this._statusLabel = new St.Label({ text: '',
+                                           style_class: 'popup-inactive-menu-item'
+                                         });
+        this._statusBin.child = this._switch.actor;
+        this._switch.actor.connect('clicked', Lang.bind(this, this.activate));
+        this.refreshBin.connect('clicked', Lang.bind(this, this.refreshAP));
+    },
+
+    setStatus: function(text) {
+        if (text != null) {
+            this._statusLabel.text = text;
+            this._statusBin.child = this._statusLabel;
+            this.actor.reactive = false;
+            this.actor.can_focus = false;
+        } else {
+            this._statusBin.child = this._switch.actor;
+            this.actor.reactive = true;
+            this.actor.can_focus = true;
+        }
+    },
+
+    activate: function(event) {
+        if (this._switch.actor.mapped) {
+            this.toggle();
+        }
+
+        PopupMenu.PopupBaseMenuItem.prototype.activate.call(this, event);
+    },
+
+    refreshAP: function(event) {
+        Util.spawnCommandLine("iwlist wlan0 scan");
+        this.emit('scanned');
+    },
+
+    toggle: function() {
+        this._switch.toggle();
+        this.emit('toggled', this._switch.state);
+    },
+
+    get state() {
+        return this._switch.state;
+    },
+
+    setToggleState: function(state) {
+        this._switch.setToggleState(state);
+    }
+};
+
 function NMNetworkMenuItem() {
     this._init.apply(this, arguments);
 }
@@ -241,12 +344,12 @@ function NMWirelessSectionTitleMenuItem() {
 }
 
 NMWirelessSectionTitleMenuItem.prototype = {
-    __proto__: PopupMenu.PopupSwitchMenuItem.prototype,
+    __proto__: PopupRefreshSwitchMenuItem.prototype,
 
     _init: function(client, property, title, params) {
-        params = params || { };
+        params = params || { reactive: false };
         params.style_class = 'popup-subtitle-menu-item';
-        PopupMenu.PopupSwitchMenuItem.prototype._init.call(this, title, false, params);
+        PopupRefreshSwitchMenuItem.prototype._init.call(this, title, false, params);
 
         this._client = client;
         this._property = property + '_enabled';
@@ -273,7 +376,7 @@ NMWirelessSectionTitleMenuItem.prototype = {
     },
 
     activate: function(event) {
-        PopupMenu.PopupSwitchMenuItem.prototype.activate.call(this, event);
+        PopupRefreshSwitchMenuItem.prototype.activate.call(this, event);
 		log(this._setEnabledFunc);
         this._client[this._setEnabledFunc](this._switch.state);
                         
@@ -1224,6 +1327,7 @@ NMDeviceWireless.prototype = {
     },
 
     _accessPointAdded: function(device, accessPoint) {
+        global.logError("ADDED>>>>>>");
         if (accessPoint.get_ssid() == null) {
             // This access point is not visible yet
             // Wait for it to get a ssid
@@ -1304,6 +1408,7 @@ NMDeviceWireless.prototype = {
     },
 
     _accessPointRemoved: function(device, accessPoint) {
+        global.logError("REMOVED>>>>");
         let res = this._findExistingNetwork(accessPoint);
 
         if (res == null) {
