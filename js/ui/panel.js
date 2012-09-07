@@ -793,11 +793,11 @@ Panel.prototype = {
                 panelHeight = 25;
             }
         }
-        if (global.settings.get_boolean("panel-scale-text-icons")) {
-            if (!this._themeFontSize) {
+        if (!this._themeFontSize) {
                 let themeNode = this.actor.get_theme_node();
                 this._themeFontSize = themeNode.get_length("font-size");
             }
+        if (global.settings.get_boolean("panel-scale-text-icons")) {
             let textheight = (panelHeight / Applet.DEFAULT_PANEL_HEIGHT) * Applet.PANEL_FONT_DEFAULT_HEIGHT;
             this.actor.set_style('font-size: ' + textheight + 'px;');
         } else {
@@ -816,11 +816,11 @@ Panel.prototype = {
         else {
             panelHeight = global.settings.get_int("panel-top-height");
         }
+        if (!this._themeFontSize) {
+            let themeNode = this.actor.get_theme_node();
+            this._themeFontSize = themeNode.get_length("font-size");
+        }
         if (global.settings.get_boolean("panel-scale-text-icons")) {
-            if (!this._themeFontSize) {
-                let themeNode = this.actor.get_theme_node();
-                this._themeFontSize = themeNode.get_length("font-size");
-            }
             let textheight = (panelHeight / Applet.DEFAULT_PANEL_HEIGHT) * Applet.PANEL_FONT_DEFAULT_HEIGHT;
             this.actor.set_style('font-size: ' + textheight + 'px;');
         } else {
