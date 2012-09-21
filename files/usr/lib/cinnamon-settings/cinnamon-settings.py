@@ -22,6 +22,7 @@ try:
     import imtools
     import Image
     import tempfile
+    import math
 except Exception, detail:
     print detail
     sys.exit(1)
@@ -1072,6 +1073,462 @@ class AppletViewSidePage (SidePage):
         else:
             cell.set_property("active", False)
 
+
+
+
+class KeyBindingCategory():
+    def __init__(self, label, int_name):
+        self.label = label
+        self.int_name = int_name
+        self.keybindings = []
+
+    def add(self, keybinding):
+        self.keybindings.append(keybinding)
+
+class KeyBinding():
+    def __init__(self, label, schema, key, is_array, category):
+        self.key = key
+        self.label = label
+        self.is_array = is_array
+        self.entries = [ ]
+        self.settings = Gio.Settings.new(schema)
+        if self.is_array:
+            self.entries = self.get_array(self.settings.get_strv(self.key))
+        else:
+            self.entries = self.get_array(self.settings.get_string(self.key))
+
+    def on_my_setting_changed(self, settings, key):
+        self.content_widget.set_text(self.settings.get_string(self.key))
+
+    def on_my_value_changed(self, event, widget):        
+        self.settings.set_string(self.key, self.content_widget.get_text())
+
+    def get_array(self, raw_array):
+        result = []
+        if self.is_array:
+            for entry in raw_array:
+                result.append(entry)
+            while (len(result) < 3):
+                result.append(_("Disabled"))
+        else:
+            result.append(raw_array)
+            while (len(result) < 3):
+                result.append("_invalid_")
+        return result
+
+    def setBinding(self, index, val):
+        if val is not None:
+            self.entries[index] = val
+        else:
+            self.entries[index] = "Disabled"
+        self.writeSettings()
+
+    def writeSettings(self):
+        if self.is_array:
+            array = []
+            for entry in self.entries:
+                if entry is not "Disabled":
+                    array.append(entry)
+            self.settings.set_strv(self.key, array)
+        else:
+            self.settings.set_string(self.key, self.entries[0])
+
+
+
+class KeyboardRange(Gtk.HBox):
+    def __init__(self, label, low_label, hi_label, low_limit, hi_limit, inverted, valtype, exponential, schema, key, dep_key, **options):
+        super(KeyboardRange, self).__init__()
+        self.key = key
+        self.dep_key = dep_key
+        self.settings = Gio.Settings.new(schema)
+        self.valtype = valtype
+        if self.valtype == "int":
+            self.value = self.settings.get_int(self.key) * 1.0
+        elif self.valtype == "uint":
+            self.value = self.settings.get_uint(self.key) * 1.0
+        elif self.valtype == "double":
+            self.value = self.settings.get_double(self.key) * 1.0
+        self.label = Gtk.Label(label)
+        self.low_label = Gtk.Label()
+        self.hi_label = Gtk.Label()
+        self.low_label.set_markup("<i><small>%s</small></i>" % low_label)
+        self.hi_label.set_markup("<i><small>%s</small></i>" % hi_label)
+        self.inverted = inverted
+        self.exponential = exponential
+        self._range = (hi_limit - low_limit) * 1.0
+        self._step = options.get('adjustment_step', 1)
+        self._min = low_limit * 1.0
+        self._max = hi_limit * 1.0
+        self.content_widget = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 1, (self._step / self._range))
+        self.content_widget.set_value(self.to_corrected(self.value))
+        self.content_widget.set_draw_value(False);
+        if (label != ""):
+            self.pack_start(self.label, False, False, 2)
+        if (low_label != ""):
+            self.pack_start(self.low_label, False, False, 2)
+        self.pack_start(self.content_widget, True, True, 2)
+        if (hi_label != ""):
+            self.pack_start(self.hi_label, False, False, 2)
+        self._dragging = False
+        self.content_widget.connect('value-changed', self.on_my_value_changed)
+        self.content_widget.connect('button-press-event', self.on_mouse_down)
+        self.content_widget.connect('button-release-event', self.on_mouse_up)
+        self.content_widget.show_all()
+        self.dependency_invert = False
+        if self.dep_key is not None:
+            if self.dep_key[0] == '!':
+                self.dependency_invert = True
+                self.dep_key = self.dep_key[1:]
+            split = self.dep_key.split('/')
+            self.dep_settings = Gio.Settings.new(split[0])
+            self.dep_key = split[1]
+            self.dep_settings.connect("changed::"+self.dep_key, self.on_dependency_setting_changed)
+            self.on_dependency_setting_changed(self, None)
+
+# halt writing gsettings during dragging
+# it can take a long time to process all
+# those updates, and the system can crash
+
+    def on_mouse_down(self, widget, event):
+        self._dragging = True
+
+    def on_mouse_up(self, widget, event):
+        self._dragging = False
+        self.on_my_value_changed(widget)
+
+    def on_my_value_changed(self, widget):
+        if self._dragging:
+            return
+        corrected = self.from_corrected(widget.get_value())
+        if self.valtype == "int":
+            self.settings.set_int(self.key, corrected)
+        elif self.valtype == "uint":
+            self.settings.set_uint(self.key, corrected)
+        elif self.valtype == "double":
+            self.settings.set_double(self.key, corrected)
+
+    def on_dependency_setting_changed(self, settings, dep_key):
+        if not self.dependency_invert:
+            self.set_sensitive(self.dep_settings.get_boolean(self.dep_key))
+        else:
+            self.set_sensitive(not self.dep_settings.get_boolean(self.dep_key))
+
+    def to_corrected(self, value):
+        result = 0.0
+        if self.exponential:
+            k = (math.log(self._max) - math.log(self._min)) / (self._range / self._step)
+            a = self._max / math.exp(k * self._range)
+            cur_val_step = (1 / (k / math.log(value / a))) / self._range
+            if self.inverted:
+                result = 1 - cur_val_step
+            else:
+                result = cur_val_step
+        else:
+            if self.inverted:
+                result = 1 - ((value - self._min) / self._range)
+            else:
+                result = (value - self._min) / self._range
+        return result
+
+    def from_corrected(self, value):
+        result = 0.0
+        if self.exponential:
+            k = (math.log(self._max)-math.log(self._min))/(self._range / self._step)
+            a = self._max / math.exp(k * self._range)
+            if self.inverted:
+                cur_val_step = (1 - value) * self._range
+                result = a * math.exp(k * cur_val_step)
+            else:
+                cur_val_step = value * self._range
+                result =  a * math.exp(k * cur_val_step)
+        else:
+            if self.inverted:
+                result = ((1 - value) * self._range) + self._min
+            else:
+                result =  (value * self._range) + self._min
+        return round(result)
+
+class NotebookPage:
+    def __init__(self, name):
+        self.name = name
+        self.widgets = []
+        self.tab = Gtk.ScrolledWindow()
+        self.content_box = Gtk.VBox()
+
+    def add_widget(self, widget):
+        self.widgets.append(widget)
+
+    def build(self):
+        # Clear all the widgets from the content box
+        widgets = self.content_box.get_children()
+        for widget in widgets:
+            self.content_box.remove(widget)
+        for widget in self.widgets:
+            self.content_box.pack_start(widget, True, True, 2)
+        self.tab.add_with_viewport(self.content_box)
+        self.content_box.set_border_width(5)
+        self.content_box.show_all()
+
+class KeyboardSidePage (SidePage):
+    def __init__(self, name, icon, content_box):
+        SidePage.__init__(self, name, icon, content_box)
+        self.tabs = []
+
+    def build(self):
+        # Clear all the widgets from the content box
+        widgets = self.content_box.get_children()
+        for widget in widgets:
+            self.content_box.remove(widget)
+        self.notebook = Gtk.Notebook()
+
+        tab = NotebookPage(_("Typing"))
+        tab.add_widget(GSettingsCheckButton(_("Enable key repeat"), "org.gnome.settings-daemon.peripherals.keyboard", "repeat", None))
+        box = IndentedHBox()
+        slider = KeyboardRange(_("Repeat delay:"), _("Short"), _("Long"), 100, 2000, False, "uint", False, "org.gnome.settings-daemon.peripherals.keyboard", "delay",
+                                                                        "org.gnome.settings-daemon.peripherals.keyboard/repeat", adjustment_step = 10)
+        box.pack_start(slider, True, True, 0)
+        tab.add_widget(box)
+        box = IndentedHBox()
+        slider = KeyboardRange(_("Repeat speed:"), _("Slow"), _("Fast"), 20, 2000, True, "uint", True, "org.gnome.settings-daemon.peripherals.keyboard", "repeat-interval",
+                                                                        "org.gnome.settings-daemon.peripherals.keyboard/repeat", adjustment_step = 1)
+        box.pack_start(slider, True, True, 0)
+        tab.add_widget(box)
+        tab.add_widget(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL))
+        
+        tab.add_widget(GSettingsCheckButton(_("Text cursor blinks"), "org.gnome.desktop.interface", "cursor-blink", None))
+        box = IndentedHBox()
+        slider = KeyboardRange(_("Blink speed:"), _("Slow"), _("Fast"), 100, 2500, True, "int", False, "org.gnome.desktop.interface", "cursor-blink-time",
+                                                                        "org.gnome.desktop.interface/cursor-blink", adjustment_step = 10)
+        box.pack_start(slider, True, True, 0)
+        tab.add_widget(box)
+        tab.add_widget(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL))
+        tab.add_widget(Gtk.Label(_("Test box:")))
+        tab.add_widget(Gtk.Entry())
+        self.addNotebookTab(tab)
+
+        tab = NotebookPage(_("Keybindings"))
+
+        paned = Gtk.Paned.new(Gtk.Orientation.VERTICAL)
+
+        left_vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 4)
+        right_vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 4)
+        right_scroller = Gtk.ScrolledWindow.new(None, None)
+        right_vbox.pack_start(right_scroller, True, True, 4)
+
+
+        self.cat_store = Gtk.ListStore(str,     # The category name
+                                       object)  # The category object
+
+        self.item_store = Gtk.ListStore( str,   # Keybinding name
+                                         str,   # Keybinding 1
+                                         str,   # Keybinding 2
+                                         str,   # Keybinding 3
+                                         bool,  # Show keybinding 1?  Always true but in there for consistency
+                                         bool,  # Show keybinding 2?
+                                         bool,  # Show keybinding 3?
+                                         object)# The keybinding object
+
+
+
+        cat_tree = Gtk.TreeView.new()
+        item_tree = Gtk.TreeView.new()
+        item_tree.set_grid_lines(Gtk.TreeViewGridLines.BOTH)
+        cell = Gtk.CellRendererText()
+        cell.set_alignment(.5,0)
+        cat_column = Gtk.TreeViewColumn(_("Category"), cell, text=0)
+        cat_column.set_property('min-width', 140)
+        cat_column.set_alignment(.5)
+        cat_tree.append_column(cat_column)
+        cat_tree.connect("cursor-changed", self.onCategoryChanged)
+
+        kb_name_cell = Gtk.CellRendererText()
+        kb_bind_1 = Gtk.CellRendererAccel()
+        kb_bind_2 = Gtk.CellRendererAccel()
+        kb_bind_3 = Gtk.CellRendererAccel()
+        kb_name_cell.set_alignment(.5,.5)
+        kb_name_cell.set_property('size-points', 8)
+        kb_name_cell.set_property('wrap-width', 140)
+        kb_bind_1.set_alignment(.5,.5)
+        kb_bind_1.set_property('size-points', 8)
+        kb_bind_1.set_property('wrap-width', 140)
+        kb_bind_1.connect('accel-edited', self.onKeyBindingChanged, self.item_store, 0)
+        kb_bind_1.connect('accel-cleared', self.onKeyBindingCleared, self.item_store, 0)
+        kb_bind_2.set_alignment(.5,.5)
+        kb_bind_2.set_property('size-points', 8)
+        kb_bind_2.set_property('wrap-width', 140)
+        kb_bind_2.connect('accel-edited', self.onKeyBindingChanged, self.item_store, 1)
+        kb_bind_2.connect('accel-cleared', self.onKeyBindingCleared, self.item_store, 1)
+        kb_bind_3.set_alignment(.5,.5)
+        kb_bind_3.set_property('size-points', 8)
+        kb_bind_3.set_property('wrap-width', 140)
+        kb_bind_3.connect('accel-edited', self.onKeyBindingChanged, self.item_store, 2)
+        kb_bind_3.connect('accel-cleared', self.onKeyBindingCleared, self.item_store, 2)
+
+
+        item_column = Gtk.TreeViewColumn(_("Description"), kb_name_cell, text=0)
+        item_column.set_alignment(.5)
+        item_column.set_property('min-width', 140)
+        item_tree.append_column(item_column)
+
+        item_column = Gtk.TreeViewColumn(_("Binding"), kb_bind_1, text=1, editable=4, visible=4)
+        item_column.set_alignment(.5)
+        item_column.set_property('min-width', 140)
+        item_tree.append_column(item_column)
+
+        item_column = Gtk.TreeViewColumn(_("Binding"), kb_bind_2, text=2, editable=5, visible=5)
+        item_column.set_alignment(.5)
+        item_column.set_property('min-width', 140)
+        item_tree.append_column(item_column)
+
+        item_column = Gtk.TreeViewColumn(_("Binding"), kb_bind_3, text=3, editable=6, visible=6)
+        item_column.set_alignment(.5)
+        item_column.set_property('min-width', 140)
+        item_tree.append_column(item_column)
+
+        self.main_store = []
+        category = KeyBindingCategory(_("Windows"), "windows")
+        category.add(KeyBinding(_("Maximize"), "org.gnome.desktop.wm.keybindings", "maximize", True, "windows"))
+        category.add(KeyBinding(_("Minimize"), "org.gnome.desktop.wm.keybindings", "minimize", True, "windows"))
+        category.add(KeyBinding(_("Show desktop"), "org.gnome.desktop.wm.keybindings", "show-desktop", True, "windows"))
+        self.main_store.append(category)
+        category = KeyBindingCategory(_("System"), "system")
+        category.add(KeyBinding(_("Log out"), "org.gnome.settings-daemon.plugins.media-keys", "logout", False, "system"))
+        self.main_store.append(category)
+        for category in self.main_store:
+            self.cat_store.append((category.label, category))
+
+
+        cat_tree.set_model(self.cat_store)
+        item_tree.set_model(self.item_store)
+
+        left_vbox.pack_start(cat_tree, False, False, 4)
+        right_scroller.add(item_tree)
+        right_scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        left_vbox.set_border_width(5)
+        right_vbox.set_border_width(5)
+        paned.add1(left_vbox)
+        paned.add2(right_vbox)
+
+        tab.add_widget(paned)
+
+
+
+
+
+        self.addNotebookTab(tab)
+
+
+
+        self.content_box.add(self.notebook)
+        for tab in self.tabs:
+            tab.build()
+        self.content_box.show_all()
+
+    def addNotebookTab(self, tab):
+        self.notebook.append_page(tab.tab, Gtk.Label(tab.name))
+        self.tabs.append(tab)
+
+    def onCategoryChanged(self, tree):
+        self.item_store.clear()
+        categories, iter = tree.get_selection().get_selected()
+        if iter:
+            category = categories[iter][1]
+            for item in category.keybindings:
+                self.item_store.append((item.label, item.entries[0], item.entries[1], item.entries[2],
+                                        item.entries[0] is not "_invalid_", item.entries[1] is not "_invalid_", item.entries[2] is not "_invalid_",
+                                        item))
+
+    def onKeyBindingChanged(self, cell, path, keyval, mask, keycode, item_store, i):
+
+        mask &= Gdk.ModifierType.LOCK_MASK
+        accel_string = Gtk.accelerator_name(keyval, mask)
+        if (mask == 0 or mask == Gdk.ModifierType.SHIFT_MASK) and keycode != 0:
+            if ((keyval >= Gdk.KEY_a and keyval <= Gdk.KEY_z)
+            or (keyval >= Gdk.KEY_A and keyval <= Gdk.KEY_Z)
+            or (keyval >= Gdk.KEY_0 and keyval <= Gdk.KEY_9)
+            or (keyval >= Gdk.KEY_kana_fullstop and keyval <= Gdk.KEY_semivoicedsound)
+            or (keyval >= Gdk.KEY_Arabic_comma and keyval <= Gdk.KEY_Arabic_sukun)
+            or (keyval >= Gdk.KEY_Serbian_dje and keyval <= Gdk.KEY_Cyrillic_HARDSIGN)
+            or (keyval >= Gdk.KEY_Greek_ALPHAaccent and keyval <= Gdk.KEY_Greek_omega)
+            or (keyval >= Gdk.KEY_hebrew_doublelowline and keyval <= Gdk.KEY_hebrew_taf)
+            or (keyval >= Gdk.KEY_Thai_kokai and keyval <= Gdk.KEY_Thai_lekkao)
+            or (keyval >= Gdk.KEY_Hangul and keyval <= Gdk.KEY_Hangul_Special)
+            or (keyval >= Gdk.KEY_Hangul_Kiyeog and keyval <= Gdk.KEY_Hangul_J_YeorinHieuh)
+            or keyval_is_forbidden (keyval)):
+                dialog = Gtk.Dialog(_("Error"), 
+                                    None,
+                                    0,
+                                    (Gtk.STOCK_OK, 5))
+                dialog.set_default_size(250, 200)
+                msg = _("The shortcut %s cannot be used because it will become\nimpossible to type using this key\n\n\n")
+                msg += _("Please try again with a key such as Control, Alt,\nShift or Super (Windows key) at the same time")
+                label = Gtk.Label(msg % accel_string)
+
+                dialog.vbox.pack_start(label, True, True, 0)
+                dialog.show_all()
+                response = dialog.run()
+                dialog.destroy()
+
+        iter = item_store.get_iter(path)
+        item_store[iter][7].setBinding(i, accel_string)
+        item_store.set_value(iter, i+1, item_store[iter][7].entries[i])
+
+
+    def onKeyBindingCleared(self, cell, path, item_store, i):
+        iter = item_store.get_iter(path)
+        item_store[iter][7].setBinding(i, None)
+        item_store.set_value(iter, i+1, item_store[iter][7].entries[i])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class GConfCheckButton(Gtk.CheckButton):    
     def __init__(self, label, key):        
         self.key = key
@@ -1226,6 +1683,7 @@ class GSettingsEntry(Gtk.HBox):
             self.set_sensitive(self.dep_settings.get_boolean(self.dep_key))
         else:
             self.set_sensitive(not self.dep_settings.get_boolean(self.dep_key))
+
 
 class GSettingsFileChooser(Gtk.HBox):
     def __init__(self, label, schema, key, dep_key, show_none_cb = False):
@@ -2143,6 +2601,10 @@ class MainWindow:
         sidePage.add_widget(GSettingsCheckButton(_("Emulate middle click by clicking both left and right buttons"), "org.gnome.settings-daemon.peripherals.mouse", "middle-button-enabled", None))
         sidePage.add_widget(GSettingsCheckButton(_("Display notifications"), "org.cinnamon", "display-notifications", None))
         
+
+        sidePage = KeyboardSidePage(_("Keyboard"), "keyboard.svg", self.content_box)
+        self.sidePages.append((sidePage, "keyboard"))
+
         #sidePage = SidePage(_("Terminal"), "terminal", self.content_box)
         #self.sidePages.append(sidePage)
         #sidePage.add_widget(GConfCheckButton(_("Show fortune cookies"), "/desktop/linuxmint/terminal/show_fortunes"))
