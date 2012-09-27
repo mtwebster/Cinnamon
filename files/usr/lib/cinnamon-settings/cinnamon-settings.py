@@ -23,6 +23,8 @@ try:
     import Image
     import tempfile
     import math
+    import cgi
+    import ctypes
 except Exception, detail:
     print detail
     sys.exit(1)
@@ -35,6 +37,23 @@ gettext.install("cinnamon", "/usr/share/cinnamon/locale")
 menuName = _("Desktop Settings")
 menuGenericName = _("Desktop Configuration Tool")
 menuComment = _("Fine-tune desktop settings")
+
+
+FORBIDDEN_KEYVALS = [
+    Gdk.KEY_Home,
+    Gdk.KEY_Left,
+    Gdk.KEY_Up,
+    Gdk.KEY_Right,
+    Gdk.KEY_Down,
+    Gdk.KEY_Page_Up,
+    Gdk.KEY_Page_Down,
+    Gdk.KEY_End,
+    Gdk.KEY_Tab,
+    Gdk.KEY_KP_Enter,
+    Gdk.KEY_Return,
+    Gdk.KEY_space,
+    Gdk.KEY_Mode_switch
+]
 
 BACKGROUND_MODES = [
     ("wallpaper", _("Wallpaper")),
@@ -1109,7 +1128,7 @@ class KeyBinding():
             for entry in raw_array:
                 result.append(entry)
             while (len(result) < 3):
-                result.append(_("Disabled"))
+                result.append(_(""))
         else:
             result.append(raw_array)
             while (len(result) < 3):
@@ -1120,14 +1139,14 @@ class KeyBinding():
         if val is not None:
             self.entries[index] = val
         else:
-            self.entries[index] = "Disabled"
+            self.entries[index] = ""
         self.writeSettings()
 
     def writeSettings(self):
         if self.is_array:
             array = []
             for entry in self.entries:
-                if entry is not "Disabled":
+                if entry is not "":
                     array.append(entry)
             self.settings.set_strv(self.key, array)
         else:
@@ -1302,7 +1321,7 @@ class KeyboardSidePage (SidePage):
         box.pack_start(slider, True, True, 0)
         tab.add_widget(box)
         tab.add_widget(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL))
-        tab.add_widget(Gtk.Label(_("Test box:")))
+        tab.add_widget(Gtk.Label(_("Test Box")))
         tab.add_widget(Gtk.Entry())
         self.addNotebookTab(tab)
 
@@ -1439,9 +1458,11 @@ class KeyboardSidePage (SidePage):
                                         item))
 
     def onKeyBindingChanged(self, cell, path, keyval, mask, keycode, item_store, i):
-
-        mask &= Gdk.ModifierType.LOCK_MASK
         accel_string = Gtk.accelerator_name(keyval, mask)
+        iter = item_store.get_iter(path)
+   #     mask = mask & ~Gdk.ModifierType.LOCK_MASK
+
+        # Check for bad keys or modifiers
         if (mask == 0 or mask == Gdk.ModifierType.SHIFT_MASK) and keycode != 0:
             if ((keyval >= Gdk.KEY_a and keyval <= Gdk.KEY_z)
             or (keyval >= Gdk.KEY_A and keyval <= Gdk.KEY_Z)
@@ -1454,22 +1475,44 @@ class KeyboardSidePage (SidePage):
             or (keyval >= Gdk.KEY_Thai_kokai and keyval <= Gdk.KEY_Thai_lekkao)
             or (keyval >= Gdk.KEY_Hangul and keyval <= Gdk.KEY_Hangul_Special)
             or (keyval >= Gdk.KEY_Hangul_Kiyeog and keyval <= Gdk.KEY_Hangul_J_YeorinHieuh)
-            or keyval_is_forbidden (keyval)):
-                dialog = Gtk.Dialog(_("Error"), 
-                                    None,
-                                    0,
-                                    (Gtk.STOCK_OK, 5))
-                dialog.set_default_size(250, 200)
-                msg = _("The shortcut %s cannot be used because it will become\nimpossible to type using this key\n\n\n")
-                msg += _("Please try again with a key such as Control, Alt,\nShift or Super (Windows key) at the same time")
-                label = Gtk.Label(msg % accel_string)
+            or keyval in FORBIDDEN_KEYVALS):
+                dialog = Gtk.MessageDialog(None,
+                                    Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                                    Gtk.MessageType.ERROR,
+                                    Gtk.ButtonsType.OK,
+                                    None)
+                dialog.set_default_size(400, 200)
+                msg = _("\nThis key combination, \'<b>%s</b>\' cannot be used because it would become impossible to type using this key.\n\n")
+                msg += _("Please try again with a modifier key such as Control, Alt or Super (Windows key) at the same time.\n")
+                dialog.set_markup(msg % cgi.escape(accel_string))
 
-                dialog.vbox.pack_start(label, True, True, 0)
                 dialog.show_all()
                 response = dialog.run()
                 dialog.destroy()
+                return
 
-        iter = item_store.get_iter(path)
+        # Check for duplicates
+        for category in self.main_store:
+            for keybinding in category.keybindings:
+                for entry in keybinding.entries:
+                    if accel_string == entry:
+                        dialog = Gtk.MessageDialog(None,
+                                    Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                                    Gtk.MessageType.QUESTION,
+                                    Gtk.ButtonsType.YES_NO,
+                                    None)
+                        dialog.set_default_size(400, 200)
+                        msg = _("\nThis key combination, \'<b>%s</b>\' is currently in use by \'<b>%s</b>\'.  ")
+                        msg += _("If you continue, the combination will be reassigned to \'<b>%s</b>.\'\n\n")
+                        msg += _("Do you want to continue with this operation?")
+                        dialog.set_markup(msg % cgi.escape(accel_string) % cgi.escape(keybinding.label) % cgi.escape(item_store[iter][7].label))
+                        dialog.show_all()
+                        response = dialog.run()
+                        if response == Gtk.ResponseType.YES:
+                            item_store[iter][7].setBinding(keybinding.entries.index(accel_string), None)
+                        elif response == Gtk.ResponseType.NO:
+                            return
+
         item_store[iter][7].setBinding(i, accel_string)
         item_store.set_value(iter, i+1, item_store[iter][7].entries[i])
 
