@@ -1091,6 +1091,30 @@ class AppletViewSidePage (SidePage):
         else:
             cell.set_property("active", False)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class KeyBindingCategory():
     def __init__(self, label, int_name):
         self.label = label
@@ -1406,14 +1430,59 @@ class KeyboardSidePage (SidePage):
         self.item_tree.append_column(item_column)
 
         self.main_store = []
-        category = KeyBindingCategory(_("Windows"), "windows")
-        category.add(KeyBinding(_("Maximize"), "org.gnome.desktop.wm.keybindings", "maximize", True, "windows"))
-        category.add(KeyBinding(_("Minimize"), "org.gnome.desktop.wm.keybindings", "minimize", True, "windows"))
-        category.add(KeyBinding(_("Show desktop"), "org.gnome.desktop.wm.keybindings", "show-desktop", True, "windows"))
-        self.main_store.append(category)
-        category = KeyBindingCategory(_("System"), "system")
-        category.add(KeyBinding(_("Log out"), "org.gnome.settings-daemon.plugins.media-keys", "logout", False, "system"))
-        self.main_store.append(category)
+
+        bindings = [
+        #   KB Label                  Schema                 Key name  Array?  Category
+        [_("Maximize window"), "org.gnome.desktop.wm.keybindings", "maximize", True, "windows"],
+        [_("Unmaximize window"), "org.gnome.desktop.wm.keybindings", "unmaximize", True, "windows"],
+        [_("Minimize window"), "org.gnome.desktop.wm.keybindings", "minimize", True, "windows"],
+        [_("Close window"), "org.gnome.desktop.wm.keybindings", "close", True, "windows"],
+        [_("Show desktop"), "org.gnome.desktop.wm.keybindings", "show-desktop", True, "windows"],
+        [_("Activate window menu"), "org.gnome.desktop.wm.keybindings", "activate-window-menu", True, "windows"],
+        [_("Toggle maximization state"), "org.gnome.desktop.wm.keybindings", "toggle-maximized", True, "windows"],
+        [_("Toggle fullscreen state"), "org.gnome.desktop.wm.keybindings", "toggle-fullscreen", True, "windows"],
+        [_("Toggle shaded state"), "org.gnome.desktop.wm.keybindings", "toggle-shaded", True, "windows"],
+        [_("Maximize vertically"), "org.gnome.desktop.wm.keybindings", "maximize-vertically", True, "windows"],
+        [_("Maximize horizontally"), "org.gnome.desktop.wm.keybindings", "maximize-horizontally", True, "windows"],
+        [_("Resize window"), "org.gnome.desktop.wm.keybindings", "begin-resize", True, "windows"],
+        [_("Move window"), "org.gnome.desktop.wm.keybindings", "begin-move", True, "windows"],
+
+
+        [_("Log out"), "org.gnome.settings-daemon.plugins.media-keys", "logout", True, "system"],
+
+
+
+
+        ]
+        # categories                                Display name        internal category
+        self.main_store.append(KeyBindingCategory(_("Windows - General"), "windows"))
+        self.main_store.append(KeyBindingCategory(_("System"), "system"))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         for category in self.main_store:
             self.cat_store.append((category.label, category))
 
@@ -1524,6 +1593,45 @@ class KeyboardSidePage (SidePage):
         item_store[iter][7].setBinding(i, None)
         self.onCategoryChanged(self.cat_tree)
         self.item_tree.get_selection().select_path(path)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 class GConfCheckButton(Gtk.CheckButton):    
     def __init__(self, label, key):        
