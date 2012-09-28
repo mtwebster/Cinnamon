@@ -1432,7 +1432,7 @@ class KeyboardSidePage (SidePage):
         self.main_store = []
 
         bindings = [
-        #   KB Label                  Schema                 Key name  Array?  Category
+        #   KB Label                        Schema                  Key name  Array?  Category
         [_("Maximize window"), "org.gnome.desktop.wm.keybindings", "maximize", True, "windows"],
         [_("Unmaximize window"), "org.gnome.desktop.wm.keybindings", "unmaximize", True, "windows"],
         [_("Minimize window"), "org.gnome.desktop.wm.keybindings", "minimize", True, "windows"],
@@ -1448,7 +1448,7 @@ class KeyboardSidePage (SidePage):
         [_("Move window"), "org.gnome.desktop.wm.keybindings", "begin-move", True, "windows"],
 
 
-        [_("Log out"), "org.gnome.settings-daemon.plugins.media-keys", "logout", True, "system"],
+        [_("Log out"), "org.gnome.settings-daemon.plugins.media-keys", "logout", False, "system"],
 
 
 
@@ -1458,30 +1458,11 @@ class KeyboardSidePage (SidePage):
         self.main_store.append(KeyBindingCategory(_("Windows - General"), "windows"))
         self.main_store.append(KeyBindingCategory(_("System"), "system"))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        for binding in bindings:
+            for category in self.main_store:
+                if category.int_name == binding[4]:
+                    category.add(KeyBinding(binding[0], binding[1], binding[2], binding[3], binding[4]))
+                    print bindings.index(binding)  # remove, only for catching segfaults
 
         for category in self.main_store:
             self.cat_store.append((category.label, category))
