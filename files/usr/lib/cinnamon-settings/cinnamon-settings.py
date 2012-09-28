@@ -1453,7 +1453,7 @@ class KeyboardSidePage (SidePage):
         if iter:
             category = categories[iter][1]
             for item in category.keybindings:
-                self.item_store.append((item.label, item.entries[0], item.entries[1], item.entries[2],
+                self.item_store.append((item.label, clean_kb(item.entries[0]), clean_kb(item.entries[1]), clean_kb(item.entries[2]),
                                         item.entries[0] is not "_invalid_", item.entries[1] is not "_invalid_", item.entries[2] is not "_invalid_",
                                         item))
 
@@ -1484,7 +1484,7 @@ class KeyboardSidePage (SidePage):
                 dialog.set_default_size(400, 200)
                 msg = _("\nThis key combination, \'<b>%s</b>\' cannot be used because it would become impossible to type using this key.\n\n")
                 msg += _("Please try again with a modifier key such as Control, Alt or Super (Windows key) at the same time.\n")
-                dialog.set_markup(msg % cgi.escape(accel_string))
+                dialog.set_markup(msg % clean_kb(accel_string))
 
                 dialog.show_all()
                 response = dialog.run()
@@ -1502,19 +1502,30 @@ class KeyboardSidePage (SidePage):
                                     Gtk.ButtonsType.YES_NO,
                                     None)
                         dialog.set_default_size(400, 200)
-                        msg = _("\nThis key combination, \'<b>%s</b>\' is currently in use by \'<b>%s</b>\'.  ")
+                        msg = _("This key combination, \'<b>%s</b>\' is currently in use by \'<b>%s</b>\'.  ")
                         msg += _("If you continue, the combination will be reassigned to \'<b>%s</b>.\'\n\n")
                         msg += _("Do you want to continue with this operation?")
-                        dialog.set_markup(msg % cgi.escape(accel_string) % cgi.escape(keybinding.label) % cgi.escape(item_store[iter][7].label))
+                        dialog.set_markup(msg % (clean_kb(accel_string), cgi.escape(keybinding.label), cgi.escape(item_store[iter][7].label)))
                         dialog.show_all()
                         response = dialog.run()
+                        dialog.destroy()
                         if response == Gtk.ResponseType.YES:
-                            item_store[iter][7].setBinding(keybinding.entries.index(accel_string), None)
+                            for item in item_store:
+                                if item[7] == keybinding:
+                                    for k in item[7].entries:
+                                        if k is accel_string:
+                                            print "EHERE"
+                                            item_idx = item_store.index(item)
+                                            print item_idx
+                                            entry_idx = item_store[item_idx][7].entries.index(accel_string)
+                                            print entry_idx
+                                            keybinding.setBinding(keybinding.entries.index(accel_string), None)
+                                            item_store.set_value(item_idx, entry_idx+1, item_store[item_idx][7].entries[entry_idx])
                         elif response == Gtk.ResponseType.NO:
                             return
 
         item_store[iter][7].setBinding(i, accel_string)
-        item_store.set_value(iter, i+1, item_store[iter][7].entries[i])
+        item_store.set_value(iter, i+1, clean_kb(item_store[iter][7].entries[i]))
 
 
     def onKeyBindingCleared(self, cell, path, item_store, i):
@@ -1522,6 +1533,18 @@ class KeyboardSidePage (SidePage):
         item_store[iter][7].setBinding(i, None)
         item_store.set_value(iter, i+1, item_store[iter][7].entries[i])
 
+
+
+
+
+def clean_kb(keybinding):
+    if keybinding is "":
+        return cgi.escape(_("unassigned"))
+    keybinding = keybinding.replace("<Super>", _("Windows-"))
+    keybinding = keybinding.replace("<Primary>", _("Control-"))
+    keybinding = keybinding.replace("<Shift>", _("Shift-"))
+    keybinding = keybinding.replace("<Alt>", _("Alt-"))
+    return cgi.escape(keybinding)
 
 
 
