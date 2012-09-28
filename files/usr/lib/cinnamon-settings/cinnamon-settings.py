@@ -24,7 +24,6 @@ try:
     import tempfile
     import math
     import cgi
-    import ctypes
 except Exception, detail:
     print detail
     sys.exit(1)
@@ -1092,9 +1091,6 @@ class AppletViewSidePage (SidePage):
         else:
             cell.set_property("active", False)
 
-
-
-
 class KeyBindingCategory():
     def __init__(self, label, int_name):
         self.label = label
@@ -1152,7 +1148,16 @@ class KeyBinding():
         else:
             self.settings.set_string(self.key, self.entries[0])
 
-
+# Utility to convert key modifier codes to something more friendly
+def clean_kb(keybinding):
+    if keybinding is "":
+        return cgi.escape(_("unassigned"))
+    keybinding = keybinding.replace("<Super>", _("Windows-"))
+    keybinding = keybinding.replace("<Primary>", _("Ctrl-"))
+    keybinding = keybinding.replace("<Shift>", _("Shift-"))
+    keybinding = keybinding.replace("<Alt>", _("Alt-"))
+    keybinding = keybinding.replace("<Control>", _("Ctrl-"))
+    return cgi.escape(keybinding)
 
 class KeyboardRange(Gtk.HBox):
     def __init__(self, label, low_label, hi_label, low_limit, hi_limit, inverted, valtype, exponential, schema, key, dep_key, **options):
@@ -1328,12 +1333,10 @@ class KeyboardSidePage (SidePage):
         tab = NotebookPage(_("Keybindings"))
 
         paned = Gtk.Paned.new(Gtk.Orientation.VERTICAL)
-
         left_vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 4)
         right_vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 4)
         right_scroller = Gtk.ScrolledWindow.new(None, None)
         right_vbox.pack_start(right_scroller, True, True, 4)
-
 
         self.cat_store = Gtk.ListStore(str,     # The category name
                                        object)  # The category object
@@ -1347,18 +1350,16 @@ class KeyboardSidePage (SidePage):
                                          bool,  # Show keybinding 3?
                                          object)# The keybinding object
 
-
-
-        cat_tree = Gtk.TreeView.new()
-        item_tree = Gtk.TreeView.new()
-        item_tree.set_grid_lines(Gtk.TreeViewGridLines.BOTH)
+        self.cat_tree = Gtk.TreeView.new()
+        self.item_tree = Gtk.TreeView.new()
+        self.item_tree.set_grid_lines(Gtk.TreeViewGridLines.BOTH)
         cell = Gtk.CellRendererText()
         cell.set_alignment(.5,0)
         cat_column = Gtk.TreeViewColumn(_("Category"), cell, text=0)
         cat_column.set_property('min-width', 140)
         cat_column.set_alignment(.5)
-        cat_tree.append_column(cat_column)
-        cat_tree.connect("cursor-changed", self.onCategoryChanged)
+        self.cat_tree.append_column(cat_column)
+        self.cat_tree.connect("cursor-changed", self.onCategoryChanged)
 
         kb_name_cell = Gtk.CellRendererText()
         kb_bind_1 = Gtk.CellRendererAccel()
@@ -1387,22 +1388,22 @@ class KeyboardSidePage (SidePage):
         item_column = Gtk.TreeViewColumn(_("Description"), kb_name_cell, text=0)
         item_column.set_alignment(.5)
         item_column.set_property('min-width', 140)
-        item_tree.append_column(item_column)
+        self.item_tree.append_column(item_column)
 
         item_column = Gtk.TreeViewColumn(_("Binding"), kb_bind_1, text=1, editable=4, visible=4)
         item_column.set_alignment(.5)
         item_column.set_property('min-width', 140)
-        item_tree.append_column(item_column)
+        self.item_tree.append_column(item_column)
 
         item_column = Gtk.TreeViewColumn(_("Binding"), kb_bind_2, text=2, editable=5, visible=5)
         item_column.set_alignment(.5)
         item_column.set_property('min-width', 140)
-        item_tree.append_column(item_column)
+        self.item_tree.append_column(item_column)
 
         item_column = Gtk.TreeViewColumn(_("Binding"), kb_bind_3, text=3, editable=6, visible=6)
         item_column.set_alignment(.5)
         item_column.set_property('min-width', 140)
-        item_tree.append_column(item_column)
+        self.item_tree.append_column(item_column)
 
         self.main_store = []
         category = KeyBindingCategory(_("Windows"), "windows")
@@ -1417,11 +1418,11 @@ class KeyboardSidePage (SidePage):
             self.cat_store.append((category.label, category))
 
 
-        cat_tree.set_model(self.cat_store)
-        item_tree.set_model(self.item_store)
+        self.cat_tree.set_model(self.cat_store)
+        self.item_tree.set_model(self.item_store)
 
-        left_vbox.pack_start(cat_tree, False, False, 4)
-        right_scroller.add(item_tree)
+        left_vbox.pack_start(self.cat_tree, False, False, 4)
+        right_scroller.add(self.item_tree)
         right_scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         left_vbox.set_border_width(5)
         right_vbox.set_border_width(5)
@@ -1460,7 +1461,6 @@ class KeyboardSidePage (SidePage):
     def onKeyBindingChanged(self, cell, path, keyval, mask, keycode, item_store, i):
         accel_string = Gtk.accelerator_name(keyval, mask)
         iter = item_store.get_iter(path)
-   #     mask = mask & ~Gdk.ModifierType.LOCK_MASK
 
         # Check for bad keys or modifiers
         if (mask == 0 or mask == Gdk.ModifierType.SHIFT_MASK) and keycode != 0:
@@ -1510,90 +1510,20 @@ class KeyboardSidePage (SidePage):
                         response = dialog.run()
                         dialog.destroy()
                         if response == Gtk.ResponseType.YES:
-                            for item in item_store:
-                                if item[7] == keybinding:
-                                    for k in item[7].entries:
-                                        if k is accel_string:
-                                            print "EHERE"
-                                            item_idx = item_store.index(item)
-                                            print item_idx
-                                            entry_idx = item_store[item_idx][7].entries.index(accel_string)
-                                            print entry_idx
-                                            keybinding.setBinding(keybinding.entries.index(accel_string), None)
-                                            item_store.set_value(item_idx, entry_idx+1, item_store[item_idx][7].entries[entry_idx])
+                            keybinding.setBinding(keybinding.entries.index(accel_string), None)
                         elif response == Gtk.ResponseType.NO:
                             return
 
         item_store[iter][7].setBinding(i, accel_string)
         item_store.set_value(iter, i+1, clean_kb(item_store[iter][7].entries[i]))
-
+        self.onCategoryChanged(self.cat_tree)
+        self.item_tree.get_selection().select_path(path)
 
     def onKeyBindingCleared(self, cell, path, item_store, i):
         iter = item_store.get_iter(path)
         item_store[iter][7].setBinding(i, None)
-        item_store.set_value(iter, i+1, item_store[iter][7].entries[i])
-
-
-
-
-
-def clean_kb(keybinding):
-    if keybinding is "":
-        return cgi.escape(_("unassigned"))
-    keybinding = keybinding.replace("<Super>", _("Windows-"))
-    keybinding = keybinding.replace("<Primary>", _("Control-"))
-    keybinding = keybinding.replace("<Shift>", _("Shift-"))
-    keybinding = keybinding.replace("<Alt>", _("Alt-"))
-    return cgi.escape(keybinding)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        self.onCategoryChanged(self.cat_tree)
+        self.item_tree.get_selection().select_path(path)
 
 class GConfCheckButton(Gtk.CheckButton):    
     def __init__(self, label, key):        
