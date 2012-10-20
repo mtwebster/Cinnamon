@@ -1128,19 +1128,7 @@ Chrome.prototype = {
             let strut = new Meta.Strut({ rect: strutRect, side: side });
             struts.push(strut);
         }
-
-        let enable_stage = true;
-        let top_windows = global.top_window_group.get_children();
-        for (var i in top_windows){
-            if (top_windows[i]._windowType != Meta.WindowType.TOOLTIP){
-                enable_stage = false;
-                break;
-            }
-        }
-        if (enable_stage)
-            global.set_stage_input_region(rects);
-        else
-            global.set_stage_input_region([]);
+        global.set_stage_input_region(rects);
 
         let screen = global.screen;
         for (let w = 0; w < screen.n_workspaces; w++) {
