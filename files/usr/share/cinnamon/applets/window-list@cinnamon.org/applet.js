@@ -481,7 +481,6 @@ AppMenuButton.prototype = {
                 }
                 alert.actor.destroy();
                 this.alert_list.splice(i, 1);
-                global.logError("DELETING: "+i);
             }
         }
     },
@@ -654,9 +653,13 @@ AppMenuButton.prototype = {
     },
 
     getAttention: function() {
+        if (this._needsAttention) {
+            return false;
+        }
         this._needsAttention = true;
         let counter = 0;
         this._flashButton(counter);
+        return true;
     },
 
     _flashButton: function(counter) {
@@ -881,7 +884,9 @@ MyApplet.prototype = {
     _onWindowDemandsAttention : function(display, window) {
         for ( let i=0; i<this._windows.length; ++i ) {
             if ( this._windows[i].metaWindow == window ) {
-                this._windows[i].actor._delegate.getAttention();
+                if (!this._windows[i].actor._delegate.getAttention()) {
+                    return;
+                }
             }
         }
         let alertButton = new AppMenuButton(this, window, true, this.orientation, this._panelHeight, false);
