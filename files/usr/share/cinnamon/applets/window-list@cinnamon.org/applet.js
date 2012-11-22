@@ -310,6 +310,9 @@ AppMenuButton.prototype = {
         this.on_panel_edit_mode_changed();
         global.settings.connect('changed::panel-edit-mode', Lang.bind(this, this.on_panel_edit_mode_changed));
         global.settings.connect('changed::window-list-applet-scroll', Lang.bind(this, this.on_scroll_mode_changed));
+
+        this.metaWindow.connect('window-progress-changed', Lang.bind(this, this.meta_progress_changed));
+
         this.window_list = this.actor._delegate._applet._windows;
         this.scroll_connector = null;
         this.on_scroll_mode_changed();
@@ -330,6 +333,12 @@ AppMenuButton.prototype = {
             }
         }
     },
+
+    meta_progress_changed: function() {
+        let progress = this.metaWindow.get_progress();
+        global.logError("progress is: "+progress.toString());
+    }
+
 
     _onScrollEvent: function(actor, event) {
         let direction = event.get_scroll_direction();
