@@ -337,7 +337,7 @@ AppMenuButton.prototype = {
     meta_progress_changed: function() {
         let progress = this.metaWindow.get_progress();
         global.logError("progress is: "+progress.toString());
-    }
+    },
 
 
     _onScrollEvent: function(actor, event) {
