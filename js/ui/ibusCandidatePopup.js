@@ -11,9 +11,12 @@ const Main = imports.ui.main;
 
 const MAX_CANDIDATES_PER_PAGE = 16;
 
-const CandidateArea = new Lang.Class({
-    Name: 'CandidateArea',
 
+function CandidateArea() {
+    this._init();
+}
+
+CandidateArea.prototype =  {
     _init: function() {
         this.actor = new St.BoxLayout({ vertical: true,
                                         visible: false });
@@ -107,12 +110,15 @@ const CandidateArea = new Lang.Class({
         this._previousButton.reactive = wrapsAround || page > 0;
         this._nextButton.reactive = wrapsAround || page < nPages - 1;
     },
-});
+};
 Signals.addSignalMethods(CandidateArea.prototype);
 
-const CandidatePopup = new Lang.Class({
-    Name: 'CandidatePopup',
 
+function CandidatePopup() {
+    this._init();
+}
+
+CandidatePopup.prototype = {
     _init: function() {
         this._cursor = new St.Bin({ opacity: 0 });
         Main.uiGroup.add_actor(this._cursor);
@@ -266,4 +272,4 @@ const CandidatePopup = new Lang.Class({
             if (attr.get_attr_type() == IBus.AttrType.BACKGROUND)
                 clutterText.set_selection(attr.get_start_index(), attr.get_end_index());
     }
-});
+};

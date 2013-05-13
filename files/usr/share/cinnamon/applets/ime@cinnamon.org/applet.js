@@ -6,7 +6,7 @@ const GLib = imports.gi.GLib;
 const GnomeDesktop = imports.gi.GnomeDesktop;
 const Lang = imports.lang;
 const Meta = imports.gi.Meta;
-const Shell = imports.gi.Shell;
+const Cinnamon = imports.gi.Cinnamon;
 const Signals = imports.signals;
 const St = imports.gi.St;
 
@@ -235,76 +235,6 @@ const InputSource = new Lang.Class({
 });
 Signals.addSignalMethods(InputSource.prototype);
 
-const InputSourcePopup = new Lang.Class({
-    Name: 'InputSourcePopup',
-    Extends: SwitcherPopup.SwitcherPopup,
-
-    _init: function(items, action, actionBackward) {
-        this.parent(items);
-
-        this._action = action;
-        this._actionBackward = actionBackward;
-    },
-
-    _createSwitcher: function() {
-        this._switcherList = new InputSourceSwitcher(this._items);
-        return true;
-    },
-
-    _initialSelection: function(backward, binding) {
-        if (binding == 'switch-input-source') {
-            if (backward)
-                this._selectedIndex = this._items.length - 1;
-        } else if (binding == 'switch-input-source-backward') {
-            if (!backward)
-                this._selectedIndex = this._items.length - 1;
-        }
-        this._select(this._selectedIndex);
-    },
-
-    _keyPressHandler: function(keysym, backwards, action) {
-        if (action == this._action)
-            this._select(backwards ? this._previous() : this._next());
-        else if (action == this._actionBackward)
-            this._select(backwards ? this._next() : this._previous());
-        else if (keysym == Clutter.Left)
-            this._select(this._previous());
-        else if (keysym == Clutter.Right)
-            this._select(this._next());
-    },
-
-    _finish : function() {
-        this.parent();
-
-        this._items[this._selectedIndex].activate();
-    },
-});
-
-const InputSourceSwitcher = new Lang.Class({
-    Name: 'InputSourceSwitcher',
-    Extends: SwitcherPopup.SwitcherList,
-
-    _init: function(items) {
-        this.parent(true);
-
-        for (let i = 0; i < items.length; i++)
-            this._addIcon(items[i]);
-    },
-
-    _addIcon: function(item) {
-        let box = new St.BoxLayout({ vertical: true });
-
-        let bin = new St.Bin({ style_class: 'input-source-switcher-symbol' });
-        let symbol = new St.Label({ text: item.shortName });
-        bin.set_child(symbol);
-        box.add(bin, { x_fill: false, y_fill: false } );
-
-        let text = new St.Label({ text: item.displayName });
-        box.add(text, { x_fill: false });
-
-        this.addItem(box, text);
-    }
-});
 
 const InputSourceIndicator = new Lang.Class({
     Name: 'InputSourceIndicator',
@@ -313,7 +243,7 @@ const InputSourceIndicator = new Lang.Class({
     _init: function() {
         this.parent(0.0, _("Keyboard"));
 
-        this._container = new Shell.GenericContainer();
+        this._container = new Cinnamon.GenericContainer();
         this._container.connect('get-preferred-width', Lang.bind(this, this._containerGetPreferredWidth));
         this._container.connect('get-preferred-height', Lang.bind(this, this._containerGetPreferredHeight));
         this._container.connect('allocate', Lang.bind(this, this._containerAllocate));
@@ -333,6 +263,12 @@ const InputSourceIndicator = new Lang.Class({
         // All valid input sources currently in the gsettings
         // KEY_INPUT_SOURCES list ordered by most recently used
         this._mruSources = [];
+
+
+
+
+
+
         this._keybindingAction =
             Main.wm.addKeybinding('switch-input-source',
                                   new Gio.Settings({ schema: "org.gnome.desktop.wm.keybindings" }),
@@ -349,6 +285,12 @@ const InputSourceIndicator = new Lang.Class({
         this._settings = new Gio.Settings({ schema: DESKTOP_INPUT_SOURCES_SCHEMA });
         this._settings.connect('changed::' + KEY_CURRENT_INPUT_SOURCE, Lang.bind(this, this._currentInputSourceChanged));
         this._settings.connect('changed::' + KEY_INPUT_SOURCES, Lang.bind(this, this._inputSourcesChanged));
+
+
+
+
+
+
 
         this._xkbInfo = new GnomeDesktop.XkbInfo();
 

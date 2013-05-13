@@ -8,6 +8,243 @@ const Main = imports.ui.main;
 const PopupMenu = imports.ui.popupMenu;
 const Util = imports.misc.util;
 
+try {
+    var IBus = imports.gi.IBus;
+    if (!('new_async' in IBus.Bus))
+        throw "IBus version is too old";
+    const IBusCandidatePopup = imports.ui.ibusCandidatePopup;
+} catch (e) {
+    var IBus = null;
+    log(e);
+}
+
+const INPUT_SOURCE_TYPE_IBUS = 'ibus';
+
+
+function IBusManager(readyCallback) {
+    this._init(readyCallback);
+}
+
+IBusManager.prototype = {
+    Name: 'IBusManager',
+
+    _init: function(readyCallback) {
+        if (!IBus)
+            return;
+
+        IBus.init();
+
+        this._readyCallback = readyCallback;
+        this._candidatePopup = new IBusCandidatePopup.CandidatePopup();
+
+        this._ibus = null;
+        this._panelService = null;
+        this._engines = {};
+        this._ready = false;
+        this._registerPropertiesId = 0;
+        this._currentEngineName = null;
+
+        this._nameWatcherId = Gio.DBus.session.watch_name(IBus.SERVICE_IBUS,
+                                                          Gio.BusNameWatcherFlags.NONE,
+                                                          Lang.bind(this, this._onNameAppeared),
+                                                          Lang.bind(this, this._clear));
+    },
+
+    _clear: function() {
+        if (this._panelService)
+            this._panelService.destroy();
+        if (this._ibus)
+            this._ibus.destroy();
+
+        this._ibus = null;
+        this._panelService = null;
+        this._candidatePopup.setPanelService(null);
+        this._engines = {};
+        this._ready = false;
+        this._registerPropertiesId = 0;
+        this._currentEngineName = null;
+
+        if (this._readyCallback)
+            this._readyCallback(false);
+    },
+
+    _onNameAppeared: function() {
+        this._ibus = IBus.Bus.new_async();
+        this._ibus.connect('connected', Lang.bind(this, this._onConnected));
+    },
+
+    _onConnected: function() {
+        this._ibus.list_engines_async(-1, null, Lang.bind(this, this._initEngines));
+        this._ibus.request_name_async(IBus.SERVICE_PANEL,
+                                      IBus.BusNameFlag.REPLACE_EXISTING,
+                                      -1, null,
+                                      Lang.bind(this, this._initPanelService));
+        this._ibus.connect('disconnected', Lang.bind(this, this._clear));
+    },
+
+    _initEngines: function(ibus, result) {
+        let enginesList = this._ibus.list_engines_async_finish(result);
+        if (enginesList) {
+            for (let i = 0; i < enginesList.length; ++i) {
+                let name = enginesList[i].get_name();
+                this._engines[name] = enginesList[i];
+            }
+            this._updateReadiness();
+        } else {
+            this._clear();
+        }
+    },
+
+    _initPanelService: function(ibus, result) {
+        let success = this._ibus.request_name_async_finish(result);
+        if (success) {
+            this._panelService = new IBus.PanelService({ connection: this._ibus.get_connection(),
+                                                         object_path: IBus.PATH_PANEL });
+            this._candidatePopup.setPanelService(this._panelService);
+            // Need to set this to get 'global-engine-changed' emitions
+            this._ibus.set_watch_ibus_signal(true);
+            this._ibus.connect('global-engine-changed', Lang.bind(this, this._engineChanged));
+            this._panelService.connect('update-property', Lang.bind(this, this._updateProperty));
+            // If an engine is already active we need to get its properties
+            this._ibus.get_global_engine_async(-1, null, Lang.bind(this, function(i, result) {
+                let engine;
+                try {
+                    engine = this._ibus.get_global_engine_async_finish(result);
+                    if (!engine)
+                        return;
+                } catch(e) {
+                    return;
+                }
+                this._engineChanged(this._ibus, engine.get_name());
+            }));
+            this._updateReadiness();
+        } else {
+            this._clear();
+        }
+    },
+
+    _updateReadiness: function() {
+        this._ready = (Object.keys(this._engines).length > 0 &&
+                       this._panelService != null);
+
+        if (this._readyCallback)
+            this._readyCallback(this._ready);
+    },
+
+    _engineChanged: function(bus, engineName) {
+        this._currentEngineName = engineName;
+
+        if (this._registerPropertiesId != 0)
+            return;
+
+        this._registerPropertiesId =
+            this._panelService.connect('register-properties', Lang.bind(this, function(p, props) {
+                if (!props.get(0))
+                    return;
+
+                this._panelService.disconnect(this._registerPropertiesId);
+                this._registerPropertiesId = 0;
+
+                this.emit('properties-registered', this._currentEngineName, props);
+            }));
+    },
+
+    _updateProperty: function(panel, prop) {
+        this.emit('property-updated', this._currentEngineName, prop);
+    },
+
+    activateProperty: function(key, state) {
+        this._panelService.property_activate(key, state);
+    },
+
+    getEngineDesc: function(id) {
+        if (!IBus || !this._ready)
+            return null;
+
+        return this._engines[id];
+    }
+};
+Signals.addSignalMethods(IBusManager.prototype);
+
+
+
+function InputSourcePopup(items, action, actionBackward) {
+    this._init(items, action, actionBackward);
+}
+
+InputSourcePopup.prototype = {
+    __proto__: SwitcherPopup.SwitcherPopup.prototype,
+
+    _init: function(items, action, actionBackward) {
+        SwitcherPopup.SwitcherPopup.prototype._init.call(this, items);
+
+        this._action = action;
+        this._actionBackward = actionBackward;
+    },
+
+    _createSwitcher: function() {
+        this._switcherList = new InputSourceSwitcher(this._items);
+        return true;
+    },
+
+    _initialSelection: function(backward, binding) {
+        if (binding == 'switch-input-source') {
+            if (backward)
+                this._selectedIndex = this._items.length - 1;
+        } else if (binding == 'switch-input-source-backward') {
+            if (!backward)
+                this._selectedIndex = this._items.length - 1;
+        }
+        this._select(this._selectedIndex);
+    },
+
+    _keyPressHandler: function(keysym, backwards, action) {
+        if (action == this._action)
+            this._select(backwards ? this._previous() : this._next());
+        else if (action == this._actionBackward)
+            this._select(backwards ? this._next() : this._previous());
+        else if (keysym == Clutter.Left)
+            this._select(this._previous());
+        else if (keysym == Clutter.Right)
+            this._select(this._next());
+    },
+
+    _finish : function() {
+        this.parent();
+
+        this._items[this._selectedIndex].activate();
+    },
+};
+
+function InputSourceSwitcher(items) {
+    this._init(items);
+}
+
+InputSourceSwitcher.prototype =  {
+    __proto__: SwitcherPopup.SwitcherList.prototype,
+
+    _init: function(items) {
+        SwitcherPopup.SwitcherList.prototype._init.call(this, true);
+
+        for (let i = 0; i < items.length; i++)
+            this._addIcon(items[i]);
+    },
+
+    _addIcon: function(item) {
+        let box = new St.BoxLayout({ vertical: true });
+
+        let bin = new St.Bin({ style_class: 'input-source-switcher-symbol' });
+        let symbol = new St.Label({ text: item.shortName });
+        bin.set_child(symbol);
+        box.add(bin, { x_fill: false, y_fill: false } );
+
+        let text = new St.Label({ text: item.displayName });
+        box.add(text, { x_fill: false });
+
+        this.addItem(box, text);
+    }
+};
+
 function LayoutMenuItem() {
     this._init.apply(this, arguments);
 }
@@ -62,6 +299,11 @@ MyApplet.prototype = {
 
             this._syncConfig();
 
+            this._ibusReady = false;
+            this._ibusManager = new IBusManager(Lang.bind(this, this._ibusReadyCallback));
+            this._ibusManager.connect('properties-registered', Lang.bind(this, this._ibusPropertiesRegistered));
+            this._ibusManager.connect('property-updated', Lang.bind(this, this._ibusPropertyUpdated));
+
             this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
             this.menu.addAction(_("Show Keyboard Layout"), Lang.bind(this, function() {
                 Main.overview.hide();
@@ -101,7 +343,37 @@ MyApplet.prototype = {
         this._showFlags = global.settings.get_boolean("keyboard-applet-use-flags");
         this._syncConfig();
     },
-    
+
+    _ibusReadyCallback: function(ready) {
+        if (this._ibusReady == ready)
+            return;
+
+        this._ibusReady = ready;
+        this._mruSources = [];
+        this._inputSourcesChanged();
+    },
+
+    _ibusPropertiesRegistered: function(im, engineName, props) {
+        let source = this._ibusSources[engineName];
+        if (!source)
+            return;
+
+        source.properties = props;
+
+        if (source == this._currentSource)
+            this._currentInputSourceChanged();
+    },
+
+    _ibusPropertyUpdated: function(im, engineName, prop) {
+        let source = this._ibusSources[engineName];
+        if (!source)
+            return;
+
+        if (this._updateSubProperty(source.properties, prop) &&
+            source == this._currentSource)
+            this._currentInputSourceChanged();
+    },
+
    _adjustGroupNames: function(names) {
         // Disambiguate duplicate names with a subscript
         // This is O(N^2) to avoid sorting names
