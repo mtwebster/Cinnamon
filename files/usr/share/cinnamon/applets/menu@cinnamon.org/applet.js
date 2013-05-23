@@ -1740,17 +1740,13 @@ MyApplet.prototype = {
         this.applicationsScrollBox.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC);
         this.categoriesApplicationsBox.actor.add_actor(this.categoriesBox);
         this.categoriesApplicationsBox.actor.add_actor(this.applicationsScrollBox);
-                     
-        this._refreshFavs();
-                                                          
+
         this.mainBox = new St.BoxLayout({ style_class: 'menu-applications-box', vertical:false });       
-                
+
         this.mainBox.add_actor(leftPane, { span: 1 });
         this.mainBox.add_actor(rightPane, { span: 1 });
-        
-        section.actor.add_actor(this.mainBox);
 
-        this._refreshApps();
+        section.actor.add_actor(this.mainBox);
 
         this.selectedAppBox = new St.BoxLayout({ style_class: 'menu-selected-app-box', vertical: true });
         this.selectedAppTitle = new St.Label({ style_class: 'menu-selected-app-title', text: "" });
@@ -1762,6 +1758,8 @@ MyApplet.prototype = {
         this.applicationsBox._vis_iter = this.appBoxIter;
         this.catBoxIter = new VisibleChildIterator(this, this.categoriesBox);
         this.categoriesBox._vis_iter = this.catBoxIter;
+        this._refreshFavs();
+        this._refreshApps();
         Mainloop.idle_add(Lang.bind(this, function() {
             this._clearAllSelections(true);
         }));
