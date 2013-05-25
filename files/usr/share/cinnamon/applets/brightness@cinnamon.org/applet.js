@@ -8,7 +8,7 @@ const Gio = imports.gi.Gio;
 const DBus = imports.dbus;
 
 /* constants */
-const DimSettingsSchema = "org.gnome.settings-daemon.plugins.power";
+const DimSettingsSchema = "org.cinnamon.settings-daemon.plugins.power";
 const DimSettingsAc = "idle-dim-ac";
 const DimSettingsBattery = "idle-dim-battery";
 const PowerBusName = 'org.gnome.SettingsDaemon';
