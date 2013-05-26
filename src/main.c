@@ -259,6 +259,8 @@ main (int argc, char **argv)
 
   meta_plugin_type_register (gnome_cinnamon_plugin_get_type ());
 
+  g_setenv ("XDG_CURRENT_DESKTOP", "GNOME", TRUE);
+
   /* Prevent meta_init() from causing gtk to load gail and at-bridge */
   g_setenv ("NO_GAIL", "1", TRUE);
   g_setenv ("NO_AT_BRIDGE", "1", TRUE);
