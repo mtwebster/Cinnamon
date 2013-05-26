@@ -11,12 +11,12 @@ const DBus = imports.dbus;
 const DimSettingsSchema = "org.cinnamon.settings-daemon.plugins.power";
 const DimSettingsAc = "idle-dim-ac";
 const DimSettingsBattery = "idle-dim-battery";
-const PowerBusName = 'org.gnome.SettingsDaemon';
-const PowerObjectPath = '/org/gnome/SettingsDaemon/Power';
+const PowerBusName = 'org.cinnamon.SettingsDaemon';
+const PowerObjectPath = '/org/cinnamon/SettingsDaemon/Power';
 
 /* DBus interface */
 const PowerManagerInterface = {
-    name: 'org.gnome.SettingsDaemon.Power.Screen',
+    name: 'org.cinnamon.SettingsDaemon.Power.Screen',
     methods:
         [
             { name: 'GetPercentage', inSignature: '', outSignature: 'u' },
