@@ -179,6 +179,32 @@ parse_stylesheet (const char  *filename,
   return stylesheet;
 }
 
+static CRStyleSheet *
+parse_stylesheet_buffer (const char  *buffer,
+                         GError     **error)
+{
+  enum CRStatus status;
+  CRStyleSheet *stylesheet;
+
+  if (buffer == NULL)
+    return NULL;
+
+  status = cr_om_parser_simply_parse_buf ((const guchar *) buffer,
+                                           g_utf8_strlen (buffer, -1);
+                                           CR_UTF_8,
+                                           &stylesheet);
+
+  if (status != CR_OK)
+    {
+      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+                   "Error parsing stylesheet '%s'; errcode:%d", filename, status);
+      return NULL;
+    }
+
+  return stylesheet;
+}
+
+
 CRDeclaration *
 _st_theme_parse_declaration_list (const char *str)
 {
@@ -212,7 +238,11 @@ insert_stylesheet (StTheme      *theme,
   if (stylesheet == NULL)
     return;
 
-  filename_copy = g_strdup(filename);
+  if (filename != NULL)
+    filename_copy = g_strdup(filename);
+  else
+    filename_copy = g_strdup_printf("__SYSTEM__");
+
   cr_stylesheet_ref (stylesheet);
 
   g_hash_table_insert (theme->stylesheets_by_filename, filename_copy, stylesheet);
@@ -254,6 +284,25 @@ st_theme_unload_stylesheet (StTheme    *theme,
   g_hash_table_remove (theme->stylesheets_by_filename, path);
   g_hash_table_remove (theme->filenames_by_stylesheet, stylesheet);
   cr_stylesheet_unref (stylesheet);
+}
+
+
+gboolean
+st_theme_load_stylesheet_by_buf (StTheme    *theme,
+                                 const char *buffer,
+                                 GError    **error)
+{
+  CRStyleSheet *stylesheet;
+
+  stylesheet = parse_stylesheet_buffer (buffer, error);
+  if (!stylesheet)
+    return FALSE;
+
+  insert_stylesheet (theme, NULL, stylesheet);
+  cr_stylesheet_ref (stylesheet);
+  theme->custom_stylesheets = g_slist_prepend (theme->custom_stylesheets, stylesheet);
+
+  return TRUE;
 }
 
 /**

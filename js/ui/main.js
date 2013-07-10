@@ -126,7 +126,6 @@ let keybindingManager = null;
 let networkAgent = null;
 let _errorLogStack = [];
 let _startDate;
-let _defaultCssStylesheet = null;
 let _cssStylesheet = null;
 let dynamicWorkspaces = null;
 let nWorks = null;
@@ -290,7 +289,6 @@ function start() {
     }
     
     Gtk.IconTheme.get_default().append_search_path("/usr/share/cinnamon/icons/");
-    _defaultCssStylesheet = global.datadir + '/theme/cinnamon.css';
 
     themeManager = new ThemeManager.ThemeManager();
     deskletContainer = new DeskletManager.DeskletContainer();
@@ -781,12 +779,8 @@ function setThemeStylesheet(cssStylesheet)
 function loadTheme() {
     let themeContext = St.ThemeContext.get_for_stage (global.stage);
 
-    let cssStylesheet = _defaultCssStylesheet;
-    if (_cssStylesheet != null)
-        cssStylesheet = _cssStylesheet;
-
     let theme = new St.Theme( {default_stylesheet: FALLBACK_THEME_PATH} );
-    theme.load_stylesheet(cssStylesheet);
+    theme.load_stylesheet_by_buf(_cssStylesheet);
     
     themeContext.set_theme (theme);
 }
