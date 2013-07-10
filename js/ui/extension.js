@@ -89,6 +89,10 @@ const Type = {
             finishExtensionLoad: DeskletManager.finishExtensionLoad,
             prepareExtensionUnload: DeskletManager.prepareExtensionUnload
         }
+    },
+    /* Added for convenience in the settings API for themes */
+    THEME: {
+        name: 'Theme'
     }
 };
 

@@ -165,9 +165,15 @@ function _provider(xlet, uuid, instanceId) {
 
 _provider.prototype = {
         _init: function (xlet, uuid, instanceId, type, string) {
+            let is_theme = false;
             if (type && string) {
                 this.ext_type = type;
-                this.xlet_str = string;
+                if (this.ext_type == Extension.Type.THEME) {
+                    this.applet_dir = string;
+                    this.xlet_str = "Theme";
+                    is_theme = true;
+                } else
+                    this.xlet_str = string;
             }
             if (!xlet) {
                 global.logError(this.xlet_str + " constructor arguments invalid");
@@ -182,14 +188,17 @@ _provider.prototype = {
             }
             this.uuid = uuid;
             this.xlet = xlet;
-            if (!instanceId && this.ext_type != Extension.Type.EXTENSION) {
+            if (!instanceId && (this.ext_type != Extension.Type.EXTENSION && !is_theme)) {
                 global.logWarning(this.xlet_str + "Settings constructor arguments warning");
                 global.logWarning("Missing instance ID as third argument");
                 global.logWarning("The UUID is " + this.uuid);
             }
             this.instanceId = instanceId;
             this.valid = false;
-            this.applet_dir = Extension.findExtensionDirectory(this.uuid, this.ext_type);
+
+            if (!is_theme)
+                this.applet_dir = Extension.findExtensionDirectory(this.uuid, this.ext_type);
+
             if (!this.applet_dir) {
                 global.logError("Could not find installation directory for " + this.uuid);
                 return;
@@ -202,10 +211,16 @@ _provider.prototype = {
                 return;
             }
 
+            let conf_dir
+            if (is_theme)
+                conf_dir = "configs/themes";
+            else
+                conf_dir = "configs";
+
             let fn = this.multi_instance ? instanceId : uuid;
             let setting_path = (GLib.get_home_dir() + "/" +
                                         ".cinnamon" + "/" +
-                                          "configs" + "/" +
+                                           conf_dir + "/" +
                                           this.uuid + "/" +
                                                  fn + ".json");
             this.settings_file = Gio.file_new_for_path(setting_path);
@@ -517,6 +532,10 @@ _provider.prototype = {
             } else {
                 key_not_found_error(key_name, this.uuid);
             }
+        },
+
+        dump: function () {
+            return this.settings_obj.json;
         }
 };
 Signals.addSignalMethods(_provider.prototype);
@@ -753,6 +772,23 @@ ExtensionSettings.prototype = {
 
     _init: function (xlet, uuid) {
         _provider.prototype._init.call(this, xlet, uuid, null, Extension.Type.EXTENSION, "Extension");
+    },
+
+    _get_is_multi_instance_xlet: function(uuid) {
+        return false;
+    }
+};
+
+
+function ThemeSettings(bootstrapper, themeName, settingsFile) {
+    this._init(bootStrapper, themeName, settingsFile);
+}
+
+ThemeSettings.prototype = {
+    __proto__: _provider.prototype,
+
+    _init: function (bootStrapper, themeName, settingsFile) {
+        _provider.prototype._init.call(this, bootStrapper, themeName, null, Extension.Type.THEME, settingsFile);
     },
 
     _get_is_multi_instance_xlet: function(uuid) {
