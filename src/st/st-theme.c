@@ -181,6 +181,7 @@ parse_stylesheet (const char  *filename,
 
 static CRStyleSheet *
 parse_stylesheet_buffer (const char  *buffer,
+                         const char  *filename,
                          GError     **error)
 {
   enum CRStatus status;
@@ -190,7 +191,7 @@ parse_stylesheet_buffer (const char  *buffer,
     return NULL;
 
   status = cr_om_parser_simply_parse_buf ((const guchar *) buffer,
-                                           g_utf8_strlen (buffer, -1);
+                                           g_utf8_strlen (buffer, -1),
                                            CR_UTF_8,
                                            &stylesheet);
 
@@ -238,10 +239,7 @@ insert_stylesheet (StTheme      *theme,
   if (stylesheet == NULL)
     return;
 
-  if (filename != NULL)
-    filename_copy = g_strdup(filename);
-  else
-    filename_copy = g_strdup_printf("__SYSTEM__");
+  filename_copy = g_strdup(filename);
 
   cr_stylesheet_ref (stylesheet);
 
@@ -290,15 +288,16 @@ st_theme_unload_stylesheet (StTheme    *theme,
 gboolean
 st_theme_load_stylesheet_by_buf (StTheme    *theme,
                                  const char *buffer,
+                                 const char *path,
                                  GError    **error)
 {
   CRStyleSheet *stylesheet;
 
-  stylesheet = parse_stylesheet_buffer (buffer, error);
+  stylesheet = parse_stylesheet_buffer (buffer, path, error);
   if (!stylesheet)
     return FALSE;
-
-  insert_stylesheet (theme, NULL, stylesheet);
+g_printerr ("ASDFLJKSJFLDSKFJSLKDJFLKDSJFLDSFJSLKFDJS\n");
+  insert_stylesheet (theme, path, stylesheet);
   cr_stylesheet_ref (stylesheet);
   theme->custom_stylesheets = g_slist_prepend (theme->custom_stylesheets, stylesheet);
 

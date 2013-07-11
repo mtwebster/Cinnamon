@@ -99,6 +99,8 @@ const Type = {
 // Add signal methods to all types and create user directories if they don't exist.
 for(var key in Type) {
     let type = Type[key];
+    if (type == Type.THEME)
+        continue;
     Signals.addSignalMethods(type);
 
     let path = GLib.build_filenamev([global.userdatadir, type.folder]);

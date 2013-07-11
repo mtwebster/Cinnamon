@@ -13,14 +13,14 @@ const SETTINGS_SCHEMA = 'org.cinnamon.theme';
 const SETTINGS_KEY = 'name';
 
 function ThemeBootstrapper(themeName, styleSheet) {
-    this._init(themeName, settingsFile);
+    this._init(themeName, styleSheet);
 }
 
 ThemeBootstrapper.prototype = {
     _init: function(themeName, styleSheet) {
 
         this.ss_file = Gio.file_new_for_path(styleSheet);
-        this.theme_folder = ss_file.get_parent();
+        this.theme_folder = this.ss_file.get_parent();
 
         let has_settings = false;
         this.settings = null;
@@ -53,6 +53,7 @@ ThemeBootstrapper.prototype = {
         this.sheet = Cinnamon.get_file_contents_utf8_sync(this.ss_file.get_path());
         if (this.sheet == null)
             this.sheet == "";
+        global.logError(this.sheet);
     },
 
     preProcessStyleSheet: function() {
@@ -63,6 +64,10 @@ ThemeBootstrapper.prototype = {
 
     get_stylesheet: function() {
         return this.sheet;
+    },
+
+    get_stylesheet_path: function() {
+        return this.ss_file.get_path();
     }
 }
 
@@ -119,7 +124,8 @@ ThemeManager.prototype = {
 
         this._themeBootstrapper = new ThemeBootstrapper(_themeName, _stylesheet);
 
-        Main.setThemeStylesheet(this._themeBootstrapper.get_stylesheet());
+        Main.setThemeStylesheet(this._themeBootstrapper.get_stylesheet(),
+                                this._themeBootstrapper.get_stylesheet_path());
         Main.loadTheme();
         this.emit("theme-set");
     }

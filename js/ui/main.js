@@ -127,6 +127,7 @@ let networkAgent = null;
 let _errorLogStack = [];
 let _startDate;
 let _cssStylesheet = null;
+let _cssStylesheetPath = null;
 let dynamicWorkspaces = null;
 let nWorks = null;
 let tracker = null;
@@ -766,9 +767,10 @@ function getThemeStylesheet()
  *
  * Set the theme CSS file that Cinnamon will load
  */
-function setThemeStylesheet(cssStylesheet)
+function setThemeStylesheet(cssStylesheet, path)
 {
     _cssStylesheet = cssStylesheet;
+    _cssStylesheetPath = path;
 }
 
 /**
@@ -780,8 +782,12 @@ function loadTheme() {
     let themeContext = St.ThemeContext.get_for_stage (global.stage);
 
     let theme = new St.Theme( {default_stylesheet: FALLBACK_THEME_PATH} );
-    theme.load_stylesheet_by_buf(_cssStylesheet);
-    
+    try {
+        theme.load_stylesheet_by_buf(_cssStylesheet, _cssStylesheetPath);
+    } catch (e) {
+        global.logError("fcuked up");
+    }
+
     themeContext.set_theme (theme);
 }
 
