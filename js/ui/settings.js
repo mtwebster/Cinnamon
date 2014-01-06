@@ -15,6 +15,13 @@ const BindingDirection = {
     BIDIRECTIONAL : 3 // Applet property updated automatically from settings.json, and vise-versa
 };
 
+const SettingType = {
+    BOOLEAN : 1,
+    STRING : 2,
+    NUMBER : 3,
+    NON_SETTING : 4
+}
+
 var BOOLEAN_TYPES = {
     "checkbox" : {
         "required-fields": [
@@ -166,7 +173,7 @@ var NON_SETTING_TYPES = {
 };
 
 
-function _provider(xlet, uuid, instanceId) {
+function _provider(xlet, uuid, instanceId, type, string) {
     this._init(xlet, uuid, instanceId, type, string);
 }
 
@@ -232,12 +239,13 @@ _provider.prototype = {
             }
 
             this.metaBindings = {}
-            if (!this.instanceId) {
-                this.instanceId = 0; 
+            if (!this.multi_instance) {
+                this.instanceId = this.uuid; 
             }
             this.settings_obj = new SettingObj(this, this.settings_file, this.uuid, this.instanceId);
 
             this.valid = true;
+            Main.settingsManager.register(this.uuid, this.instanceId, this);
         },
 
         _get_is_multi_instance_xlet: function(uuid) {
@@ -345,20 +353,20 @@ _provider.prototype = {
 
             let existing_settings_file = Cinnamon.get_file_contents_utf8_sync(this.settings_file.get_path());
             let existing_json;
-	    let new_json;
-            try {             
+            let new_json;
+            try {
                 new_json = JSON.parse(init_file_contents);
             } catch (e) {
                 global.logError("Problem parsing " + orig_file.get_path() + " while preparing to perform upgrade.");
                 global.logError("Skipping upgrade for now - something may be wrong with the new settings schema file.");
                 return false;
             }
-	    try {
+            try {
                 existing_json = JSON.parse(existing_settings_file);
             } catch (e) {
                 global.logError("Problem parsing " + this.settings_file.get_path() + " while preparing to perform upgrade.");
                 global.log("Re-creating settings file.");   
-		this.settings_file.delete(null, null);
+                this.settings_file.delete(null, null);
                 return this._create_settings_file();
             }           
             if (existing_json["__md5__"] != checksum) {
@@ -448,6 +456,25 @@ _provider.prototype = {
             return true;
         },
 
+        remote_set: function (key_name, value, type) {
+            let final_val;
+
+            switch (type) {
+                case SettingType.BOOLEAN:
+                    final_val = value == "__TRUE__";
+                    break;
+                case SettingType.NUMBER:
+                    final_val = eval(value);
+                    break;
+                case SettingType.STRING:
+                default:
+                    final_val = value;
+                    break;
+            }
+
+            this.metaBindings[key_name].set_applet_var_and_cb(final_val);
+            this.setValue(key_name, final_val);
+        },
 
 /* _settings_file_changed:  For convenience only, if you want to handle updating your applet props yourself,
  * connect to this signal on your AppletSettings object to get notified when the json file changes, then
@@ -513,6 +540,7 @@ _provider.prototype = {
             }
             this.metaBindings = undefined;
             this.settings_obj = undefined;
+            Main.settingsManager.unregister(this.uuid, this.instanceId);
         },
 
         getValue: function (key_name) {
@@ -684,17 +712,20 @@ _setting.prototype = {
 
     _setting_file_changed: function () {
         if (this.sync_type != BindingDirection.OUT) {
-            let new_val = this.get_val();
-            if (new_val != this.obj[this.applet_var]) {
-                this._monitor_applet_var(false);
-                this.obj[this.applet_var] = this.get_val();
-                if (this.user_data) {
-                    this.cb(user_data);
-                } else {
-                    this.cb();
-                }
-                this._monitor_applet_var(true);
+            this.set_applet_var_and_cb(this.get_val());
+        }
+    },
+
+    set_applet_var_and_cb: function (new_val) {
+        if (new_val != this.obj[this.applet_var]) {
+            this._monitor_applet_var(false);
+            this.obj[this.applet_var] = new_val;
+            if (this.user_data) {
+                this.cb(user_data);
+            } else {
+                this.cb();
             }
+            this._monitor_applet_var(true);
         }
     },
 
@@ -774,4 +805,24 @@ ExtensionSettings.prototype = {
     _get_is_multi_instance_xlet: function(uuid) {
         return false;
     }
+};
+
+function SettingsManager() {
+    this._init();
+}
+
+SettingsManager.prototype = {
+        _init: function () {
+            this.uuids = {};
+        },
+
+        register: function (uuid, instance_id, obj) {
+            if (!(uuid in this.uuids))
+                this.uuids[uuid] = {}
+            this.uuids[uuid][instance_id] = obj;
+        },
+
+        unregister: function (uuid, instance_id) {
+            this.instances[uuid][instance_id] = null;
+        }
 };
