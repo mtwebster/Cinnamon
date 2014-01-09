@@ -152,32 +152,47 @@ class Settings():
     def get_key_exists(self, key):
         return key in self.data.keys()
 
-    def tryUpdateDbus(self):
+    def real_update_dbus(self, key):
+        self.factory.pause_monitor()
+        session_bus = dbus.SessionBus()
+        cinnamon_dbus = session_bus.get_object("org.Cinnamon", "/org/Cinnamon")
+        setter = cinnamon_dbus.get_dbus_method('updateSetting', 'org.Cinnamon')
+        payload = json.dumps(self.data[key])
+        setter(self.uuid, self.instance_id, key, payload)
+        self.factory.resume_monitor()
+
+    def try_update_dbus(self, key):
         try:
-            self.factory.pause_monitor()
-            session_bus = dbus.SessionBus()
-            cinnamon_dbus = session_bus.get_object("org.Cinnamon", "/org/Cinnamon")
-            setter = cinnamon_dbus.get_dbus_method('updateSetting', 'org.Cinnamon')
-            payload = json.dumps(self.data)
-            setter(self.uuid, self.instance_id, payload)
-            self.factory.resume_monitor()
-        except:
-            print "Cinnamon not running, falling back to python settings engine"
+            self.real_update_dbus(key)
+        except Exception, e:
+            print "Cinnamon not running, falling back to python settings engine: ", e
+            self.save()
+
+    def try_update_dbus_foreach(self):
+        failed = False
+        for key in self.data.keys():
+            if "value" in self.data[key] and "default" in self.data[key]:
+                try:
+                    self.real_update_dbus(self, key)
+                except Exception, e:
+                    failed = True;
+                    print "Cinnamon not running, falling back to python settings engine: ", e
+        if failed:
             self.save()
 
     def set_value(self, key, val):
         self.data[key]["value"] = val
-        self.tryUpdateDbus()
+        self.try_update_dbus(key)
 
     def set_custom_value(self, key, val):
         self.data[key]["last-custom-value"] = val
-        self.tryUpdateDbus()
+        self.try_update_dbus(key)
 
     def reset_to_defaults(self):
         for key in self.data.keys():
             if "value" in self.data[key] and "default" in self.data[key]:
                 self.data[key]["value"] = self.data[key]["default"]
-        self.tryUpdateDbus()
+        self.try_update_dbus_foreach()
 
     def load_from_file(self, filename):
         new_file = open(filename)

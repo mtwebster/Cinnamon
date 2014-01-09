@@ -449,13 +449,9 @@ _provider.prototype = {
             return true;
         },
 
-        remote_set: function (payload) {
-            let new_settings = JSON.parse(payload);
-            for (let key in new_settings) {
-                this.metaBindings[key].set_applet_var_and_cb(new_settings[key]["value"]);
-                this.settings_obj.set_node(key, new_settings[key]);
-            }
-            this.settings_obj.save();
+        remote_set: function (key, payload) {
+            let node = JSON.parse(payload);
+            this.settings_obj.set_node_from_dbus(key, node);
         },
 
 /* _settings_file_changed:  For convenience only, if you want to handle updating your applet props yourself,
@@ -611,8 +607,17 @@ SettingObj.prototype = {
         this.save();
     },
 
-    set_node: function(key, node) {
-        this.json[key] = node;
+    set_node_from_dbus: function(key, node) {
+        let different = false;
+        let old_val = this.json[key]['value'];
+        let new_val = node['value']
+        if (old_val != new_val) {
+            this.json[key] = node;
+            this.provider._value_changed_notify(key, old_val, new_val);
+            this.emit("setting-file-changed");
+            this.provider._setting_file_changed_notify();
+            this.save(); // TODO: This is probably wrong to have here....should be earlier..but i'd rather do everything else first, for responsiveness
+        }
     },
 
     _on_file_changed: function() {

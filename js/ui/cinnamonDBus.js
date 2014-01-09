@@ -44,7 +44,7 @@ const CinnamonIface = {
               },
               {
                 name: 'updateSetting',
-                inSignature: 'sss',
+                inSignature: 'ssss',
                 outSignature: ''
               },
               {
@@ -237,8 +237,8 @@ Cinnamon.prototype = {
         cb();
     },
 
-    updateSetting: function(uuid, instance_id, payload) {
-        Main.settingsManager.uuids[uuid][instance_id].remote_set(payload);
+    updateSetting: function(uuid, instance_id, key, payload) {
+        Main.settingsManager.uuids[uuid][instance_id].remote_set(key, payload);
     },
 
     switchWorkspaceLeft: function() {
