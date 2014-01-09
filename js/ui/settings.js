@@ -15,13 +15,6 @@ const BindingDirection = {
     BIDIRECTIONAL : 3 // Applet property updated automatically from settings.json, and vise-versa
 };
 
-const SettingType = {
-    BOOLEAN : 1,
-    STRING : 2,
-    NUMBER : 3,
-    NON_SETTING : 4
-}
-
 var BOOLEAN_TYPES = {
     "checkbox" : {
         "required-fields": [
@@ -456,24 +449,13 @@ _provider.prototype = {
             return true;
         },
 
-        remote_set: function (key_name, value, type) {
-            let final_val;
-
-            switch (type) {
-                case SettingType.BOOLEAN:
-                    final_val = value == "__TRUE__";
-                    break;
-                case SettingType.NUMBER:
-                    final_val = eval(value);
-                    break;
-                case SettingType.STRING:
-                default:
-                    final_val = value;
-                    break;
+        remote_set: function (payload) {
+            let new_settings = JSON.parse(payload);
+            for (let key in new_settings) {
+                this.metaBindings[key].set_applet_var_and_cb(new_settings[key]["value"]);
+                this.settings_obj.set_node(key, new_settings[key]);
             }
-
-            this.metaBindings[key_name].set_applet_var_and_cb(final_val);
-            this.setValue(key_name, final_val);
+            this.settings_obj.save();
         },
 
 /* _settings_file_changed:  For convenience only, if you want to handle updating your applet props yourself,
@@ -627,6 +609,10 @@ SettingObj.prototype = {
     set_value: function(key, val) {
         this.json[key]["value"] = val;
         this.save();
+    },
+
+    set_node: function(key, node) {
+        this.json[key] = node;
     },
 
     _on_file_changed: function() {

@@ -34,13 +34,6 @@ setting_dict = {
     "button"          :   "Button" # Not a setting, provides a button which triggers a callback in the applet/desklet
 }
 
-# SettingType from settings.js
-
-SETTING_TYPE_BOOLEAN = 1
-SETTING_TYPE_STRING = 2
-SETTING_TYPE_NUMBER = 3
-SETTING_TYPE_NON_SETTING = 4
-
 class Factory():
     def __init__(self, file_name, instance_id, multi_instance, uuid):
         self.file = file_name
@@ -159,41 +152,32 @@ class Settings():
     def get_key_exists(self, key):
         return key in self.data.keys()
 
-    def updateDbus(self, key, val):
-        data_type = SETTING_TYPE_STRING
-        if isinstance(val, bool):
-            data_type = SETTING_TYPE_BOOLEAN
-            if val:
-                val = "__TRUE__"
-            else:
-                val = "__FALSE__"
-        elif isinstance(val, int) or isinstance(val, float):
-            data_type = SETTING_TYPE_NUMBER
-        session_bus = dbus.SessionBus()
-        cinnamon_dbus = session_bus.get_object("org.Cinnamon", "/org/Cinnamon")
-        setter = cinnamon_dbus.get_dbus_method('updateSetting', 'org.Cinnamon')
-        print self.uuid, self.instance_id
-        setter(self.uuid, self.instance_id, key, str(val), data_type)
+    def tryUpdateDbus(self):
+        try:
+            self.factory.pause_monitor()
+            session_bus = dbus.SessionBus()
+            cinnamon_dbus = session_bus.get_object("org.Cinnamon", "/org/Cinnamon")
+            setter = cinnamon_dbus.get_dbus_method('updateSetting', 'org.Cinnamon')
+            payload = json.dumps(self.data)
+            setter(self.uuid, self.instance_id, payload)
+            self.factory.resume_monitor()
+        except:
+            print "Cinnamon not running, falling back to python settings engine"
+            self.save()
 
     def set_value(self, key, val):
         self.data[key]["value"] = val
-        try:
-            self.factory.pause_monitor()
-            self.updateDbus(key, val)
-            self.factory.resume_monitor()
-        except Exception, e:
-            print e, "oops"
-            self.save()
+        self.tryUpdateDbus()
 
     def set_custom_value(self, key, val):
         self.data[key]["last-custom-value"] = val
-        self.save()
+        self.tryUpdateDbus()
 
     def reset_to_defaults(self):
         for key in self.data.keys():
             if "value" in self.data[key] and "default" in self.data[key]:
                 self.data[key]["value"] = self.data[key]["default"]
-        self.save()
+        self.tryUpdateDbus()
 
     def load_from_file(self, filename):
         new_file = open(filename)
