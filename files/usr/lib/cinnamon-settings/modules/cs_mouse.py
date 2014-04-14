@@ -85,6 +85,7 @@ class Module:
 
             section = Section(_("General"))  
             section.add(GSettingsCheckButton(_("Enable touchpad"), "org.cinnamon.settings-daemon.peripherals.touchpad", "touchpad-enabled", None))
+            section.add(GSettingsCheckButton(_("Disable touchpad when a mouse is attached"), "org.cinnamon.settings-daemon.peripherals.touchpad", "disable-when-external-device-attached", "org.cinnamon.settings-daemon.peripherals.touchpad/touchpad-enabled"))
             section.add(GSettingsCheckButton(_("Disable touchpad while typing"), "org.cinnamon.settings-daemon.peripherals.touchpad", "disable-while-typing", "org.cinnamon.settings-daemon.peripherals.touchpad/touchpad-enabled"))
             section.add(GSettingsCheckButton(_("Enable mouseclicks with touchpad"), "org.cinnamon.settings-daemon.peripherals.touchpad", "tap-to-click", "org.cinnamon.settings-daemon.peripherals.touchpad/touchpad-enabled"))   
             vbox.add(section)
