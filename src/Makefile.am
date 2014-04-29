@@ -8,6 +8,8 @@ noinst_LTLIBRARIES =
 noinst_PROGRAMS =
 service_in_files =
 
+SUBDIRS = gvc
+
 -include $(INTROSPECTION_MAKEFILE)
 INTROSPECTION_GIRS =
 INTROSPECTION_SCANNER_ARGS = --warn-all --warn-error --add-include-path=$(srcdir)
@@ -73,7 +75,6 @@ CLEANFILES += cinnamon $(bin_SCRIPTS)
 
 include Makefile-st.am
 include Makefile-tray.am
-include Makefile-gvc.am
 include Makefile-hotplug-sniffer.am
 
 cinnamon_cflags =				\
@@ -261,7 +262,7 @@ libcinnamon_la_LIBADD =		\
 	$(BLUETOOTH_LIBS)	\
 	libst-1.0.la       	\
 	libtray.la		\
-	libgvc.la		\
+	gvc/libgvc.la		\
 	$(NULL)
 
 libcinnamon_la_CPPFLAGS = $(cinnamon_cflags)
