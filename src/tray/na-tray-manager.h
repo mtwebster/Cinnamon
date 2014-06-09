@@ -14,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 51 Franklin Street - Suite 500,
- * Boston, MA 02110-1335, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Used to be: eggtraymanager.h
  */
@@ -33,14 +31,14 @@
 
 G_BEGIN_DECLS
 
-#define NA_TYPE_TRAY_MANAGER			(na_tray_manager_get_type ())
-#define NA_TRAY_MANAGER(obj)			(G_TYPE_CHECK_INSTANCE_CAST ((obj), NA_TYPE_TRAY_MANAGER, NaTrayManager))
-#define NA_TRAY_MANAGER_CLASS(klass)		(G_TYPE_CHECK_CLASS_CAST ((klass), NA_TYPE_TRAY_MANAGER, NaTrayManagerClass))
-#define NA_IS_TRAY_MANAGER(obj)			(G_TYPE_CHECK_INSTANCE_TYPE ((obj), NA_TYPE_TRAY_MANAGER))
-#define NA_IS_TRAY_MANAGER_CLASS(klass)		(G_TYPE_CHECK_CLASS_TYPE ((klass), NA_TYPE_TRAY_MANAGER))
-#define NA_TRAY_MANAGER_GET_CLASS(obj)		(G_TYPE_INSTANCE_GET_CLASS ((obj), NA_TYPE_TRAY_MANAGER, NaTrayManagerClass))
-	
-typedef struct _NaTrayManager	    NaTrayManager;
+#define NA_TYPE_TRAY_MANAGER            (na_tray_manager_get_type ())
+#define NA_TRAY_MANAGER(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), NA_TYPE_TRAY_MANAGER, NaTrayManager))
+#define NA_TRAY_MANAGER_CLASS(klass)        (G_TYPE_CHECK_CLASS_CAST ((klass), NA_TYPE_TRAY_MANAGER, NaTrayManagerClass))
+#define NA_IS_TRAY_MANAGER(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NA_TYPE_TRAY_MANAGER))
+#define NA_IS_TRAY_MANAGER_CLASS(klass)     (G_TYPE_CHECK_CLASS_TYPE ((klass), NA_TYPE_TRAY_MANAGER))
+#define NA_TRAY_MANAGER_GET_CLASS(obj)      (G_TYPE_INSTANCE_GET_CLASS ((obj), NA_TYPE_TRAY_MANAGER, NaTrayManagerClass))
+    
+typedef struct _NaTrayManager       NaTrayManager;
 typedef struct _NaTrayManagerClass  NaTrayManagerClass;
 
 struct _NaTrayManager
@@ -63,7 +61,6 @@ struct _NaTrayManager
 
   GList *messages;
   GHashTable *socket_table;
-  gint scale;
 };
 
 struct _NaTrayManagerClass
@@ -71,19 +68,19 @@ struct _NaTrayManagerClass
   GObjectClass parent_class;
 
   void (* tray_icon_added)   (NaTrayManager      *manager,
-			      NaTrayChild        *child);
+                  NaTrayChild        *child);
   void (* tray_icon_removed) (NaTrayManager      *manager,
-			      NaTrayChild        *child);
+                  NaTrayChild        *child);
 
   void (* message_sent)      (NaTrayManager      *manager,
-			      NaTrayChild        *child,
-			      const gchar        *message,
-			      glong               id,
-			      glong               timeout);
+                  NaTrayChild        *child,
+                  const gchar        *message,
+                  glong               id,
+                  glong               timeout);
   
   void (* message_cancelled) (NaTrayManager      *manager,
-			      NaTrayChild        *child,
-			      glong               id);
+                  NaTrayChild        *child,
+                  glong               id);
 
   void (* lost_selection)    (NaTrayManager      *manager);
 };
@@ -93,17 +90,16 @@ GType           na_tray_manager_get_type        (void);
 gboolean        na_tray_manager_check_running   (GdkScreen          *screen);
 NaTrayManager  *na_tray_manager_new             (void);
 gboolean        na_tray_manager_manage_screen   (NaTrayManager      *manager,
-						 GdkScreen          *screen);
+                         GdkScreen          *screen);
 void            na_tray_manager_set_orientation (NaTrayManager      *manager,
-						 GtkOrientation      orientation);
+                         GtkOrientation      orientation);
 GtkOrientation  na_tray_manager_get_orientation (NaTrayManager      *manager);
 void            na_tray_manager_set_colors      (NaTrayManager      *manager,
-						 GdkColor           *fg,
-						 GdkColor           *error,
-						 GdkColor           *warning,
-						 GdkColor           *success);
-void            na_tray_manager_set_scale       (NaTrayManager      *manager,
-                                                 gint                scale);
+                         GdkColor           *fg,
+                         GdkColor           *error,
+                         GdkColor           *warning,
+                         GdkColor           *success);
+
 
 G_END_DECLS
 
