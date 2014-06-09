@@ -1,51 +1,50 @@
 /* -*- mode: C; c-file-style: "gnu"; indent-tabs-mode: nil; -*- */
 
-#ifndef __CINNAMON_TRAY_MANAGER_H__
-#define __CINNAMON_TRAY_MANAGER_H__
+#ifndef __SHELL_TRAY_MANAGER_H__
+#define __SHELL_TRAY_MANAGER_H__
 
 #include <clutter/clutter.h>
 #include "st.h"
 
 G_BEGIN_DECLS
 
-#define CINNAMON_TYPE_TRAY_MANAGER			(cinnamon_tray_manager_get_type ())
-#define CINNAMON_TRAY_MANAGER(obj)			(G_TYPE_CHECK_INSTANCE_CAST ((obj), CINNAMON_TYPE_TRAY_MANAGER, CinnamonTrayManager))
-#define CINNAMON_TRAY_MANAGER_CLASS(klass)		(G_TYPE_CHECK_CLASS_CAST ((klass), CINNAMON_TYPE_TRAY_MANAGER, CinnamonTrayManagerClass))
-#define CINNAMON_IS_TRAY_MANAGER(obj)		(G_TYPE_CHECK_INSTANCE_TYPE ((obj), CINNAMON_TYPE_TRAY_MANAGER))
-#define CINNAMON_IS_TRAY_MANAGER_CLASS(klass)	(G_TYPE_CHECK_CLASS_TYPE ((klass), CINNAMON_TYPE_TRAY_MANAGER))
-#define CINNAMON_TRAY_MANAGER_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS ((obj), CINNAMON_TYPE_TRAY_MANAGER, CinnamonTrayManagerClass))
-	
-typedef struct _CinnamonTrayManager        CinnamonTrayManager;
-typedef struct _CinnamonTrayManagerPrivate CinnamonTrayManagerPrivate;
-typedef struct _CinnamonTrayManagerClass   CinnamonTrayManagerClass;
+#define SHELL_TYPE_TRAY_MANAGER         (shell_tray_manager_get_type ())
+#define SHELL_TRAY_MANAGER(obj)         (G_TYPE_CHECK_INSTANCE_CAST ((obj), SHELL_TYPE_TRAY_MANAGER, ShellTrayManager))
+#define SHELL_TRAY_MANAGER_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), SHELL_TYPE_TRAY_MANAGER, ShellTrayManagerClass))
+#define SHELL_IS_TRAY_MANAGER(obj)      (G_TYPE_CHECK_INSTANCE_TYPE ((obj), SHELL_TYPE_TRAY_MANAGER))
+#define SHELL_IS_TRAY_MANAGER_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), SHELL_TYPE_TRAY_MANAGER))
+#define SHELL_TRAY_MANAGER_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), SHELL_TYPE_TRAY_MANAGER, ShellTrayManagerClass))
+    
+typedef struct _ShellTrayManager        ShellTrayManager;
+typedef struct _ShellTrayManagerPrivate ShellTrayManagerPrivate;
+typedef struct _ShellTrayManagerClass   ShellTrayManagerClass;
 
-struct _CinnamonTrayManager
+struct _ShellTrayManager
 {
   GObject parent_instance;
 
-  CinnamonTrayManagerPrivate *priv;
+  ShellTrayManagerPrivate *priv;
 };
 
-struct _CinnamonTrayManagerClass
+struct _ShellTrayManagerClass
 {
   GObjectClass parent_class;
 
-  void (* tray_icon_added)   (CinnamonTrayManager *manager,
-			      ClutterActor     *icon,
-			      const char       *lowercase_wm_class);
-  void (* tray_icon_removed) (CinnamonTrayManager *manager,
-			      ClutterActor     *icon);
+  void (* tray_icon_added)   (ShellTrayManager *manager,
+                  ClutterActor     *icon,
+                  const char       *lowercase_wm_class);
+  void (* tray_icon_removed) (ShellTrayManager *manager,
+                  ClutterActor     *icon);
 
 };
 
-GType             cinnamon_tray_manager_get_type     (void);
+GType             shell_tray_manager_get_type     (void);
 
-CinnamonTrayManager *cinnamon_tray_manager_new          (void);
-void              cinnamon_tray_manager_manage_stage (CinnamonTrayManager *manager,
-                                                   ClutterStage     *stage,
-                                                   StWidget         *theme_widget);
-void              cinnamon_tray_manager_redisplay (CinnamonTrayManager *manager);
+ShellTrayManager *shell_tray_manager_new          (void);
+void              shell_tray_manager_manage_screen (ShellTrayManager *manager,
+                                                    MetaScreen       *screen,
+                                                    StWidget         *theme_widget);
 
 G_END_DECLS
 
-#endif /* __CINNAMON_TRAY_MANAGER_H__ */
+#endif /* __SHELL_TRAY_MANAGER_H__ */

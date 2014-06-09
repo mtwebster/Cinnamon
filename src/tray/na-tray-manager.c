@@ -346,7 +346,7 @@ na_tray_manager_handle_dock_request (NaTrayManager       *manager,
   packet->child = g_object_ref (child);
   packet->window = icon_window;
   packet->manager = manager;
-
+return;
   g_timeout_add (250, (GSourceFunc) wait_after_added, packet);
 }
 

@@ -2,11 +2,12 @@
 
 #include "config.h"
 
-#include "cinnamon-tray-icon.h"
-#include "cinnamon-gtk-embed.h"
-#include "cinnamon-window-tracker.h"
+#include "shell-tray-icon.h"
+#include "shell-gtk-embed.h"
+#include "shell-window-tracker.h"
 #include "tray/na-tray-child.h"
 #include <gdk/gdkx.h>
+#include <X11/Xatom.h>
 #include "st.h"
 
 enum {
@@ -17,7 +18,7 @@ enum {
    PROP_WM_CLASS
 };
 
-struct _CinnamonTrayIconPrivate
+struct _ShellTrayIconPrivate
 {
   NaTrayChild *socket;
 
@@ -25,25 +26,25 @@ struct _CinnamonTrayIconPrivate
   char *title, *wm_class;
 };
 
-G_DEFINE_TYPE (CinnamonTrayIcon, cinnamon_tray_icon, CINNAMON_TYPE_GTK_EMBED);
+G_DEFINE_TYPE (ShellTrayIcon, shell_tray_icon, SHELL_TYPE_GTK_EMBED);
 
 static void
-cinnamon_tray_icon_finalize (GObject *object)
+shell_tray_icon_finalize (GObject *object)
 {
-  CinnamonTrayIcon *icon = CINNAMON_TRAY_ICON (object);
+  ShellTrayIcon *icon = SHELL_TRAY_ICON (object);
 
   g_free (icon->priv->title);
   g_free (icon->priv->wm_class);
 
-  G_OBJECT_CLASS (cinnamon_tray_icon_parent_class)->finalize (object);
+  G_OBJECT_CLASS (shell_tray_icon_parent_class)->finalize (object);
 }
 
 static void
-cinnamon_tray_icon_constructed (GObject *object)
+shell_tray_icon_constructed (GObject *object)
 {
   GdkWindow *icon_app_window;
-  CinnamonTrayIcon *icon = CINNAMON_TRAY_ICON (object);
-  CinnamonEmbeddedWindow *window;
+  ShellTrayIcon *icon = SHELL_TRAY_ICON (object);
+  ShellEmbeddedWindow *window;
   GdkDisplay *display;
   Window plug_xid;
   Atom _NET_WM_PID, type;
@@ -51,7 +52,7 @@ cinnamon_tray_icon_constructed (GObject *object)
   gulong nitems, bytes_after, *val = NULL;
 
   /* We do all this now rather than computing it on the fly later,
-   * because Cinnamon may want to see their values from a
+   * because the shell may want to see their values from a
    * tray-icon-removed signal handler, at which point the plug has
    * already been removed from the socket.
    */
@@ -85,12 +86,12 @@ cinnamon_tray_icon_constructed (GObject *object)
 }
 
 static void
-cinnamon_tray_icon_get_property (GObject         *object,
+shell_tray_icon_get_property (GObject         *object,
                               guint            prop_id,
                               GValue          *value,
                               GParamSpec      *pspec)
 {
-  CinnamonTrayIcon *icon = CINNAMON_TRAY_ICON (object);
+  ShellTrayIcon *icon = SHELL_TRAY_ICON (object);
 
   switch (prop_id)
     {
@@ -113,15 +114,15 @@ cinnamon_tray_icon_get_property (GObject         *object,
 }
 
 static void
-cinnamon_tray_icon_class_init (CinnamonTrayIconClass *klass)
+shell_tray_icon_class_init (ShellTrayIconClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-  g_type_class_add_private (klass, sizeof (CinnamonTrayIconPrivate));
+  g_type_class_add_private (klass, sizeof (ShellTrayIconPrivate));
 
-  object_class->get_property = cinnamon_tray_icon_get_property;
-  object_class->constructed  = cinnamon_tray_icon_constructed;
-  object_class->finalize     = cinnamon_tray_icon_finalize;
+  object_class->get_property = shell_tray_icon_get_property;
+  object_class->constructed  = shell_tray_icon_constructed;
+  object_class->finalize     = shell_tray_icon_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_PID,
@@ -147,28 +148,28 @@ cinnamon_tray_icon_class_init (CinnamonTrayIconClass *klass)
 }
 
 static void
-cinnamon_tray_icon_init (CinnamonTrayIcon *icon)
+shell_tray_icon_init (ShellTrayIcon *icon)
 {
-  icon->priv = G_TYPE_INSTANCE_GET_PRIVATE (icon, CINNAMON_TYPE_TRAY_ICON,
-                                            CinnamonTrayIconPrivate);
+  icon->priv = G_TYPE_INSTANCE_GET_PRIVATE (icon, SHELL_TYPE_TRAY_ICON,
+                                            ShellTrayIconPrivate);
 }
 
 /*
  * Public API
  */
 ClutterActor *
-cinnamon_tray_icon_new (CinnamonEmbeddedWindow *window)
+shell_tray_icon_new (ShellEmbeddedWindow *window)
 {
-  g_return_val_if_fail (CINNAMON_IS_EMBEDDED_WINDOW (window), NULL);
+  g_return_val_if_fail (SHELL_IS_EMBEDDED_WINDOW (window), NULL);
 
-  return g_object_new (CINNAMON_TYPE_TRAY_ICON,
+  return g_object_new (SHELL_TYPE_TRAY_ICON,
                        "window", window,
                        NULL);
 }
 
 /**
- * cinnamon_tray_icon_click:
- * @icon: a #CinnamonTrayIcon
+ * shell_tray_icon_click:
+ * @icon: a #ShellTrayIcon
  * @event: the #ClutterEvent triggering the fake click
  *
  * Fakes a press and release on @icon. @event must be a
@@ -177,9 +178,10 @@ cinnamon_tray_icon_new (CinnamonEmbeddedWindow *window)
  * always made on the center of @icon.
  */
 void
-cinnamon_tray_icon_click (CinnamonTrayIcon *icon,
+shell_tray_icon_click (ShellTrayIcon *icon,
                        ClutterEvent  *event)
 {
+  XKeyEvent xkevent;
   XButtonEvent xbevent;
   XCrossingEvent xcevent;
   GdkWindow *remote_window;
@@ -187,8 +189,10 @@ cinnamon_tray_icon_click (CinnamonTrayIcon *icon,
   int x_root, y_root;
   Display *xdisplay;
   Window xwindow, xrootwindow;
+  ClutterEventType event_type = clutter_event_type (event);
 
-  g_return_if_fail (clutter_event_type (event) == CLUTTER_BUTTON_RELEASE);
+  g_return_if_fail (event_type == CLUTTER_BUTTON_RELEASE ||
+                    event_type == CLUTTER_KEY_RELEASE);
 
   gdk_error_trap_push ();
 
@@ -215,22 +219,44 @@ cinnamon_tray_icon_click (CinnamonTrayIcon *icon,
   XSendEvent (xdisplay, xwindow, False, 0, (XEvent *)&xcevent);
 
   /* Now do the click */
-  xbevent.type = ButtonPress;
-  xbevent.window = xwindow;
-  xbevent.root = xrootwindow;
-  xbevent.subwindow = None;
-  xbevent.time = xcevent.time;
-  xbevent.x = xcevent.x;
-  xbevent.y = xcevent.y;
-  xbevent.x_root = xcevent.x_root;
-  xbevent.y_root = xcevent.y_root;
-  xbevent.state = clutter_event_get_state (event);
-  xbevent.button = clutter_event_get_button (event);
-  xbevent.same_screen = True;
-  XSendEvent (xdisplay, xwindow, False, 0, (XEvent *)&xbevent);
+  if (event_type == CLUTTER_BUTTON_RELEASE)
+    {
+      xbevent.window = xwindow;
+      xbevent.root = xrootwindow;
+      xbevent.subwindow = None;
+      xbevent.time = xcevent.time;
+      xbevent.x = xcevent.x;
+      xbevent.y = xcevent.y;
+      xbevent.x_root = xcevent.x_root;
+      xbevent.y_root = xcevent.y_root;
+      xbevent.state = clutter_event_get_state (event);
+      xbevent.same_screen = True;
+      xbevent.type = ButtonPress;
+      xbevent.button = clutter_event_get_button (event);
+      XSendEvent (xdisplay, xwindow, False, 0, (XEvent *)&xbevent);
 
-  xbevent.type = ButtonRelease;
-  XSendEvent (xdisplay, xwindow, False, 0, (XEvent *)&xbevent);
+      xbevent.type = ButtonRelease;
+      XSendEvent (xdisplay, xwindow, False, 0, (XEvent *)&xbevent);
+    }
+  else
+    {
+      xkevent.window = xwindow;
+      xkevent.root = xrootwindow;
+      xkevent.subwindow = None;
+      xkevent.time = xcevent.time;
+      xkevent.x = xcevent.x;
+      xkevent.y = xcevent.y;
+      xkevent.x_root = xcevent.x_root;
+      xkevent.y_root = xcevent.y_root;
+      xkevent.state = clutter_event_get_state (event);
+      xkevent.same_screen = True;
+      xkevent.type = KeyPress;
+      xkevent.keycode = clutter_event_get_key_code (event);
+      XSendEvent (xdisplay, xwindow, False, 0, (XEvent *)&xkevent);
+
+      xkevent.type = KeyRelease;
+      XSendEvent (xdisplay, xwindow, False, 0, (XEvent *)&xkevent);
+    }
 
   /* And move the pointer back out */
   xcevent.type = LeaveNotify;

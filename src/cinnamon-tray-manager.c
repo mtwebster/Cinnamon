@@ -8,27 +8,26 @@
 #include <gtk/gtk.h>
 #include <meta/display.h>
 
-#include "cinnamon-tray-manager.h"
+#include "shell-tray-manager.h"
 #include "na-tray-manager.h"
 
-#include "cinnamon-tray-icon.h"
-#include "cinnamon-embedded-window.h"
-#include "cinnamon-global.h"
+#include "shell-tray-icon.h"
+#include "shell-embedded-window.h"
+#include "shell-global.h"
 
-struct _CinnamonTrayManagerPrivate {
+struct _ShellTrayManagerPrivate {
   NaTrayManager *na_manager;
-  ClutterStage *stage;
   ClutterColor bg_color;
 
   GHashTable *icons;
 };
 
 typedef struct {
-  CinnamonTrayManager *manager;
+  ShellTrayManager *manager;
   GtkWidget *socket;
   GtkWidget *window;
   ClutterActor *actor;
-} CinnamonTrayManagerChild;
+} ShellTrayManagerChild;
 
 enum {
   PROP_0,
@@ -44,9 +43,9 @@ enum
   LAST_SIGNAL
 };
 
-G_DEFINE_TYPE (CinnamonTrayManager, cinnamon_tray_manager, G_TYPE_OBJECT);
+G_DEFINE_TYPE (ShellTrayManager, shell_tray_manager, G_TYPE_OBJECT);
 
-static guint cinnamon_tray_manager_signals [LAST_SIGNAL] = { 0 };
+static guint shell_tray_manager_signals [LAST_SIGNAL] = { 0 };
 
 static const ClutterColor default_color = { 0x00, 0x00, 0x00, 0xff };
 
@@ -56,7 +55,7 @@ static void na_tray_icon_removed (NaTrayManager *na_manager, GtkWidget *child, g
 static void
 free_tray_icon (gpointer data)
 {
-  CinnamonTrayManagerChild *child = data;
+  ShellTrayManagerChild *child = data;
 
   gtk_widget_destroy (child->window);
   if (child->actor)
@@ -65,16 +64,16 @@ free_tray_icon (gpointer data)
                                             0, 0, NULL, NULL, child);
       g_object_unref (child->actor);
     }
-  g_slice_free (CinnamonTrayManagerChild, child);
+  g_slice_free (ShellTrayManagerChild, child);
 }
 
 static void
-cinnamon_tray_manager_set_property(GObject         *object,
+shell_tray_manager_set_property(GObject         *object,
                                 guint            prop_id,
                                 const GValue    *value,
                                 GParamSpec      *pspec)
 {
-  CinnamonTrayManager *manager = CINNAMON_TRAY_MANAGER (object);
+  ShellTrayManager *manager = SHELL_TRAY_MANAGER (object);
 
   switch (prop_id)
     {
@@ -94,12 +93,12 @@ cinnamon_tray_manager_set_property(GObject         *object,
 }
 
 static void
-cinnamon_tray_manager_get_property(GObject         *object,
+shell_tray_manager_get_property(GObject         *object,
                                 guint            prop_id,
                                 GValue          *value,
                                 GParamSpec      *pspec)
 {
-  CinnamonTrayManager *manager = CINNAMON_TRAY_MANAGER (object);
+  ShellTrayManager *manager = SHELL_TRAY_MANAGER (object);
 
   switch (prop_id)
     {
@@ -113,10 +112,10 @@ cinnamon_tray_manager_get_property(GObject         *object,
 }
 
 static void
-cinnamon_tray_manager_init (CinnamonTrayManager *manager)
+shell_tray_manager_init (ShellTrayManager *manager)
 {
-  manager->priv = G_TYPE_INSTANCE_GET_PRIVATE (manager, CINNAMON_TYPE_TRAY_MANAGER,
-                                               CinnamonTrayManagerPrivate);
+  manager->priv = G_TYPE_INSTANCE_GET_PRIVATE (manager, SHELL_TYPE_TRAY_MANAGER,
+                                               ShellTrayManagerPrivate);
   manager->priv->na_manager = na_tray_manager_new ();
 
   manager->priv->icons = g_hash_table_new_full (NULL, NULL,
@@ -130,44 +129,41 @@ cinnamon_tray_manager_init (CinnamonTrayManager *manager)
 }
 
 static void
-cinnamon_tray_manager_finalize (GObject *object)
+shell_tray_manager_finalize (GObject *object)
 {
-  CinnamonTrayManager *manager = CINNAMON_TRAY_MANAGER (object);
+  ShellTrayManager *manager = SHELL_TRAY_MANAGER (object);
 
   g_object_unref (manager->priv->na_manager);
-  g_object_unref (manager->priv->stage);
   g_hash_table_destroy (manager->priv->icons);
 
-  G_OBJECT_CLASS (cinnamon_tray_manager_parent_class)->finalize (object);
+  G_OBJECT_CLASS (shell_tray_manager_parent_class)->finalize (object);
 }
 
 static void
-cinnamon_tray_manager_class_init (CinnamonTrayManagerClass *klass)
+shell_tray_manager_class_init (ShellTrayManagerClass *klass)
 {
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
 
-  g_type_class_add_private (klass, sizeof (CinnamonTrayManagerPrivate));
+  g_type_class_add_private (klass, sizeof (ShellTrayManagerPrivate));
 
-  gobject_class->finalize = cinnamon_tray_manager_finalize;
-  gobject_class->set_property = cinnamon_tray_manager_set_property;
-  gobject_class->get_property = cinnamon_tray_manager_get_property;
+  gobject_class->finalize = shell_tray_manager_finalize;
+  gobject_class->set_property = shell_tray_manager_set_property;
+  gobject_class->get_property = shell_tray_manager_get_property;
 
-  cinnamon_tray_manager_signals[TRAY_ICON_ADDED] =
+  shell_tray_manager_signals[TRAY_ICON_ADDED] =
     g_signal_new ("tray-icon-added",
                   G_TYPE_FROM_CLASS (klass),
                   G_SIGNAL_RUN_LAST,
-                  G_STRUCT_OFFSET (CinnamonTrayManagerClass, tray_icon_added),
-                  NULL, NULL,
-                  g_cclosure_marshal_VOID__OBJECT,
+                  G_STRUCT_OFFSET (ShellTrayManagerClass, tray_icon_added),
+                  NULL, NULL, NULL,
                   G_TYPE_NONE, 1,
                   CLUTTER_TYPE_ACTOR);
-  cinnamon_tray_manager_signals[TRAY_ICON_REMOVED] =
+  shell_tray_manager_signals[TRAY_ICON_REMOVED] =
     g_signal_new ("tray-icon-removed",
                   G_TYPE_FROM_CLASS (klass),
                   G_SIGNAL_RUN_LAST,
-                  G_STRUCT_OFFSET (CinnamonTrayManagerClass, tray_icon_removed),
-                  NULL, NULL,
-                  g_cclosure_marshal_VOID__OBJECT,
+                  G_STRUCT_OFFSET (ShellTrayManagerClass, tray_icon_removed),
+                  NULL, NULL, NULL,
                   G_TYPE_NONE, 1,
                   CLUTTER_TYPE_ACTOR);
 
@@ -184,17 +180,17 @@ cinnamon_tray_manager_class_init (CinnamonTrayManagerClass *klass)
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 }
 
-CinnamonTrayManager *
-cinnamon_tray_manager_new (void)
+ShellTrayManager *
+shell_tray_manager_new (void)
 {
-  return g_object_new (CINNAMON_TYPE_TRAY_MANAGER, NULL);
+  return g_object_new (SHELL_TYPE_TRAY_MANAGER, NULL);
 }
 
 static void
-cinnamon_tray_manager_style_changed (StWidget *theme_widget,
+shell_tray_manager_style_changed (StWidget *theme_widget,
                                   gpointer  user_data)
 {
-  CinnamonTrayManager *manager = user_data;
+  ShellTrayManager *manager = user_data;
   StThemeNode *theme_node;
   StIconColors *icon_colors;
   GdkColor foreground, warning, error, success;
@@ -221,59 +217,28 @@ cinnamon_tray_manager_style_changed (StWidget *theme_widget,
 }
 
 void
-cinnamon_tray_manager_manage_stage (CinnamonTrayManager *manager,
-                                 ClutterStage     *stage,
-                                 StWidget         *theme_widget)
+shell_tray_manager_manage_screen (ShellTrayManager *manager,
+                                  MetaScreen       *screen,
+                                  StWidget         *theme_widget)
 {
-  Window stage_xwindow;
-  GdkWindow *stage_window;
   GdkDisplay *display;
-  GdkScreen *screen;
+  GdkScreen *gdk_screen;
+  int screen_number;
 
-  g_return_if_fail (manager->priv->stage == NULL);
+  display = gdk_display_get_default ();
+  screen_number = meta_screen_get_screen_number (screen);
+  gdk_screen = gdk_display_get_screen (display, screen_number);
 
-  manager->priv->stage = g_object_ref (stage);
-
-  stage_xwindow = clutter_x11_get_stage_window (stage);
-
-  /* This is a pretty ugly way to get the GdkScreen for the stage; it
-   *  will normally go through the foreign_new() case with a
-   *  round-trip to the X server, it might be nicer to pass the screen
-   *  in in some way. (The Clutter/Muffin combo is currently incapable
-   *  of multi-screen operation, so alternatively we could just assume
-   *  that clutter_x11_get_default_screen() gives us the right
-   *  screen.) We assume, in any case, that we are using the default
-   *  GDK display.
-   */
-  display = gdk_display_get_default();
-  stage_window = gdk_x11_window_lookup_for_display (display, stage_xwindow);
-  if (stage_window)
-    g_object_ref (stage_window);
-  else
-    stage_window = gdk_x11_window_foreign_new_for_display (display, stage_xwindow);
-
-  screen = gdk_window_get_screen (stage_window);
-
-  g_object_unref (stage_window);
-
-  gint scale = 1;
-
-  g_object_get (cinnamon_global_get (),
-                "ui_scale", &scale,
-                NULL);
-
-  na_tray_manager_set_scale (manager->priv->na_manager, scale);
-
-  na_tray_manager_manage_screen (manager->priv->na_manager, screen);
+  na_tray_manager_manage_screen (manager->priv->na_manager, gdk_screen);
 
   g_signal_connect (theme_widget, "style-changed",
-                    G_CALLBACK (cinnamon_tray_manager_style_changed), manager);
-  cinnamon_tray_manager_style_changed (theme_widget, manager);
+                    G_CALLBACK (shell_tray_manager_style_changed), manager);
+  shell_tray_manager_style_changed (theme_widget, manager);
 }
 
 static void
-cinnamon_tray_manager_child_on_realize (GtkWidget             *widget,
-                                     CinnamonTrayManagerChild *child)
+shell_tray_manager_child_on_realize (GtkWidget             *widget,
+                                     ShellTrayManagerChild *child)
 {
   /* If the tray child is using an RGBA colormap (and so we have real
    * transparency), we don't need to worry about the background. If
@@ -299,18 +264,18 @@ cinnamon_tray_manager_child_on_realize (GtkWidget             *widget,
 
 static void
 on_plug_added (GtkSocket        *socket,
-               CinnamonTrayManager *manager)
+               ShellTrayManager *manager)
 {
-  CinnamonTrayManagerChild *child;
+  ShellTrayManagerChild *child;
 
   g_signal_handlers_disconnect_by_func (socket, on_plug_added, manager);
 
   child = g_hash_table_lookup (manager->priv->icons, socket);
 
-  child->actor = cinnamon_tray_icon_new (CINNAMON_EMBEDDED_WINDOW (child->window));
+  child->actor = shell_tray_icon_new (SHELL_EMBEDDED_WINDOW (child->window));
   g_object_ref_sink (child->actor);
 
-  g_signal_emit (manager, cinnamon_tray_manager_signals[TRAY_ICON_ADDED], 0,
+  g_signal_emit (manager, shell_tray_manager_signals[TRAY_ICON_ADDED], 0,
                  child->actor);
 }
 
@@ -318,9 +283,9 @@ static void
 na_tray_icon_added (NaTrayManager *na_manager, GtkWidget *socket,
                     gpointer user_data)
 {
-  CinnamonTrayManager *manager = user_data;
+  ShellTrayManager *manager = user_data;
   GtkWidget *win;
-  CinnamonTrayManagerChild *child;
+  ShellTrayManagerChild *child;
 
   /* We don't need the NaTrayIcon to be composited on the window we
    * put it in: the window is the same size as the tray icon
@@ -330,20 +295,20 @@ na_tray_icon_added (NaTrayManager *na_manager, GtkWidget *socket,
    */
   na_tray_child_set_composited (NA_TRAY_CHILD (socket), FALSE);
 
-  win = cinnamon_embedded_window_new (manager->priv->stage);
+  win = shell_embedded_window_new ();
   gtk_container_add (GTK_CONTAINER (win), socket);
 
   /* The visual of the socket matches that of its contents; make
    * the window we put it in match that as well */
   gtk_widget_set_visual (win, gtk_widget_get_visual (socket));
 
-  child = g_slice_new0 (CinnamonTrayManagerChild);
+  child = g_slice_new0 (ShellTrayManagerChild);
   child->manager = manager;
   child->window = win;
   child->socket = socket;
 
   g_signal_connect (win, "realize",
-                    G_CALLBACK (cinnamon_tray_manager_child_on_realize), child);
+                    G_CALLBACK (shell_tray_manager_child_on_realize), child);
 
   gtk_widget_show_all (win);
 
@@ -353,30 +318,11 @@ na_tray_icon_added (NaTrayManager *na_manager, GtkWidget *socket,
 }
 
 static void
-cinnamon_tray_manager_child_redisplay (gpointer socket_pointer, gpointer child_pointer, gpointer user_data)
-{
-  CinnamonTrayManagerChild *child = child_pointer;
-  
-  g_return_if_fail(child != NULL);
-  
-  if (child->actor && CLUTTER_IS_ACTOR(child->actor)) {
-    clutter_actor_destroy(child->actor);
-  }
-  
-  on_plug_added(socket_pointer, child->manager);
-}
-
-void cinnamon_tray_manager_redisplay (CinnamonTrayManager *manager)
-{
-  g_hash_table_foreach(manager->priv->icons, cinnamon_tray_manager_child_redisplay, manager);
-}
-
-static void
 na_tray_icon_removed (NaTrayManager *na_manager, GtkWidget *socket,
                       gpointer user_data)
 {
-  CinnamonTrayManager *manager = user_data;
-  CinnamonTrayManagerChild *child;
+  ShellTrayManager *manager = user_data;
+  ShellTrayManagerChild *child;
 
   child = g_hash_table_lookup (manager->priv->icons, socket);
   g_return_if_fail (child != NULL);
@@ -387,7 +333,7 @@ na_tray_icon_removed (NaTrayManager *na_manager, GtkWidget *socket,
          that is, if embedding did not fail and we got a plug-added
       */
       g_signal_emit (manager,
-                     cinnamon_tray_manager_signals[TRAY_ICON_REMOVED], 0,
+                     shell_tray_manager_signals[TRAY_ICON_REMOVED], 0,
                      child->actor);
     }
   g_hash_table_remove (manager->priv->icons, socket);

@@ -1,35 +1,35 @@
 /* -*- mode: C; c-file-style: "gnu"; indent-tabs-mode: nil; -*- */
-#ifndef __CINNAMON_GTK_EMBED_H__
-#define __CINNAMON_GTK_EMBED_H__
+#ifndef __SHELL_GTK_EMBED_H__
+#define __SHELL_GTK_EMBED_H__
 
-#include <clutter/x11/clutter-x11.h>
+#include <clutter/clutter.h>
 
-#include "cinnamon-embedded-window.h"
+#include "shell-embedded-window.h"
 
-#define CINNAMON_TYPE_GTK_EMBED                 (cinnamon_gtk_embed_get_type ())
-#define CINNAMON_GTK_EMBED(obj)                 (G_TYPE_CHECK_INSTANCE_CAST ((obj), CINNAMON_TYPE_GTK_EMBED, CinnamonGtkEmbed))
-#define CINNAMON_GTK_EMBED_CLASS(klass)         (G_TYPE_CHECK_CLASS_CAST ((klass), CINNAMON_TYPE_GTK_EMBED, CinnamonGtkEmbedClass))
-#define CINNAMON_IS_GTK_EMBED(obj)              (G_TYPE_CHECK_INSTANCE_TYPE ((obj), CINNAMON_TYPE_GTK_EMBED))
-#define CINNAMON_IS_GTK_EMBED_CLASS(klass)      (G_TYPE_CHECK_CLASS_TYPE ((klass), CINNAMON_TYPE_GTK_EMBED))
-#define CINNAMON_GTK_EMBED_GET_CLASS(obj)       (G_TYPE_INSTANCE_GET_CLASS ((obj), CINNAMON_TYPE_GTK_EMBED, CinnamonGtkEmbedClass))
+#define SHELL_TYPE_GTK_EMBED                 (shell_gtk_embed_get_type ())
+#define SHELL_GTK_EMBED(obj)                 (G_TYPE_CHECK_INSTANCE_CAST ((obj), SHELL_TYPE_GTK_EMBED, ShellGtkEmbed))
+#define SHELL_GTK_EMBED_CLASS(klass)         (G_TYPE_CHECK_CLASS_CAST ((klass), SHELL_TYPE_GTK_EMBED, ShellGtkEmbedClass))
+#define SHELL_IS_GTK_EMBED(obj)              (G_TYPE_CHECK_INSTANCE_TYPE ((obj), SHELL_TYPE_GTK_EMBED))
+#define SHELL_IS_GTK_EMBED_CLASS(klass)      (G_TYPE_CHECK_CLASS_TYPE ((klass), SHELL_TYPE_GTK_EMBED))
+#define SHELL_GTK_EMBED_GET_CLASS(obj)       (G_TYPE_INSTANCE_GET_CLASS ((obj), SHELL_TYPE_GTK_EMBED, ShellGtkEmbedClass))
 
-typedef struct _CinnamonGtkEmbed        CinnamonGtkEmbed;
-typedef struct _CinnamonGtkEmbedClass   CinnamonGtkEmbedClass;
-typedef struct _CinnamonGtkEmbedPrivate CinnamonGtkEmbedPrivate;
+typedef struct _ShellGtkEmbed        ShellGtkEmbed;
+typedef struct _ShellGtkEmbedClass   ShellGtkEmbedClass;
+typedef struct _ShellGtkEmbedPrivate ShellGtkEmbedPrivate;
 
-struct _CinnamonGtkEmbed
+struct _ShellGtkEmbed
 {
-    ClutterX11TexturePixmap parent;
+    ClutterClone parent;
 
-    CinnamonGtkEmbedPrivate *priv;
+    ShellGtkEmbedPrivate *priv;
 };
 
-struct _CinnamonGtkEmbedClass
+struct _ShellGtkEmbedClass
 {
-    ClutterX11TexturePixmapClass parent_class;
+    ClutterCloneClass parent_class;
 };
 
-GType cinnamon_gtk_embed_get_type (void) G_GNUC_CONST;
-ClutterActor *cinnamon_gtk_embed_new (CinnamonEmbeddedWindow *window);
+GType shell_gtk_embed_get_type (void) G_GNUC_CONST;
+ClutterActor *shell_gtk_embed_new (ShellEmbeddedWindow *window);
 
-#endif /* __CINNAMON_GTK_EMBED_H__ */
+#endif /* __SHELL_GTK_EMBED_H__ */
