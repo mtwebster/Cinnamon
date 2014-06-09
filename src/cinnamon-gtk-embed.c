@@ -2,8 +2,8 @@
 
 #include "config.h"
 
-#include "shell-embedded-window-private.h"
-#include "shell-global.h"
+#include "cinnamon-embedded-window-private.h"
+#include "cinnamon-global.h"
 
 #include <gdk/gdkx.h>
 #include <meta/display.h>
@@ -15,9 +15,9 @@ enum {
    PROP_WINDOW
 };
 
-struct _ShellGtkEmbedPrivate
+struct _CinnamonGtkEmbedPrivate
 {
-  ShellEmbeddedWindow *window;
+  CinnamonEmbeddedWindow *window;
 
   ClutterActor *window_actor;
   guint window_actor_destroyed_handler;
@@ -25,22 +25,22 @@ struct _ShellGtkEmbedPrivate
   guint window_created_handler;
 };
 
-G_DEFINE_TYPE (ShellGtkEmbed, shell_gtk_embed, CLUTTER_TYPE_CLONE);
+G_DEFINE_TYPE (CinnamonGtkEmbed, cinnamon_gtk_embed, CLUTTER_TYPE_CLONE);
 
-static void shell_gtk_embed_set_window (ShellGtkEmbed       *embed,
-                                        ShellEmbeddedWindow *window);
+static void cinnamon_gtk_embed_set_window (CinnamonGtkEmbed       *embed,
+                                        CinnamonEmbeddedWindow *window);
 
 static void
-shell_gtk_embed_on_window_destroy (GtkWidget     *object,
-                                   ShellGtkEmbed *embed)
+cinnamon_gtk_embed_on_window_destroy (GtkWidget     *object,
+                                   CinnamonGtkEmbed *embed)
 {
-  shell_gtk_embed_set_window (embed, NULL);
+  cinnamon_gtk_embed_set_window (embed, NULL);
 }
 
 static void
-shell_gtk_embed_remove_window_actor (ShellGtkEmbed *embed)
+cinnamon_gtk_embed_remove_window_actor (CinnamonGtkEmbed *embed)
 {
-  ShellGtkEmbedPrivate *priv = embed->priv;
+  CinnamonGtkEmbedPrivate *priv = embed->priv;
 
   if (priv->window_actor)
     {
@@ -56,11 +56,11 @@ shell_gtk_embed_remove_window_actor (ShellGtkEmbed *embed)
 }
 
 static void
-shell_gtk_embed_window_created_cb (MetaDisplay   *display,
+cinnamon_gtk_embed_window_created_cb (MetaDisplay   *display,
                                    MetaWindow    *window,
-                                   ShellGtkEmbed *embed)
+                                   CinnamonGtkEmbed *embed)
 {
-  ShellGtkEmbedPrivate *priv = embed->priv;
+  CinnamonGtkEmbedPrivate *priv = embed->priv;
   Window xwindow = meta_window_get_xwindow (window);
   GdkWindow *gdk_window = gtk_widget_get_window (GTK_WIDGET (priv->window));
 
@@ -68,8 +68,8 @@ shell_gtk_embed_window_created_cb (MetaDisplay   *display,
     {
       ClutterActor *window_actor =
         CLUTTER_ACTOR (meta_window_get_compositor_private (window));
-      MetaDisplay *display = shell_global_get_display (shell_global_get ());
-      GCallback remove_cb = G_CALLBACK (shell_gtk_embed_remove_window_actor);
+      MetaDisplay *display = cinnamon_global_get_display (cinnamon_global_get ());
+      GCallback remove_cb = G_CALLBACK (cinnamon_gtk_embed_remove_window_actor);
       cairo_region_t *empty_region;
 
       clutter_clone_set_source (CLUTTER_CLONE (embed), window_actor);
@@ -120,10 +120,10 @@ shell_gtk_embed_window_created_cb (MetaDisplay   *display,
 }
 
 static void
-shell_gtk_embed_set_window (ShellGtkEmbed       *embed,
-                            ShellEmbeddedWindow *window)
+cinnamon_gtk_embed_set_window (CinnamonGtkEmbed       *embed,
+                            CinnamonEmbeddedWindow *window)
 {
-  MetaDisplay *display = shell_global_get_display (shell_global_get ());
+  MetaDisplay *display = cinnamon_global_get_display (cinnamon_global_get ());
 
   if (embed->priv->window)
     {
@@ -134,14 +134,14 @@ shell_gtk_embed_set_window (ShellGtkEmbed       *embed,
           embed->priv->window_created_handler = 0;
         }
 
-      shell_gtk_embed_remove_window_actor (embed);
+      cinnamon_gtk_embed_remove_window_actor (embed);
 
-      _shell_embedded_window_set_actor (embed->priv->window, NULL);
+      _cinnamon_embedded_window_set_actor (embed->priv->window, NULL);
 
       g_object_unref (embed->priv->window);
 
       g_signal_handlers_disconnect_by_func (embed->priv->window,
-                                            (gpointer)shell_gtk_embed_on_window_destroy,
+                                            (gpointer)cinnamon_gtk_embed_on_window_destroy,
                                             embed);
     }
 
@@ -151,17 +151,17 @@ shell_gtk_embed_set_window (ShellGtkEmbed       *embed,
     {
       g_object_ref (embed->priv->window);
 
-      _shell_embedded_window_set_actor (embed->priv->window, embed);
+      _cinnamon_embedded_window_set_actor (embed->priv->window, embed);
 
       g_signal_connect (embed->priv->window, "destroy",
-                        G_CALLBACK (shell_gtk_embed_on_window_destroy), embed);
+                        G_CALLBACK (cinnamon_gtk_embed_on_window_destroy), embed);
 
       /* Listen for new windows so we can detect when Mutter has
          created a MutterWindow for this window */
       embed->priv->window_created_handler =
         g_signal_connect (display,
                           "window-created",
-                          G_CALLBACK (shell_gtk_embed_window_created_cb),
+                          G_CALLBACK (cinnamon_gtk_embed_window_created_cb),
                           embed);
     }
 
@@ -169,17 +169,17 @@ shell_gtk_embed_set_window (ShellGtkEmbed       *embed,
 }
 
 static void
-shell_gtk_embed_set_property (GObject         *object,
+cinnamon_gtk_embed_set_property (GObject         *object,
                               guint            prop_id,
                               const GValue    *value,
                               GParamSpec      *pspec)
 {
-  ShellGtkEmbed *embed = SHELL_GTK_EMBED (object);
+  CinnamonGtkEmbed *embed = CINNAMON_GTK_EMBED (object);
 
   switch (prop_id)
     {
     case PROP_WINDOW:
-      shell_gtk_embed_set_window (embed, (ShellEmbeddedWindow *)g_value_get_object (value));
+      cinnamon_gtk_embed_set_window (embed, (CinnamonEmbeddedWindow *)g_value_get_object (value));
       break;
 
     default:
@@ -189,12 +189,12 @@ shell_gtk_embed_set_property (GObject         *object,
 }
 
 static void
-shell_gtk_embed_get_property (GObject         *object,
+cinnamon_gtk_embed_get_property (GObject         *object,
                               guint            prop_id,
                               GValue          *value,
                               GParamSpec      *pspec)
 {
-  ShellGtkEmbed *embed = SHELL_GTK_EMBED (object);
+  CinnamonGtkEmbed *embed = CINNAMON_GTK_EMBED (object);
 
   switch (prop_id)
     {
@@ -209,12 +209,12 @@ shell_gtk_embed_get_property (GObject         *object,
 }
 
 static void
-shell_gtk_embed_get_preferred_width (ClutterActor *actor,
+cinnamon_gtk_embed_get_preferred_width (ClutterActor *actor,
                                      float         for_height,
                                      float        *min_width_p,
                                      float        *natural_width_p)
 {
-  ShellGtkEmbed *embed = SHELL_GTK_EMBED (actor);
+  CinnamonGtkEmbed *embed = CINNAMON_GTK_EMBED (actor);
 
   if (embed->priv->window
       && gtk_widget_get_visible (GTK_WIDGET (embed->priv->window)))
@@ -230,12 +230,12 @@ shell_gtk_embed_get_preferred_width (ClutterActor *actor,
 }
 
 static void
-shell_gtk_embed_get_preferred_height (ClutterActor *actor,
+cinnamon_gtk_embed_get_preferred_height (ClutterActor *actor,
                                       float         for_width,
                                       float        *min_height_p,
                                       float        *natural_height_p)
 {
-  ShellGtkEmbed *embed = SHELL_GTK_EMBED (actor);
+  CinnamonGtkEmbed *embed = CINNAMON_GTK_EMBED (actor);
 
   if (embed->priv->window
       && gtk_widget_get_visible (GTK_WIDGET (embed->priv->window)))
@@ -251,14 +251,14 @@ shell_gtk_embed_get_preferred_height (ClutterActor *actor,
 }
 
 static void
-shell_gtk_embed_allocate (ClutterActor          *actor,
+cinnamon_gtk_embed_allocate (ClutterActor          *actor,
                           const ClutterActorBox *box,
                           ClutterAllocationFlags flags)
 {
-  ShellGtkEmbed *embed = SHELL_GTK_EMBED (actor);
+  CinnamonGtkEmbed *embed = CINNAMON_GTK_EMBED (actor);
   float wx = 0.0, wy = 0.0, x, y, ax, ay;
 
-  CLUTTER_ACTOR_CLASS (shell_gtk_embed_parent_class)->
+  CLUTTER_ACTOR_CLASS (cinnamon_gtk_embed_parent_class)->
     allocate (actor, box, flags);
 
   /* Find the actor's new coordinates in terms of the stage (which is
@@ -275,85 +275,85 @@ shell_gtk_embed_allocate (ClutterActor          *actor,
       actor = clutter_actor_get_parent (actor);
     }
 
-  _shell_embedded_window_allocate (embed->priv->window,
+  _cinnamon_embedded_window_allocate (embed->priv->window,
                                    (int)(0.5 + wx), (int)(0.5 + wy),
                                    box->x2 - box->x1,
                                    box->y2 - box->y1);
 }
 
 static void
-shell_gtk_embed_map (ClutterActor *actor)
+cinnamon_gtk_embed_map (ClutterActor *actor)
 {
-  ShellGtkEmbed *embed = SHELL_GTK_EMBED (actor);
+  CinnamonGtkEmbed *embed = CINNAMON_GTK_EMBED (actor);
 
-  _shell_embedded_window_map (embed->priv->window);
+  _cinnamon_embedded_window_map (embed->priv->window);
 
-  CLUTTER_ACTOR_CLASS (shell_gtk_embed_parent_class)->map (actor);
+  CLUTTER_ACTOR_CLASS (cinnamon_gtk_embed_parent_class)->map (actor);
 }
 
 static void
-shell_gtk_embed_unmap (ClutterActor *actor)
+cinnamon_gtk_embed_unmap (ClutterActor *actor)
 {
-  ShellGtkEmbed *embed = SHELL_GTK_EMBED (actor);
+  CinnamonGtkEmbed *embed = CINNAMON_GTK_EMBED (actor);
 
-  _shell_embedded_window_unmap (embed->priv->window);
+  _cinnamon_embedded_window_unmap (embed->priv->window);
 
-  CLUTTER_ACTOR_CLASS (shell_gtk_embed_parent_class)->unmap (actor);
+  CLUTTER_ACTOR_CLASS (cinnamon_gtk_embed_parent_class)->unmap (actor);
 }
 
 static void
-shell_gtk_embed_dispose (GObject *object)
+cinnamon_gtk_embed_dispose (GObject *object)
 {
-  ShellGtkEmbed *embed = SHELL_GTK_EMBED (object);
+  CinnamonGtkEmbed *embed = CINNAMON_GTK_EMBED (object);
 
-  G_OBJECT_CLASS (shell_gtk_embed_parent_class)->dispose (object);
+  G_OBJECT_CLASS (cinnamon_gtk_embed_parent_class)->dispose (object);
 
-  shell_gtk_embed_set_window (embed, NULL);
+  cinnamon_gtk_embed_set_window (embed, NULL);
 }
 
 static void
-shell_gtk_embed_class_init (ShellGtkEmbedClass *klass)
+cinnamon_gtk_embed_class_init (CinnamonGtkEmbedClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   ClutterActorClass *actor_class = CLUTTER_ACTOR_CLASS (klass);
 
-  g_type_class_add_private (klass, sizeof (ShellGtkEmbedPrivate));
+  g_type_class_add_private (klass, sizeof (CinnamonGtkEmbedPrivate));
 
-  object_class->get_property = shell_gtk_embed_get_property;
-  object_class->set_property = shell_gtk_embed_set_property;
-  object_class->dispose      = shell_gtk_embed_dispose;
+  object_class->get_property = cinnamon_gtk_embed_get_property;
+  object_class->set_property = cinnamon_gtk_embed_set_property;
+  object_class->dispose      = cinnamon_gtk_embed_dispose;
 
-  actor_class->get_preferred_width = shell_gtk_embed_get_preferred_width;
-  actor_class->get_preferred_height = shell_gtk_embed_get_preferred_height;
-  actor_class->allocate = shell_gtk_embed_allocate;
-  actor_class->map = shell_gtk_embed_map;
-  actor_class->unmap = shell_gtk_embed_unmap;
+  actor_class->get_preferred_width = cinnamon_gtk_embed_get_preferred_width;
+  actor_class->get_preferred_height = cinnamon_gtk_embed_get_preferred_height;
+  actor_class->allocate = cinnamon_gtk_embed_allocate;
+  actor_class->map = cinnamon_gtk_embed_map;
+  actor_class->unmap = cinnamon_gtk_embed_unmap;
 
   g_object_class_install_property (object_class,
                                    PROP_WINDOW,
                                    g_param_spec_object ("window",
                                                         "Window",
-                                                        "ShellEmbeddedWindow to embed",
-                                                        SHELL_TYPE_EMBEDDED_WINDOW,
+                                                        "CinnamonEmbeddedWindow to embed",
+                                                        CINNAMON_TYPE_EMBEDDED_WINDOW,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 }
 
 static void
-shell_gtk_embed_init (ShellGtkEmbed *embed)
+cinnamon_gtk_embed_init (CinnamonGtkEmbed *embed)
 {
-  embed->priv = G_TYPE_INSTANCE_GET_PRIVATE (embed, SHELL_TYPE_GTK_EMBED,
-                                             ShellGtkEmbedPrivate);
+  embed->priv = G_TYPE_INSTANCE_GET_PRIVATE (embed, CINNAMON_TYPE_GTK_EMBED,
+                                             CinnamonGtkEmbedPrivate);
 }
 
 /*
  * Public API
  */
 ClutterActor *
-shell_gtk_embed_new (ShellEmbeddedWindow *window)
+cinnamon_gtk_embed_new (CinnamonEmbeddedWindow *window)
 {
-  g_return_val_if_fail (SHELL_IS_EMBEDDED_WINDOW (window), NULL);
+  g_return_val_if_fail (CINNAMON_IS_EMBEDDED_WINDOW (window), NULL);
 
-  return g_object_new (SHELL_TYPE_GTK_EMBED,
+  return g_object_new (CINNAMON_TYPE_GTK_EMBED,
                        "window", window,
                        NULL);
 }

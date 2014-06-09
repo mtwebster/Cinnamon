@@ -5,16 +5,16 @@
 #include <gdk/gdkx.h>
 #include <clutter/x11/clutter-x11.h>
 
-#include "shell-embedded-window-private.h"
+#include "cinnamon-embedded-window-private.h"
 
 /* This type is a subclass of GtkWindow that ties the window to a
- * ShellGtkEmbed; the resizing logic is bound to the clutter logic.
+ * CinnamonGtkEmbed; the resizing logic is bound to the clutter logic.
  *
  * The typical usage we might expect is
  *
- *  - ShellEmbeddedWindow is created and filled with content
- *  - ShellEmbeddedWindow is shown with gtk_widget_show_all()
- *  - ShellGtkEmbed is created for the ShellEmbeddedWindow
+ *  - CinnamonEmbeddedWindow is created and filled with content
+ *  - CinnamonEmbeddedWindow is shown with gtk_widget_show_all()
+ *  - CinnamonGtkEmbed is created for the CinnamonEmbeddedWindow
  *  - actor is added to a stage
  *
  * The way it works is that the GtkWindow is mapped if and only if both:
@@ -23,14 +23,14 @@
  * - Actor is mapped [actor and all parents visible, actor in stage]
  */
 
-G_DEFINE_TYPE (ShellEmbeddedWindow, shell_embedded_window, GTK_TYPE_WINDOW);
+G_DEFINE_TYPE (CinnamonEmbeddedWindow, cinnamon_embedded_window, GTK_TYPE_WINDOW);
 
 enum {
    PROP_0
 };
 
-struct _ShellEmbeddedWindowPrivate {
-  ShellGtkEmbed *actor;
+struct _CinnamonEmbeddedWindowPrivate {
+  CinnamonGtkEmbed *actor;
 
   GdkRectangle position;
 };
@@ -44,9 +44,9 @@ struct _ShellEmbeddedWindowPrivate {
  * GtkWidget into a Clutter stage.
  */
 static void
-shell_embedded_window_show (GtkWidget *widget)
+cinnamon_embedded_window_show (GtkWidget *widget)
 {
-  ShellEmbeddedWindow *window = SHELL_EMBEDDED_WINDOW (widget);
+  CinnamonEmbeddedWindow *window = CINNAMON_EMBEDDED_WINDOW (widget);
   GtkWidgetClass *widget_class;
 
   /* Skip GtkWindow, but run the default GtkWidget handling which
@@ -65,18 +65,18 @@ shell_embedded_window_show (GtkWidget *widget)
 }
 
 static void
-shell_embedded_window_hide (GtkWidget *widget)
+cinnamon_embedded_window_hide (GtkWidget *widget)
 {
-  ShellEmbeddedWindow *window = SHELL_EMBEDDED_WINDOW (widget);
+  CinnamonEmbeddedWindow *window = CINNAMON_EMBEDDED_WINDOW (widget);
 
   if (window->priv->actor)
     clutter_actor_queue_relayout (CLUTTER_ACTOR (window->priv->actor));
 
-  GTK_WIDGET_CLASS (shell_embedded_window_parent_class)->hide (widget);
+  GTK_WIDGET_CLASS (cinnamon_embedded_window_parent_class)->hide (widget);
 }
 
 static gboolean
-shell_embedded_window_configure_event (GtkWidget         *widget,
+cinnamon_embedded_window_configure_event (GtkWidget         *widget,
                                        GdkEventConfigure *event)
 {
   /* Normally a configure event coming back from X triggers the
@@ -87,9 +87,9 @@ shell_embedded_window_configure_event (GtkWidget         *widget,
 }
 
 static void
-shell_embedded_window_check_resize (GtkContainer *container)
+cinnamon_embedded_window_check_resize (GtkContainer *container)
 {
-  ShellEmbeddedWindow *window = SHELL_EMBEDDED_WINDOW (container);
+  CinnamonEmbeddedWindow *window = CINNAMON_EMBEDDED_WINDOW (container);
 
   /* Check resize is called when a resize is queued on something
    * inside the GtkWindow; we need to make sure that in response
@@ -102,14 +102,14 @@ shell_embedded_window_check_resize (GtkContainer *container)
 }
 
 static GObject *
-shell_embedded_window_constructor (GType                  gtype,
+cinnamon_embedded_window_constructor (GType                  gtype,
                                    guint                  n_properties,
                                    GObjectConstructParam *properties)
 {
   GObject *object;
   GObjectClass *parent_class;
 
-  parent_class = G_OBJECT_CLASS (shell_embedded_window_parent_class);
+  parent_class = G_OBJECT_CLASS (cinnamon_embedded_window_parent_class);
   object = parent_class->constructor (gtype, n_properties, properties);
 
   /* Setting the resize mode to immediate means that calling queue_resize()
@@ -128,40 +128,40 @@ shell_embedded_window_constructor (GType                  gtype,
 }
 
 static void
-shell_embedded_window_class_init (ShellEmbeddedWindowClass *klass)
+cinnamon_embedded_window_class_init (CinnamonEmbeddedWindowClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (klass);
   GtkContainerClass *container_class = GTK_CONTAINER_CLASS (klass);
 
-  g_type_class_add_private (klass, sizeof (ShellEmbeddedWindowPrivate));
+  g_type_class_add_private (klass, sizeof (CinnamonEmbeddedWindowPrivate));
 
-  object_class->constructor     = shell_embedded_window_constructor;
+  object_class->constructor     = cinnamon_embedded_window_constructor;
 
-  widget_class->show            = shell_embedded_window_show;
-  widget_class->hide            = shell_embedded_window_hide;
-  widget_class->configure_event = shell_embedded_window_configure_event;
+  widget_class->show            = cinnamon_embedded_window_show;
+  widget_class->hide            = cinnamon_embedded_window_hide;
+  widget_class->configure_event = cinnamon_embedded_window_configure_event;
 
-  container_class->check_resize    = shell_embedded_window_check_resize;
+  container_class->check_resize    = cinnamon_embedded_window_check_resize;
 }
 
 static void
-shell_embedded_window_init (ShellEmbeddedWindow *window)
+cinnamon_embedded_window_init (CinnamonEmbeddedWindow *window)
 {
-  window->priv = G_TYPE_INSTANCE_GET_PRIVATE (window, SHELL_TYPE_EMBEDDED_WINDOW,
-                                              ShellEmbeddedWindowPrivate);
+  window->priv = G_TYPE_INSTANCE_GET_PRIVATE (window, CINNAMON_TYPE_EMBEDDED_WINDOW,
+                                              CinnamonEmbeddedWindowPrivate);
 }
 
 /*
- * Private routines called by ShellGtkEmbed
+ * Private routines called by CinnamonGtkEmbed
  */
 
 void
-_shell_embedded_window_set_actor (ShellEmbeddedWindow  *window,
-                                  ShellGtkEmbed        *actor)
+_cinnamon_embedded_window_set_actor (CinnamonEmbeddedWindow  *window,
+                                  CinnamonGtkEmbed        *actor)
 
 {
-  g_return_if_fail (SHELL_IS_EMBEDDED_WINDOW (window));
+  g_return_if_fail (CINNAMON_IS_EMBEDDED_WINDOW (window));
 
   window->priv->actor = actor;
 
@@ -172,7 +172,7 @@ _shell_embedded_window_set_actor (ShellEmbeddedWindow  *window,
 }
 
 void
-_shell_embedded_window_allocate (ShellEmbeddedWindow *window,
+_cinnamon_embedded_window_allocate (CinnamonEmbeddedWindow *window,
                                  int                  x,
                                  int                  y,
                                  int                  width,
@@ -180,7 +180,7 @@ _shell_embedded_window_allocate (ShellEmbeddedWindow *window,
 {
   GtkAllocation allocation;
 
-  g_return_if_fail (SHELL_IS_EMBEDDED_WINDOW (window));
+  g_return_if_fail (CINNAMON_IS_EMBEDDED_WINDOW (window));
 
   if (window->priv->position.x == x &&
       window->priv->position.y == y &&
@@ -206,18 +206,18 @@ _shell_embedded_window_allocate (ShellEmbeddedWindow *window,
 }
 
 void
-_shell_embedded_window_map (ShellEmbeddedWindow *window)
+_cinnamon_embedded_window_map (CinnamonEmbeddedWindow *window)
 {
-  g_return_if_fail (SHELL_IS_EMBEDDED_WINDOW (window));
+  g_return_if_fail (CINNAMON_IS_EMBEDDED_WINDOW (window));
 
   if (gtk_widget_get_visible (GTK_WIDGET (window)))
     gtk_widget_map (GTK_WIDGET (window));
 }
 
 void
-_shell_embedded_window_unmap (ShellEmbeddedWindow *window)
+_cinnamon_embedded_window_unmap (CinnamonEmbeddedWindow *window)
 {
-  g_return_if_fail (SHELL_IS_EMBEDDED_WINDOW (window));
+  g_return_if_fail (CINNAMON_IS_EMBEDDED_WINDOW (window));
 
   gtk_widget_unmap (GTK_WIDGET (window));
 }
@@ -226,8 +226,8 @@ _shell_embedded_window_unmap (ShellEmbeddedWindow *window)
  * Public API
  */
 GtkWidget *
-shell_embedded_window_new (void)
+cinnamon_embedded_window_new (void)
 {
-  return g_object_new (SHELL_TYPE_EMBEDDED_WINDOW,
+  return g_object_new (CINNAMON_TYPE_EMBEDDED_WINDOW,
                        NULL);
 }

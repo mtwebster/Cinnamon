@@ -2,9 +2,9 @@
 
 #include "config.h"
 
-#include "shell-tray-icon.h"
-#include "shell-gtk-embed.h"
-#include "shell-window-tracker.h"
+#include "cinnamon-tray-icon.h"
+#include "cinnamon-gtk-embed.h"
+#include "cinnamon-window-tracker.h"
 #include "tray/na-tray-child.h"
 #include <gdk/gdkx.h>
 #include <X11/Xatom.h>
@@ -18,7 +18,7 @@ enum {
    PROP_WM_CLASS
 };
 
-struct _ShellTrayIconPrivate
+struct _CinnamonTrayIconPrivate
 {
   NaTrayChild *socket;
 
@@ -26,25 +26,25 @@ struct _ShellTrayIconPrivate
   char *title, *wm_class;
 };
 
-G_DEFINE_TYPE (ShellTrayIcon, shell_tray_icon, SHELL_TYPE_GTK_EMBED);
+G_DEFINE_TYPE (CinnamonTrayIcon, cinnamon_tray_icon, CINNAMON_TYPE_GTK_EMBED);
 
 static void
-shell_tray_icon_finalize (GObject *object)
+cinnamon_tray_icon_finalize (GObject *object)
 {
-  ShellTrayIcon *icon = SHELL_TRAY_ICON (object);
+  CinnamonTrayIcon *icon = CINNAMON_TRAY_ICON (object);
 
   g_free (icon->priv->title);
   g_free (icon->priv->wm_class);
 
-  G_OBJECT_CLASS (shell_tray_icon_parent_class)->finalize (object);
+  G_OBJECT_CLASS (cinnamon_tray_icon_parent_class)->finalize (object);
 }
 
 static void
-shell_tray_icon_constructed (GObject *object)
+cinnamon_tray_icon_constructed (GObject *object)
 {
   GdkWindow *icon_app_window;
-  ShellTrayIcon *icon = SHELL_TRAY_ICON (object);
-  ShellEmbeddedWindow *window;
+  CinnamonTrayIcon *icon = CINNAMON_TRAY_ICON (object);
+  CinnamonEmbeddedWindow *window;
   GdkDisplay *display;
   Window plug_xid;
   Atom _NET_WM_PID, type;
@@ -52,7 +52,7 @@ shell_tray_icon_constructed (GObject *object)
   gulong nitems, bytes_after, *val = NULL;
 
   /* We do all this now rather than computing it on the fly later,
-   * because the shell may want to see their values from a
+   * because the cinnamon may want to see their values from a
    * tray-icon-removed signal handler, at which point the plug has
    * already been removed from the socket.
    */
@@ -86,12 +86,12 @@ shell_tray_icon_constructed (GObject *object)
 }
 
 static void
-shell_tray_icon_get_property (GObject         *object,
+cinnamon_tray_icon_get_property (GObject         *object,
                               guint            prop_id,
                               GValue          *value,
                               GParamSpec      *pspec)
 {
-  ShellTrayIcon *icon = SHELL_TRAY_ICON (object);
+  CinnamonTrayIcon *icon = CINNAMON_TRAY_ICON (object);
 
   switch (prop_id)
     {
@@ -114,15 +114,15 @@ shell_tray_icon_get_property (GObject         *object,
 }
 
 static void
-shell_tray_icon_class_init (ShellTrayIconClass *klass)
+cinnamon_tray_icon_class_init (CinnamonTrayIconClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-  g_type_class_add_private (klass, sizeof (ShellTrayIconPrivate));
+  g_type_class_add_private (klass, sizeof (CinnamonTrayIconPrivate));
 
-  object_class->get_property = shell_tray_icon_get_property;
-  object_class->constructed  = shell_tray_icon_constructed;
-  object_class->finalize     = shell_tray_icon_finalize;
+  object_class->get_property = cinnamon_tray_icon_get_property;
+  object_class->constructed  = cinnamon_tray_icon_constructed;
+  object_class->finalize     = cinnamon_tray_icon_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_PID,
@@ -148,28 +148,28 @@ shell_tray_icon_class_init (ShellTrayIconClass *klass)
 }
 
 static void
-shell_tray_icon_init (ShellTrayIcon *icon)
+cinnamon_tray_icon_init (CinnamonTrayIcon *icon)
 {
-  icon->priv = G_TYPE_INSTANCE_GET_PRIVATE (icon, SHELL_TYPE_TRAY_ICON,
-                                            ShellTrayIconPrivate);
+  icon->priv = G_TYPE_INSTANCE_GET_PRIVATE (icon, CINNAMON_TYPE_TRAY_ICON,
+                                            CinnamonTrayIconPrivate);
 }
 
 /*
  * Public API
  */
 ClutterActor *
-shell_tray_icon_new (ShellEmbeddedWindow *window)
+cinnamon_tray_icon_new (CinnamonEmbeddedWindow *window)
 {
-  g_return_val_if_fail (SHELL_IS_EMBEDDED_WINDOW (window), NULL);
+  g_return_val_if_fail (CINNAMON_IS_EMBEDDED_WINDOW (window), NULL);
 
-  return g_object_new (SHELL_TYPE_TRAY_ICON,
+  return g_object_new (CINNAMON_TYPE_TRAY_ICON,
                        "window", window,
                        NULL);
 }
 
 /**
- * shell_tray_icon_click:
- * @icon: a #ShellTrayIcon
+ * cinnamon_tray_icon_click:
+ * @icon: a #CinnamonTrayIcon
  * @event: the #ClutterEvent triggering the fake click
  *
  * Fakes a press and release on @icon. @event must be a
@@ -178,7 +178,7 @@ shell_tray_icon_new (ShellEmbeddedWindow *window)
  * always made on the center of @icon.
  */
 void
-shell_tray_icon_click (ShellTrayIcon *icon,
+cinnamon_tray_icon_click (CinnamonTrayIcon *icon,
                        ClutterEvent  *event)
 {
   XKeyEvent xkevent;
