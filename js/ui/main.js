@@ -377,7 +377,7 @@ function start() {
 
     _startDate = new Date();
 
-    global.stage.connect('captured-event', _globalKeyPressHandler);
+    global.stage.connect('captured-event', _stageEventHandler);
 
     global.log('loaded at ' + _startDate);
     log('Cinnamon started at ' + _startDate);
@@ -1050,16 +1050,30 @@ function getWindowActorsForWorkspace(workspaceIndex) {
     });
 }
 
+// Filter out BUTTON_RELEASE events when the current position
+// and the event's position do not match
+
+function _event_and_current_pos_mismatch(event) {
+    let [x, y, mods] = global.get_pointer();
+    let pt = new Clutter.Point();
+    event.get_position(pt);
+    return (x != pt.x) || (y != pt.y);
+}
+
 // This function encapsulates hacks to make certain global keybindings
 // work even when we are in one of our modes where global keybindings
 // are disabled with a global grab. (When there is a global grab, then
 // all key events will be delivered to the stage, so ::captured-event
 // on the stage can be used for global keybindings.)
-function _globalKeyPressHandler(actor, event) {
+function _stageEventHandler(actor, event) {
     if (modalCount == 0)
         return false;
-    if (event.type() != Clutter.EventType.KEY_PRESS)
+    if (event.type() != Clutter.EventType.KEY_PRESS) {
+        if (event.type() == Clutter.EventType.BUTTON_RELEASE) {
+            return _event_and_current_pos_mismatch(event);
+        }
         return false;
+    }
 
     let symbol = event.get_key_symbol();
     let keyCode = event.get_key_code();
