@@ -136,6 +136,8 @@ let software_rendering = false;
 let lg_log_file;
 let can_log = false;
 
+let popup_rendering = false;
+
 // Override Gettext localization
 const Gettext = imports.gettext;
 Gettext.bindtextdomain('cinnamon', '/usr/share/cinnamon/locale');
@@ -1050,16 +1052,6 @@ function getWindowActorsForWorkspace(workspaceIndex) {
     });
 }
 
-// Filter out BUTTON_RELEASE events when the current position
-// and the event's position do not match
-
-function _event_and_current_pos_mismatch(event) {
-    let [x, y, mods] = global.get_pointer();
-    let pt = new Clutter.Point();
-    event.get_position(pt);
-    return (x != pt.x) || (y != pt.y);
-}
-
 // This function encapsulates hacks to make certain global keybindings
 // work even when we are in one of our modes where global keybindings
 // are disabled with a global grab. (When there is a global grab, then
@@ -1069,10 +1061,7 @@ function _stageEventHandler(actor, event) {
     if (modalCount == 0)
         return false;
     if (event.type() != Clutter.EventType.KEY_PRESS) {
-        if (event.type() == Clutter.EventType.BUTTON_RELEASE) {
-            return _event_and_current_pos_mismatch(event);
-        }
-        return false;
+        return popup_rendering && event.type() == Clutter.EventType.BUTTON_RELEASE;
     }
 
     let symbol = event.get_key_symbol();
