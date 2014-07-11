@@ -1,0 +1,53 @@
+#!/usr/bin/python
+
+import os
+from optparse import OptionParser
+
+if os.geteuid() != 0:
+    print "This program must be run as root (or using sudo)"
+    quit()
+
+print "Checking some dependencies...\n"
+
+try:
+    from launchpadlib.launchpad import Launchpad
+except:
+    print "Missing required library: python-launchpadlib"
+    print "Updating package list..."
+    os.system("apt-get update")
+    print "Installing..."
+    ret = os.system("apt-get install -y python-launchpadlib")
+    if ret > 0:
+        print "Problem installing launchpad libs, exiting"
+        quit()
+    print "...complete!"
+
+REPO_NAMES = [
+    "cinnamon",
+    "cinnamon-session",
+    "mdm",
+    "cinnamon-settings-daemon",
+    "cinnamon-control-center",
+    "cjs",
+    "cinnamon-desktop",
+    "cinnamon-menus",
+    "cinnamon-screensaver",
+    "nemo",
+    "muffin"
+]
+
+
+class Main:
+    def __init__(self):
+
+
+
+
+
+
+
+
+
+
+if __name__ == "__main__":
+    Main()
