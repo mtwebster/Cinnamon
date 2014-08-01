@@ -418,7 +418,7 @@ class Module:
             custom_kb = CustomKeyBinding(entry,
                                          schema.get_string("name"),
                                          schema.get_string("command"),
-                                         schema.get_string("binding"))
+                                         schema.get_strv("binding"))
             self.kb_store.append((custom_kb.label, custom_kb))
             for category in self.main_store:
                 if category.int_name is "custom":
@@ -430,15 +430,10 @@ class Module:
             keybindings, iter = tree.get_selection().get_selected()
             if iter:
                 keybinding = keybindings[iter][1]
-                if isinstance(keybinding, KeyBinding):
-                    for entry in keybinding.entries:
-                        if entry is not "_invalid_":
-                            self.entry_store.append((clean_kb(entry), entry))
-                    self.remove_custom_button.set_property('sensitive', False)
-                else:
-                    self.entry_store.append((clean_kb(keybinding.entries[0]), keybinding))
-                    self.remove_custom_button.set_property('sensitive', True)
-
+                for entry in keybinding.entries:
+                    if entry is not "_invalid_":
+                        self.entry_store.append((clean_kb(entry), entry))
+                self.remove_custom_button.set_property('sensitive', isinstance(keybinding, CustomKeyBinding))
 
     def onEntryChanged(self, cell, path, keyval, mask, keycode, entry_store):
         accel_string = Gtk.accelerator_name(keyval, mask)
@@ -543,10 +538,10 @@ class Module:
         new_schema = Gio.Settings.new_with_path(CUSTOM_KEYS_SCHEMA, new_path)
         new_schema.set_string("name", dialog.name_entry.get_text())
         new_schema.set_string("command", dialog.command_entry.get_text().replace("%20", "\ "))
-        new_schema.set_string("binding", "")
+        new_schema.set_strv("binding", ())
         i = 0
         for cat in self.cat_store:
-            if cat[1].int_name is "custom":
+            if cat[2].int_name is "custom":
                 self.cat_tree.set_cursor(str(i), self.cat_tree.get_column(0), False)
             i += 1
         i = 0
@@ -584,7 +579,7 @@ class Module:
 
         i = 0
         for cat in self.cat_store:
-            if cat[1].int_name is "custom":
+            if cat[2].int_name is "custom":
                 self.cat_tree.set_cursor(str(i), self.cat_tree.get_column(0), False)
             i += 1
 
@@ -714,8 +709,16 @@ class CustomKeyBinding():
         self.path = path
         self.label = label
         self.action = action
-        self.entries = []
-        self.entries.append(binding)
+        self.entries = self.get_array(binding)
+
+    def get_array(self, raw_array):
+        result = []
+
+        for entry in raw_array:
+            result.append(entry)
+        while (len(result) < 3):
+            result.append("")
+        return result
 
     def setBinding(self, index, val):
         if val is not None:
@@ -730,7 +733,12 @@ class CustomKeyBinding():
 
         settings.set_string("name", self.label)
         settings.set_string("command", self.action)
-        settings.set_string("binding", self.entries[0])
+
+        array = []
+        for entry in self.entries:
+            if entry is not "":
+                array.append(entry)
+        settings.set_strv("binding", array)
 
         # Touch the custom-list key, this will trigger a rebuild in cinnamon
         parent = Gio.Settings.new(CUSTOM_KEYS_PARENT_SCHEMA)
