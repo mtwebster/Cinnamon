@@ -192,9 +192,9 @@ class PictureChooserButton (Gtk.Button):
 
     def _on_picture_selected(self, menuitem, path, callback, id=None):
         if id is not None:
-            result = callback(path, id)
+            result = callback(id)
         else:
-            result = callback(path)
+            result = callback()
         
         if result:
             self.set_picture_from_file(path)            
@@ -205,6 +205,26 @@ class PictureChooserButton (Gtk.Button):
         self.row = 0
         self.col = 0
         menu.destroy()
+
+    def add_widget(self, widget, callback, title=None, id=None):
+            menuitem = Gtk.MenuItem()            
+            if title is not None:
+                vbox = Gtk.VBox()
+                vbox.pack_start(widget, False, False, 2)
+                label = Gtk.Label()
+                label.set_text(title)
+                vbox.pack_start(label, False, False, 2)
+                menuitem.add(vbox)
+            else:
+                menuitem.add(widget)
+            if id is not None:
+                menuitem.connect('activate', self._on_picture_selected, widget, callback, id)
+            else:
+                menuitem.connect('activate', self._on_picture_selected, widget, callback)
+            self.menu.attach(menuitem, self.col, self.col+1, self.row, self.row+1)
+            self.col = (self.col+1) % self.num_cols
+            if (self.col == 0):
+                self.row = self.row + 1
 
     def add_picture(self, path, callback, title=None, id=None):
         if os.path.exists(path):          
