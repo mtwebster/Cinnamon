@@ -92,7 +92,7 @@ class Module:
 
         inc = 1.0 / len(themes) 
 
-        if path_suffix == "icons":            
+        if path_suffix == "icons":
             for theme in themes:
                 icon_theme = Gtk.IconTheme()
                 icon_theme.set_custom_theme(theme)
@@ -101,20 +101,16 @@ class Module:
                     path = folder.get_filename()
                     chooser.add_picture(path, callback, title=theme, id=theme)
                 GObject.timeout_add(5, self.increment_progress, (chooser,inc))
+        elif path_suffix == "gtk-3.0":
+            for theme in themes:
+                chooser.add_socket(callback, title=theme[0])
+                GObject.timeout_add(5, self.increment_progress, (chooser, inc))
         else:
             if path_suffix == "cinnamon":
                 chooser.add_picture("/usr/share/cinnamon/theme/thumbnail.png", callback, title="cinnamon", id="cinnamon") 
             for theme in themes:
                 theme_name = theme[0]
                 theme_path = theme[1]
-                # Try to create a real widget preview for Gtk
-                widget = None
-                if path_suffix == "gtk-3.0":
-                    widget = self.get_gtk_preview_widget(theme)
-                if widget:
-                    chooser.add_widget(widget, callback, title=theme_name, id=theme_name)
-                    continue
-                # Everything else, including gtk if it fails
                 for path in ["%s/%s/%s/thumbnail.png" % (theme_path, theme_name, path_suffix), 
                              "/usr/share/cinnamon/thumbnails/%s/%s.png" % (path_suffix, theme_name), 
                              "/usr/share/cinnamon/thumbnails/%s/unknown.png" % path_suffix]:
@@ -124,53 +120,6 @@ class Module:
                 GObject.timeout_add(5, self.increment_progress, (chooser, inc))
         GObject.timeout_add(500, self.hide_progress, chooser)
         thread.exit()
-
-    # def context(self, provider):
-    #     context = Gtk.StyleContext()
-    #     context.add_provider(provider)
-    #     return context
-
-    def get_gtk_preview_widget(self, theme):
-        theme_name = theme[0]
-        theme_path = theme[1]
-
-        path = "%s/%s/gtk-3.0/gtk.css" % (theme_path, theme_name)
-        if not os.path.exists(path):
-            return None
-
-        res_path = "%s/%s/gtk-3.0/gtk.gresource" % (theme_path, theme_name)
-        if os.path.exists(res_path):
-            res = Gio.Resource.load(res_path)
-            Gio.resources_register(res)
-
-        prov = Gtk.CssProvider()
-        prov.load_from_path(path)
-
-        box = Gtk.Box(Gtk.Orientation.HORIZONTAL)
-        box.get_style_context().add_provider(prov, 800)
-
-        w = Gtk.Button("Button")
-        w.get_style_context().add_provider(prov, 800)
-        box.pack_start(w, False, False, 2)
-
-        w = Gtk.VScale(draw_value=False)
-        w.set_range(0, 1.0)
-        w.set_value(0)
-        w.get_style_context().add_provider(prov, 800)
-
-        box.pack_start(w, False, False, 2)
-
-        w = Gtk.CheckButton()
-        w.get_style_context().add_provider(prov, 800)
-        w.set_active(True)
-        box.pack_start(w, False, False, 2)
-
-        w = Gtk.RadioButton()
-        w.get_style_context().add_provider(prov, 800)
-        box.pack_start(w, False, False, 2)
-
-        box.reset_style()
-        return box
 
     def increment_progress(self, payload):
         (chooser, inc) = payload
@@ -198,7 +147,10 @@ class Module:
         return box
          
     def create_button_chooser(self, settings, key, path_prefix, path_suffix, button_picture_size, menu_pictures_size, num_cols):        
-        chooser = PictureChooserButton(num_cols=num_cols, button_picture_size=button_picture_size, menu_pictures_size=menu_pictures_size, has_button_label=True)
+        if path_suffix == "gtk-3.0":
+            chooser = SocketChooserButton(num_cols=num_cols, button_picture_size=button_picture_size, menu_pictures_size=menu_pictures_size, has_button_label=True)
+        else:
+            chooser = PictureChooserButton(num_cols=num_cols, button_picture_size=button_picture_size, menu_pictures_size=menu_pictures_size, has_button_label=True)
         theme = settings.get_string(key)
         chooser.set_button_label(theme)
         chooser.set_tooltip_text(theme)
@@ -209,6 +161,8 @@ class Module:
             folder = current_theme.lookup_icon("folder", button_picture_size, 0)
             path = folder.get_filename()
             chooser.set_picture_from_file(path)
+        elif path_suffix == "gtk-3.0":
+            chooser.set_display_widget(theme)
         else:
             for path in ["/usr/share/%s/%s/%s/thumbnail.png" % (path_prefix, theme, path_suffix), 
                          os.path.expanduser("~/.%s/%s/%s/thumbnail.png" % (path_prefix, theme, path_suffix)), 
