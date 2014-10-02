@@ -251,7 +251,7 @@ class SocketChooserButton (Gtk.Button):
         self.col = 0
         self.menu = Gtk.Menu()
         self.button_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-        self.display_socket_holder = Gtk.Alignment(xalign=0.5, yalign=0.5, xscale=1.0, yscale=1.0)
+        self.display_socket_holder = Gtk.Frame()
         self.button_box.add(self.display_socket_holder)
         self.has_button_label = has_button_label
         if has_button_label:
@@ -264,7 +264,13 @@ class SocketChooserButton (Gtk.Button):
         context = self.get_style_context()
         context.add_class("gtkstyle-fallback")
 
-        self.connect_after("draw", self.on_draw) 
+        self.connect_after("draw", self.on_draw)
+        # self.connect("enter-notify-event", self.on_visibility_changed)
+
+    # def on_visibility_changed(self, widget, event):
+    #     print "visible", widget.get_visible()
+    #     if widget.get_visible():
+    #         self.display_socket_holder.show_all()
 
     def on_draw(self, widget, cr, data=None):
         if self.progress == 0:
@@ -357,20 +363,22 @@ class SocketChooserButton (Gtk.Button):
         self.col = 0
         menu.destroy()
 
-    def add_socket(self, callback, title=None):
+    def add_socket(self, callback, title):
         socket = Gtk.Socket()
 
         menuitem = Gtk.MenuItem()
-        if title is not None:
+
+        if self.has_button_label:
             vbox = Gtk.VBox()
             vbox.pack_start(socket, True, True, 2)
-            if self.has_button_label:
-                label = Gtk.Label()
-                label.set_text(title)
-                vbox.pack_start(label, False, False, 2)
+            label = Gtk.Label()
+            label.set_text(title)
+            vbox.pack_start(label, False, False, 2)
             menuitem.add(vbox)
         else:
-            menuitem.add(socket)
+            frame = Gtk.Frame()
+            frame.add(socket)
+            menuitem.add(frame)
 
         menuitem.connect('activate', self._on_widget_selected, callback, title)
 

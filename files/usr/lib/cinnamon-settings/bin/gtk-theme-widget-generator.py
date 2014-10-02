@@ -56,10 +56,15 @@ class GtkPreviewGenerator:
         plug.add(eventbox)
 
         plug.connect("destroy", Gtk.main_quit)
+        # plug.connect("realize", self.on_realize)
         plug.show_all()
 
     def on_event(self, *args):
         return False
+
+    def on_realize(self, widget):
+        print "realize"
+        widget.show_all()
 
 if len(sys.argv) < 3:
     exit()
