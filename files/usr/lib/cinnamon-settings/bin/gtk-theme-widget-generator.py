@@ -9,27 +9,48 @@ class GtkPreviewGenerator:
 
         settings.set_string_property("gtk-theme-name", sys.argv[1], "gtk-preview-widget-%s" % sys.argv[1])
 
-        box = Gtk.Box(Gtk.Orientation.HORIZONTAL)
+        top_row = Gtk.Box(Gtk.Orientation.HORIZONTAL)
 
         w = Gtk.Button("Button")
-        box.pack_start(w, False, False, 2)
+        top_row.pack_start(w, False, False, 2)
 
-        w = Gtk.VScale(draw_value=False)
+        w = Gtk.HScale(draw_value=False)
         w.set_range(0, 1.0)
-        w.set_value(0)
-        box.pack_start(w, False, False, 2)
+        w.set_value(0.5)
+        top_row.pack_start(w, True, True, 2)
 
         w = Gtk.CheckButton()
         w.set_active(True)
-        box.pack_start(w, False, False, 2)
+        top_row.pack_start(w, False, False, 2)
 
         w = Gtk.RadioButton()
-        box.pack_start(w, False, False, 2)
+        top_row.pack_start(w, False, False, 2)
 
-        eventbox = Gtk.EventBox(above_child=True)
-        eventbox.set_events(0)
-        # eventbox.connect("event", self.on_event)
-        eventbox.add(box)
+        bottom_row = Gtk.Box(Gtk.Orientation.HORIZONTAL)
+
+        w = Gtk.Switch()
+        w.set_active(True)
+        bottom_row.pack_start(w, False, False, 2)
+
+        w = Gtk.Entry()
+        w.set_placeholder_text("Search...")
+        w.set_icon_from_stock(Gtk.EntryIconPosition.PRIMARY, "gtk-find")
+        bottom_row.pack_start(w, False, False, 2)
+
+        main_box = Gtk.VBox()
+        main_box.pack_start(top_row, False, False, 2)
+        main_box.pack_start(bottom_row, False, False, 2)
+
+        frame = Gtk.Frame(label=sys.argv[1])
+        frame.set_label_align(0.5, 0.5)
+        frame.add(main_box)
+
+        align = Gtk.Alignment(xalign=0.5, yalign=0.5, xscale=1.0, yscale=1.0)
+        align.set_padding(5, 5, 5, 5)
+        align.add(frame)
+
+        eventbox = Gtk.EventBox(above_child=False)
+        eventbox.add(align)
 
         plug = Gtk.Plug.new(long(sys.argv[2]))
         plug.add(eventbox)

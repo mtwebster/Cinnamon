@@ -103,6 +103,7 @@ class PictureChooserButton (Gtk.Button):
         self.button_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         self.button_image = Gtk.Image()
         self.button_box.add(self.button_image)
+        self.has_button_label = has_button_label
         if has_button_label:
             self.button_label = Gtk.Label()
             self.button_box.add(self.button_label)
@@ -252,6 +253,7 @@ class SocketChooserButton (Gtk.Button):
         self.button_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         self.display_socket_holder = Gtk.Alignment(xalign=0.5, yalign=0.5, xscale=1.0, yscale=1.0)
         self.button_box.add(self.display_socket_holder)
+        self.has_button_label = has_button_label
         if has_button_label:
             self.button_label = Gtk.Label()
             self.button_box.add(self.button_label)
@@ -361,10 +363,11 @@ class SocketChooserButton (Gtk.Button):
         menuitem = Gtk.MenuItem()
         if title is not None:
             vbox = Gtk.VBox()
-            vbox.pack_start(socket, False, False, 2)
-            label = Gtk.Label()
-            label.set_text(title)
-            vbox.pack_start(label, False, False, 2)
+            vbox.pack_start(socket, True, True, 2)
+            if self.has_button_label:
+                label = Gtk.Label()
+                label.set_text(title)
+                vbox.pack_start(label, False, False, 2)
             menuitem.add(vbox)
         else:
             menuitem.add(socket)
@@ -383,14 +386,6 @@ class SocketChooserButton (Gtk.Button):
     def spawn_previewer(self, title, socket):
         # os.system("python2 /usr/lib/cinnamon-settings/bin/gtk-preview-widget.py %s %s &" % (str(title), str(socket.get_id())))
         subprocess.Popen(['python2', '/usr/lib/cinnamon-settings/bin/gtk-theme-widget-generator.py', str(title), str(socket.get_id())])
-
-    def add_separator(self):
-        self.row = self.row + 1
-        self.menu.attach(Gtk.SeparatorMenuItem(), 0, self.num_cols, self.row, self.row+1)
-
-    def add_menuitem(self, menuitem):
-        self.row = self.row + 1
-        self.menu.attach(menuitem, 0, self.num_cols, self.row, self.row+1)
 
 
 class SidePage:

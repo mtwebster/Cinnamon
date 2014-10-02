@@ -24,9 +24,9 @@ class Module:
             self.cinnamon_settings = Gio.Settings.new("org.cinnamon.theme")
             
             self.icon_chooser = self.create_button_chooser(self.settings, 'icon-theme', 'icons', 'icons', button_picture_size=ICON_SIZE, menu_pictures_size=ICON_SIZE, num_cols=4)
-            self.cursor_chooser = self.create_button_chooser(self.settings, 'cursor-theme', 'icons', 'cursors', button_picture_size=32, menu_pictures_size=32, num_cols=4)
-            self.theme_chooser = self.create_button_chooser(self.settings, 'gtk-theme', 'themes', 'gtk-3.0', button_picture_size=35, menu_pictures_size=120, num_cols=4)
-            self.metacity_chooser = self.create_button_chooser(self.wm_settings, 'theme', 'themes', 'metacity-1', button_picture_size=32, menu_pictures_size=100, num_cols=4)
+            self.cursor_chooser = self.create_button_chooser(self.settings, 'cursor-theme', 'icons', 'cursors', button_picture_size=48, menu_pictures_size=32, num_cols=4)
+            self.theme_chooser = self.create_button_chooser(self.settings, 'gtk-theme', 'themes', 'gtk-3.0', button_picture_size=48, menu_pictures_size=120, num_cols=4)
+            self.metacity_chooser = self.create_button_chooser(self.wm_settings, 'theme', 'themes', 'metacity-1', button_picture_size=48, menu_pictures_size=100, num_cols=4)
             self.cinnamon_chooser = self.create_button_chooser(self.cinnamon_settings, 'name', 'themes', 'cinnamon', button_picture_size=60, menu_pictures_size=100, num_cols=4)
 
             bg = SectionBg()        
@@ -148,11 +148,12 @@ class Module:
          
     def create_button_chooser(self, settings, key, path_prefix, path_suffix, button_picture_size, menu_pictures_size, num_cols):        
         if path_suffix == "gtk-3.0":
-            chooser = SocketChooserButton(num_cols=num_cols, button_picture_size=button_picture_size, menu_pictures_size=menu_pictures_size, has_button_label=True)
+            chooser = SocketChooserButton(num_cols=num_cols, button_picture_size=button_picture_size, menu_pictures_size=menu_pictures_size, has_button_label=False)
         else:
             chooser = PictureChooserButton(num_cols=num_cols, button_picture_size=button_picture_size, menu_pictures_size=menu_pictures_size, has_button_label=True)
         theme = settings.get_string(key)
-        chooser.set_button_label(theme)
+        if chooser.has_button_label:
+            chooser.set_button_label(theme)
         chooser.set_tooltip_text(theme)
         if path_suffix == "cinnamon" and theme == "cinnamon":
             chooser.set_picture_from_file("/usr/share/cinnamon/theme/thumbnail.png")
