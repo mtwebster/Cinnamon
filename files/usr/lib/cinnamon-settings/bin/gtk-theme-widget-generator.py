@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from gi.repository import Gtk
+from gi.repository import Gtk, GObject
 import sys
 
 class GtkPreviewGenerator:
@@ -49,22 +49,19 @@ class GtkPreviewGenerator:
         align.set_padding(5, 5, 5, 5)
         align.add(frame)
 
-        eventbox = Gtk.EventBox(above_child=False)
-        eventbox.add(align)
+        # eventbox = Gtk.EventBox(above_child=False)
+        # eventbox.add(align)
 
         plug = Gtk.Plug.new(long(sys.argv[2]))
-        plug.add(eventbox)
+        plug.add(align)
 
         plug.connect("destroy", Gtk.main_quit)
-        # plug.connect("realize", self.on_realize)
         plug.show_all()
 
     def on_event(self, *args):
         return False
 
-    def on_realize(self, widget):
-        print "realize"
-        widget.show_all()
+
 
 if len(sys.argv) < 3:
     exit()

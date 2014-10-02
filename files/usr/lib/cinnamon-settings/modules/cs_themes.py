@@ -64,6 +64,12 @@ class Module:
                     self.monitors.append(file_monitor)
 
             self.refresh()
+        else:
+            self.update_button_chooser(self.settings, 'icon-theme', self.icon_chooser, 'icons', 'icons')
+            self.update_button_chooser(self.settings, 'cursor-theme', self.cursor_chooser, 'icons', 'cursors')
+            self.update_button_chooser(self.settings, 'gtk-theme', self.theme_chooser, 'themes', 'gtk-3.0')
+            self.update_button_chooser(self.wm_settings, 'theme', self.metacity_chooser, 'themes', 'metacity-1')
+            self.update_button_chooser(self.cinnamon_settings, 'name', self.cinnamon_chooser, 'themes', 'cinnamon')
 
     def on_file_changed(self, file, other, event, data):
         self.refresh()
@@ -145,12 +151,18 @@ class Module:
         box.pack_start(widget, False, False, 15)
 
         return box
-         
+
     def create_button_chooser(self, settings, key, path_prefix, path_suffix, button_picture_size, menu_pictures_size, num_cols):        
         if path_suffix == "gtk-3.0":
             chooser = SocketChooserButton(num_cols=num_cols, button_picture_size=button_picture_size, menu_pictures_size=menu_pictures_size, has_button_label=False)
         else:
             chooser = PictureChooserButton(num_cols=num_cols, button_picture_size=button_picture_size, menu_pictures_size=menu_pictures_size, has_button_label=True)
+        self.update_button_chooser(settings, key, chooser, path_prefix, path_suffix)
+
+        chooser.watch_id = settings.connect("changed::%s" % (key,), self.update_button_chooser, chooser, path_prefix, path_suffix)
+        return chooser
+
+    def update_button_chooser(self, settings, key, chooser, path_prefix, path_suffix):
         theme = settings.get_string(key)
         if chooser.has_button_label:
             chooser.set_button_label(theme)
@@ -159,7 +171,7 @@ class Module:
             chooser.set_picture_from_file("/usr/share/cinnamon/theme/thumbnail.png")
         elif path_suffix == "icons":
             current_theme = Gtk.IconTheme.get_default()
-            folder = current_theme.lookup_icon("folder", button_picture_size, 0)
+            folder = current_theme.lookup_icon("folder", chooser.button_picture_size, 0)
             path = folder.get_filename()
             chooser.set_picture_from_file(path)
         elif path_suffix == "gtk-3.0":
@@ -172,7 +184,6 @@ class Module:
                 if os.path.exists(path):
                     chooser.set_picture_from_file(path)
                     break        
-        return chooser    
 
     def add_remove_cinnamon_themes(self, widget):
         window = Gtk.Window()
@@ -191,7 +202,10 @@ class Module:
 
     def _on_icon_theme_selected(self, theme):
         try:
+            self.settings.handler_block(self.icon_chooser.watch_id)
             self.settings.set_string("icon-theme", theme)
+            self.settings.handler_unblock(self.icon_chooser.watch_id)
+
             self.icon_chooser.set_button_label(theme)
             self.icon_chooser.set_tooltip_text(theme)
         except Exception, detail:
@@ -200,7 +214,10 @@ class Module:
 
     def _on_metacity_theme_selected(self, theme):
         try:
+            self.wm_settings.handler_block(self.metacity_chooser.watch_id)
             self.wm_settings.set_string("theme", theme)
+            self.wm_settings.handler_unblock(self.metacity_chooser.watch_id)
+
             self.metacity_chooser.set_button_label(theme)
             self.metacity_chooser.set_tooltip_text(theme)
         except Exception, detail:
@@ -209,8 +226,10 @@ class Module:
 
     def _on_gtk_theme_selected(self, theme):
         try:
+            self.settings.handler_block(self.theme_chooser.watch_id)
             self.settings.set_string("gtk-theme", theme)
-            self.theme_chooser.set_button_label(theme)
+            self.settings.handler_unblock(self.theme_chooser.watch_id)
+
             self.theme_chooser.set_tooltip_text(theme)
         except Exception, detail:
             print detail        
@@ -218,7 +237,10 @@ class Module:
 
     def _on_cursor_theme_selected(self, theme):
         try:
+            self.settings.handler_block(self.cursor_chooser.watch_id)
             self.settings.set_string("cursor-theme", theme)
+            self.settings.handler_unblock(self.cursor_chooser.watch_id)
+
             self.cursor_chooser.set_button_label(theme)
             self.cursor_chooser.set_tooltip_text(theme)
         except Exception, detail:
@@ -227,7 +249,10 @@ class Module:
 
     def _on_cinnamon_theme_selected(self, theme):
         try:
+            self.cinnamon_settings.handler_block(self.cinnamon_chooser.watch_id)
             self.cinnamon_settings.set_string("name", theme)
+            self.cinnamon_settings.handler_block(self.cinnamon_chooser.watch_id)
+
             self.cinnamon_chooser.set_button_label(theme)
             self.cinnamon_chooser.set_tooltip_text(theme)
         except Exception, detail:

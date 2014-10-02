@@ -252,6 +252,7 @@ class SocketChooserButton (Gtk.Button):
         self.menu = Gtk.Menu()
         self.button_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         self.display_socket_holder = Gtk.Frame()
+        self.display_socket_holder.set_size_request(120, 35)
         self.button_box.add(self.display_socket_holder)
         self.has_button_label = has_button_label
         if has_button_label:
