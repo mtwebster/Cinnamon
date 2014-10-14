@@ -2,7 +2,7 @@
 
 const Lang = imports.lang;
 const Gio = imports.gi.Gio;
-
+const GLib = imports.gi.GLib;
 const Config = imports.misc.config;
 const Flashspot = imports.ui.flashspot;
 const Main = imports.ui.main;
@@ -64,14 +64,15 @@ const CinnamonIface =
             <method name="switchWorkspaceUp" /> \
             <method name="switchWorkspaceDown" /> \
             <method name="GetRunningXletUUIDs"> \
-                <arg type="a{s}" direction="out" /> \
-            </method> \ 
+                <arg type="s" direction="in" /> \
+                <arg type="as" direction="out" /> \
+            </method> \
             <property name="OverviewActive" type="b" access="readwrite" /> \
             <property name="CinnamonVersion" type="s" access="read" /> \
-            <signal name="xletAddedComplete">
+            <signal name="XletAddedComplete"> \
                 <arg type="b" direction="out" /> \
                 <arg type="s" direction="out" /> \
-            </signal>
+            </signal> \
         </interface> \
     </node>';
 
@@ -218,7 +219,7 @@ Cinnamon.prototype = {
     },
 
     EmitXletAddedComplete: function(success, uuid, name) {
-        this._dbusImpl.emit_signal('xletAddedComplete', GLib.Variant.new('(bs)', [success,uuid]));
+        this._dbusImpl.emit_signal('XletAddedComplete', GLib.Variant.new('(bs)', [success,uuid]));
         if (!success)
             Main.criticalNotify(_("Problem loading an applet, desklet or extension."),
                                 _("A problem occurred when trying to load:\n\nName: ")
@@ -226,13 +227,22 @@ Cinnamon.prototype = {
     },
 
     GetRunningXletUUIDs: function(type) {
+        let list = null;
+        let res = [];
+
         if (type == "applet")
-            return AppletManager.appletObj.keys();
+            list = AppletManager.appletObj;
         else if (type == "desklet")
-            return DeskletManager.deskletObj.keys();
+            list = DeskletManager.deskletObj;
         else
-            return ExtensionSystem.extensionStateObjs.keys();
-    }
+            list = ExtensionSystem.extensionStateObjs;
+
+        for (let key in list) {
+            res.push(key);
+        }
+
+        return res;
+    },
 
     highlightApplet: function(id, id_is_instance) {
         let obj = this._getXletObject(id, id_is_instance);

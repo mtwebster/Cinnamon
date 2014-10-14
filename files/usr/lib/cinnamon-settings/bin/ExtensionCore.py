@@ -406,7 +406,7 @@ class ExtensionSidePage (SidePage):
             self.spices.scrubConfigDirs(self.enabled_extensions)
             try:
                 Gio.DBusProxy.new_for_bus(Gio.BusType.SESSION, Gio.DBusProxyFlags.NONE, None,
-                                          "org.Cinnamon", "/org/Cinnamon", "org.cinnamon", None, self._onProxyReady, None)
+                                          "org.Cinnamon", "/org/Cinnamon", "org.Cinnamon", None, self._on_proxy_ready, None)
             except dbus.exceptions.DBusException as e:
                 print(e)
                 self._proxy = None
@@ -415,15 +415,14 @@ class ExtensionSidePage (SidePage):
 
     def refresh_running_uuids(self):
         if self._proxy:
-            self.running_uuids = self._proxy.GetRunningXletUUIDs(self.collection_type)
+            self.running_uuids = self._proxy.GetRunningXletUUIDs('(s)', self.collection_type)
         else:
             self.running_uuids = None
-        self._enabled_extensions_changed()
 
     def _on_proxy_ready (self, object, result, data=None):
         self._proxy = Gio.DBusProxy.new_for_bus_finish(result)
-        self._proxy.connect("g-signal", self._onSignal)
-        self.refresh_running_uuids()
+        self._proxy.connect("g-signal", self._on_signal)
+        self._enabled_extensions_changed()
 
     def _on_signal(self, proxy, sender_name, signal_name, params):
         pass
@@ -968,6 +967,7 @@ class ExtensionSidePage (SidePage):
         last_selection = ''
         model, treeiter = self.treeview.get_selection().get_selected()
         self.refresh_running_uuids()
+        print self.running_uuids
 
         if self.themes:
             self.enabled_extensions = [self.settings.get_string("name")]
