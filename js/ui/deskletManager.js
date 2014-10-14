@@ -11,6 +11,7 @@ const Desklet = imports.ui.desklet;
 const DND = imports.ui.dnd;
 const Extension = imports.ui.extension;
 const Main = imports.ui.main;
+const CinnamonDBus = imports.ui.cinnamonDBus;
 
 // Maps uuid -> metadata object
 var deskletMeta;
@@ -265,9 +266,12 @@ function _loadDesklet(extension, deskletDefinition) {
 
         desklet.on_desklet_added_to_desktop_internal(deskletsLoaded && !deskletsDragging);
 
+        CinnamonDBus.emitXletAddedComplete(true, extension.uuid, extension.meta["name"]);
+
         deskletsDragging = false;
     } catch (e) {
         extension.logError('Failed to load desklet: ' + deskletDefinition.uuid + "/" + deskletDefinition.desklet_id, e);
+        CinnamonDBus.emitXletAddedComplete(false, extension.uuid, extension.meta["name"]);
     }
 }
 

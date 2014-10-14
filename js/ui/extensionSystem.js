@@ -1,6 +1,7 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
 const Extension = imports.ui.extension;
+const CinnamonDBus = imports.ui.cinnamonDBus;
 
 // Maps uuid -> importer object (extension directory tree)
 var extensions;
@@ -47,16 +48,20 @@ function finishExtensionLoad(extension) {
         stateObj = extension.module.init(extension.meta);
     } catch (e) {
         extension.logError('Failed to evaluate \'init\' function on extension: ' + extension.uuid, e);
+        CinnamonDBus.emitXletAddedComplete(false, extension.uuid, extension.meta["name"]);
         return false;
     }
     try {
         extension.module.enable();
     } catch (e) {
         extension.logError('Failed to evaluate \'enable\' function on extension: ' + extension.uuid, e);
+        CinnamonDBus.emitXletAddedComplete(false, extension.uuid, extension.meta["name"]);
         return false;
     }
     
     extensionStateObjs[extension.uuid] = stateObj;
+
+    CinnamonDBus.emitXletAddedComplete(true, extension.uuid, extension.meta["name"]);
 
     return true;
 }

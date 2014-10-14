@@ -8,6 +8,7 @@ const Flashspot = imports.ui.flashspot;
 const Main = imports.ui.main;
 const AppletManager = imports.ui.appletManager;
 const DeskletManager = imports.ui.deskletManager;
+const ExtensionSystem = imports.ui.extensionSystem;
 
 const CinnamonIface =
     '<node> \
@@ -62,8 +63,15 @@ const CinnamonIface =
             <method name="switchWorkspaceLeft" /> \
             <method name="switchWorkspaceUp" /> \
             <method name="switchWorkspaceDown" /> \
+            <method name="GetRunningXletUUIDs"> \
+                <arg type="a{s}" direction="out" /> \
+            </method> \ 
             <property name="OverviewActive" type="b" access="readwrite" /> \
             <property name="CinnamonVersion" type="s" access="read" /> \
+            <signal name="xletAddedComplete">
+                <arg type="b" direction="out" /> \
+                <arg type="s" direction="out" /> \
+            </signal>
         </interface> \
     </node>';
 
@@ -209,6 +217,23 @@ Cinnamon.prototype = {
         return obj
     },
 
+    EmitXletAddedComplete: function(success, uuid, name) {
+        this._dbusImpl.emit_signal('xletAddedComplete', GLib.Variant.new('(bs)', [success,uuid]));
+        if (!success)
+            Main.criticalNotify(_("Problem loading an applet, desklet or extension."),
+                                _("A problem occurred when trying to load:\n\nName: ")
+                                + name + _("\nuuid: ") + uuid + _("\n\nPlease contact the developer."));
+    },
+
+    GetRunningXletUUIDs: function(type) {
+        if (type == "applet")
+            return AppletManager.appletObj.keys();
+        else if (type == "desklet")
+            return DeskletManager.deskletObj.keys();
+        else
+            return ExtensionSystem.extensionStateObjs.keys();
+    }
+
     highlightApplet: function(id, id_is_instance) {
         let obj = this._getXletObject(id, id_is_instance);
         if (!obj)
@@ -247,7 +272,6 @@ Cinnamon.prototype = {
     switchWorkspaceDown: function() {
         Main.expo.toggle();
     },
-
 
     CinnamonVersion: Config.PACKAGE_VERSION
 };

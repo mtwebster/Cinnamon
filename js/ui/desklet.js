@@ -18,7 +18,6 @@ const PopupMenu = imports.ui.popupMenu;
 const Tooltips = imports.ui.tooltips;
 const Tweener = imports.ui.tweener;
 
-
 const RIGHT_PANEL_POPUP_ANIMATE_TIME = 0.5;
 const DESKLET_DESTROY_TIME = 0.5;
 

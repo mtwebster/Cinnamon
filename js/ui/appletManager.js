@@ -7,6 +7,7 @@ const Cinnamon = imports.gi.Cinnamon;
 const Main = imports.ui.main;
 const Applet = imports.ui.applet;
 const Extension = imports.ui.extension;
+const CinnamonDBus = imports.ui.cinnamonDBus;
 
 // Maps uuid -> metadata object
 var appletMeta;
@@ -286,12 +287,15 @@ function addAppletToPanels(extension, appletDefinition) {
             extension._loadedDefinitions = {};
         }
         extension._loadedDefinitions[appletDefinition.applet_id] = appletDefinition;
-        
+
+        CinnamonDBus.emitXletAddedComplete(true, extension.uuid, extension.meta["name"]);
+
         applet.on_applet_added_to_panel_internal(appletsLoaded);
     }
     catch(e) {
         extension.unlockRole();
         extension.logError('Failed to load applet: ' + appletDefinition.uuid + "/" + appletDefinition.applet_id, e);
+        CinnamonDBus.emitXletAddedComplete(false, extension.uuid, extension.meta["name"]);
     }
 }
 

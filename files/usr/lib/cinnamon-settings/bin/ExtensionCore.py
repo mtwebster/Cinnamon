@@ -58,6 +58,10 @@ class ExtensionSidePage (SidePage):
         if window is not None:
             self.window = window
 
+        self.running_uuids = None
+        self._proxy = None
+        self._proxy_add_id = 0
+
         scrolledWindow = Gtk.ScrolledWindow()   
         scrolledWindow.set_shadow_type(Gtk.ShadowType.ETCHED_IN)   
         scrolledWindow.set_border_width(6) 
@@ -400,8 +404,29 @@ class ExtensionSidePage (SidePage):
 
         if not self.themes:
             self.spices.scrubConfigDirs(self.enabled_extensions)
+            try:
+                Gio.DBusProxy.new_for_bus(Gio.BusType.SESSION, Gio.DBusProxyFlags.NONE, None,
+                                          "org.Cinnamon", "/org/Cinnamon", "org.cinnamon", None, self._onProxyReady, None)
+            except dbus.exceptions.DBusException as e:
+                print(e)
+                self._proxy = None
 
         self.search_entry.grab_focus()
+
+    def refresh_running_uuids(self):
+        if self._proxy:
+            self.running_uuids = self._proxy.GetRunningXletUUIDs(self.collection_type)
+        else:
+            self.running_uuids = None
+        self._enabled_extensions_changed()
+
+    def _on_proxy_ready (self, object, result, data=None):
+        self._proxy = Gio.DBusProxy.new_for_bus_finish(result)
+        self._proxy.connect("g-signal", self._onSignal)
+        self.refresh_running_uuids()
+
+    def _on_signal(self, proxy, sender_name, signal_name, params):
+        pass
 
     def check_third_arg(self):
         if len(sys.argv) > 2 and not self.run_once:
@@ -444,6 +469,10 @@ class ExtensionSidePage (SidePage):
                     markup += _("In use")
                     if count > 1:
                         markup += _("\n\nInstance count: %d") % count
+                    tooltip.set_markup(markup)
+                    return True
+                elif count < 0:
+                    markup += _("Problem loading - please check Looking Glass or your system's error log");
                     tooltip.set_markup(markup)
                     return True
         return False
@@ -555,11 +584,15 @@ class ExtensionSidePage (SidePage):
    
     def _is_active_data_func(self, column, cell, model, iter, data=None):
         enabled = model.get_value(iter, 2) > 0
-        if (enabled):
+        error = model.get_value(iter, 2) < 0
+        if enabled:
             if not self.themes:
                 icon = "cs-xlet-running"
             else:
                 icon = "cs-xlet-installed"
+        elif error:
+            if not self.themes:
+                icon = "cs-xlet-error"
         else:
             icon = ""
         cell.set_property('icon-name', icon)
@@ -748,11 +781,11 @@ class ExtensionSidePage (SidePage):
             return False
 
         if self.showFilter == SHOW_ALL:
-            return enabled >= 0 and (query == "" or query in extensionName.lower())
+            return (query == "" or query in extensionName.lower())
         elif self.showFilter == SHOW_ACTIVE:
             return enabled > 0 and (query == "" or query in extensionName.lower())
         elif self.showFilter == SHOW_INACTIVE:
-            return enabled == 0 and (query == "" or query in extensionName.lower())
+            return enabled <= 0 and (query == "" or query in extensionName.lower())
         else:
             return False
 
@@ -865,7 +898,7 @@ class ExtensionSidePage (SidePage):
             else:
                 self.settings.set_string("name", name)
 
-    def disable_extension(self, uuid, name, checked):
+    def disable_extension(self, uuid, name, checked=0):
 
         if (checked > 1):
             msg = _("There are multiple instances, do you want to remove all of them?\n\n")
@@ -904,7 +937,20 @@ class ExtensionSidePage (SidePage):
         else:
             extension_id = 0
         self.enabled_extensions.append(self.toSettingString(uuid, extension_id))
+
+        if self._proxy:
+            self._proxy_add_id = self._proxy.connect("XletAddedComplete", self.xlet_added_callback)
+
         self.settings.set_strv(("enabled-%ss") % (self.collection_type), self.enabled_extensions)
+
+    def xlet_added_callback(self, packet):
+        [success, uuid] = packet
+
+        if not success:
+            self.disable_extension(uuid, "", 0)
+            self.show_error(_("There was a problem loading the selected item.  Please check Looking Glass or your system logs, or contact the developer."))
+
+        self._proxy.disconnect(self._proxy_add_id)
 
     def on_page_changed(self, notebook, page, page_num):
         if page_num == 1 and len(self.gm_model) == 0:
@@ -921,12 +967,13 @@ class ExtensionSidePage (SidePage):
     def _enabled_extensions_changed(self):
         last_selection = ''
         model, treeiter = self.treeview.get_selection().get_selected()
+        self.refresh_running_uuids()
 
         if self.themes:
             self.enabled_extensions = [self.settings.get_string("name")]
         else:
             self.enabled_extensions = self.settings.get_strv(("enabled-%ss") % (self.collection_type))
-        
+
         uuidCount = {}
         for enabled_extension in self.enabled_extensions:
             try:
@@ -947,8 +994,14 @@ class ExtensionSidePage (SidePage):
                     uuid = "STOCK"
                 else:
                     uuid = self.model.get_value(row.iter, 5)
-            if(uuid in uuidCount):
-                self.model.set_value(row.iter, 2, uuidCount[uuid])
+            if uuid in uuidCount:
+                if self.running_uuids is not None:
+                    if uuid in self.running_uuids:
+                        self.model.set_value(row.iter, 2, uuidCount[uuid])
+                    else:
+                        self.model.set_value(row.iter, 2, -1)
+                else:
+                    self.model.set_value(row.iter, 2, uuidCount[uuid])
             else:
                 self.model.set_value(row.iter, 2, 0)
         self._selection_changed()
@@ -1278,6 +1331,17 @@ class ExtensionSidePage (SidePage):
         dialog = Gtk.MessageDialog(transient_for = None,
                                    modal = True,
                                    message_type = Gtk.MessageType.INFO,
+                                   buttons = Gtk.ButtonsType.OK)
+        esc = cgi.escape(msg)
+        dialog.set_markup(esc)
+        dialog.show_all()
+        response = dialog.run()
+        dialog.destroy()
+
+    def show_error(self, msg):
+        dialog = Gtk.MessageDialog(transient_for = None,
+                                   modal = True,
+                                   message_type = Gtk.MessageType.ERROR,
                                    buttons = Gtk.ButtonsType.OK)
         esc = cgi.escape(msg)
         dialog.set_markup(esc)
