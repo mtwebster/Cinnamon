@@ -219,7 +219,7 @@ GenericApplicationButton.prototype = {
         }
         if (event.get_button()==3){
             if (this.withMenu && !this.menu.isOpen)
-                this.appsMenuButton.closeApplicationsContextMenus(this.app, true);
+                this.appsMenuButton.closeContextMenus(this.app, true);
             this.toggleMenu();
         }
         return true;
@@ -459,12 +459,37 @@ PlaceButton.prototype = {
     }
 };
 
+function RecentContextMenuItem(recentButton, label, is_default, callback) {
+    this._init(recentButton, label, is_default, callback);
+}
+
+RecentContextMenuItem.prototype = {
+    __proto__: PopupMenu.PopupBaseMenuItem.prototype,
+
+    _init: function (recentButton, label, is_default, callback) {
+        PopupMenu.PopupBaseMenuItem.prototype._init.call(this, {focusOnHover: false});
+
+        this._recentButton = recentButton;
+        this._callback = callback;
+        this.label = new St.Label({ text: label });
+        this.addActor(this.label);
+
+        if (is_default)
+            this.label.style = this.label.style + "font-weight: bold;";
+    },
+
+    activate: function (event) {
+        this._callback()
+        return false;
+    }
+};
+
 function RecentButton(appsMenuButton, file) {
     this._init(appsMenuButton, file);
 }
 
 RecentButton.prototype = {
-    __proto__: PopupMenu.PopupBaseMenuItem.prototype,
+    __proto__: PopupMenu.PopupSubMenuMenuItem.prototype,
 
     _init: function(appsMenuButton, file) {
         PopupMenu.PopupBaseMenuItem.prototype._init.call(this, {hover: false});
@@ -481,6 +506,10 @@ RecentButton.prototype = {
         this.addActor(this.label);
         this.icon.realize();
         this.label.realize();
+
+        this.menu = new PopupMenu.PopupSubMenu(this.actor);
+        this.menu.actor.set_style_class_name('menu-context-menu');
+        this.menu.connect('open-state-changed', Lang.bind(this, this._subMenuOpenStateChanged));
     },
 
     _onButtonReleaseEvent: function (actor, event) {
@@ -488,11 +517,79 @@ RecentButton.prototype = {
             this.file.launch();
             this.appsMenuButton.menu.close();
         }
+        if (event.get_button()==3){
+            if (!this.menu.isOpen)
+                this.appsMenuButton.closeContextMenus(this, true);
+            this.toggleMenu();
+        }
+        return true;
     },
 
     activate: function(event) {
         this.file.launch();
         this.appsMenuButton.menu.close();
+    },
+
+    closeMenu: function() {
+        this.menu.close();
+    },
+    
+    toggleMenu: function() {
+        if (!this.menu.isOpen){
+            let children = this.menu.box.get_children();
+            for (var i in children) {
+                this.menu.box.remove_actor(children[i]);
+            }
+            let menuItem;
+
+            let default_info = Gio.AppInfo.get_default_for_type(this.file.mimeType, false);
+
+            if (default_info) {
+                menuItem = new RecentContextMenuItem(this,
+                                                     _("Open with ") + default_info.get_display_name(),
+                                                     true,
+                                                     Lang.bind(this, function() {
+                                                         default_info.launch([Gio.File.new_for_uri(this.file.uri)], null, null);
+                                                         this.toggleMenu();
+                                                         this.appsMenuButton.menu.close();
+                                                     }));
+                this.menu.addMenuItem(menuItem);
+            }
+
+            let infos = Gio.AppInfo.get_all_for_type(this.file.mimeType)
+
+            for (let i = 0; i < infos.length; i++) {
+                let info = infos[i];
+
+                if (info.equal(default_info))
+                    continue;
+
+                menuItem = new RecentContextMenuItem(this,
+                                                     _("Open with ") + info.get_display_name(),
+                                                     false,
+                                                     Lang.bind(this, function() {
+                                                         info.launch([Gio.File.new_for_uri(this.file.uri)], null, null);
+                                                         this.toggleMenu();
+                                                         this.appsMenuButton.menu.close();
+                                                     }));
+                this.menu.addMenuItem(menuItem);
+            }
+
+            menuItem = new RecentContextMenuItem(this,
+                                                 _("Open with other application..."),
+                                                 false,
+                                                 Lang.bind(this, function() {
+                                                     Util.spawnCommandLine("nemo-open-with " + this.file.uri);
+                                                     this.toggleMenu();
+                                                     this.appsMenuButton.menu.close();
+                                                 }));
+            this.menu.addMenuItem(menuItem);
+        }
+        this.menu.toggle();
+    },
+    
+    _subMenuOpenStateChanged: function() {
+        if (this.menu.isOpen) this.appsMenuButton._scrollToButton(this.menu);
     }
 };
 
@@ -521,6 +618,8 @@ GenericButton.prototype = {
 
         this.actor.reactive = reactive;
         this.callback = callback;
+
+        this.menu = new PopupMenu.PopupSubMenu(this.actor);
     },
 
     _onButtonReleaseEvent: function (actor, event) {
@@ -545,6 +644,8 @@ RecentClearButton.prototype = {
         this.icon = new St.Icon({ icon_name: 'edit-clear', icon_type: St.IconType.SYMBOLIC, icon_size: APPLICATION_ICON_SIZE });
         this.addActor(this.icon);
         this.addActor(this.label);
+
+        this.menu = new PopupMenu.PopupSubMenu(this.actor);
     },
     
     _onButtonReleaseEvent: function (actor, event) {
@@ -1060,7 +1161,7 @@ MyApplet.prototype = {
             this._previousTreeItemIndex = null;
             this._previousTreeSelectedActor = null;
             this._previousSelectedActor = null;
-            this.closeApplicationsContextMenus(null, false);
+            this.closeContextMenus(null, false);
 
             this._clearAllSelections(false);
             this.destroyVectorBox();
@@ -1395,7 +1496,7 @@ MyApplet.prototype = {
                                 if (this.placesButton.isHovered) {
                                     this._clearPrevCatSelection(this.placesButton);
                                     this.placesButton.actor.style_class = "menu-category-button-selected";
-                                    this.closeApplicationsContextMenus(null, false);
+                                    this.closeContextMenus(null, false);
                                     this._displayButtons(null, -1);
                                 } else {
                                     this.placesButton.actor.style_class = "menu-category-button";
@@ -1405,7 +1506,7 @@ MyApplet.prototype = {
                     } else {
                                 this._clearPrevCatSelection(this.placesButton);
                                 this.placesButton.actor.style_class = "menu-category-button-selected";
-                                this.closeApplicationsContextMenus(null, false);
+                                this.closeContextMenus(null, false);
                                 this._displayButtons(null, -1);
                     }
                     this.makeVectorBox(this.placesButton.actor);
@@ -1463,7 +1564,7 @@ MyApplet.prototype = {
                                 if (this.recentButton.isHovered) {
                                     this._clearPrevCatSelection(this.recentButton.actor);
                                     this.recentButton.actor.style_class = "menu-category-button-selected";
-                                    this.closeApplicationsContextMenus(null, false);
+                                    this.closeContextMenus(null, false);
                                     this._displayButtons(null, null, -1);
                                 } else {
                                     this.recentButton.actor.style_class = "menu-category-button";
@@ -1473,7 +1574,7 @@ MyApplet.prototype = {
                     } else {
                         this._clearPrevCatSelection(this.recentButton.actor);
                         this.recentButton.actor.style_class = "menu-category-button-selected";
-                        this.closeApplicationsContextMenus(null, false);
+                        this.closeContextMenus(null, false);
                         this._displayButtons(null, null, -1);
                     }
                     this.makeVectorBox(this.recentButton.actor);
@@ -1544,6 +1645,7 @@ MyApplet.prototype = {
                                 }));
                         this._recentButtons.push(button);
                         this.applicationsBox.add_actor(button.actor);
+                        this.applicationsBox.add_actor(button.menu.actor);
                     }
 
                     let button = new RecentClearButton(this);
@@ -2039,16 +2141,25 @@ MyApplet.prototype = {
             this._displayButtons(this._listApplications(dir.get_menu_id()));
         else
             this._displayButtons(this._listApplications(null));
-        this.closeApplicationsContextMenus(null, false);
+        this.closeContextMenus(null, false);
     },
 
-    closeApplicationsContextMenus: function(excludeApp, animate) {
+    closeContextMenus: function(excluded, animate) {
         for (var app in this._applicationsButtons){
-            if (app!=excludeApp && this._applicationsButtons[app].menu.isOpen){
+            if (app != excluded && this._applicationsButtons[app].menu.isOpen){
                 if (animate)
                     this._applicationsButtons[app].toggleMenu();
                 else
                     this._applicationsButtons[app].closeMenu();
+            }
+        }
+
+        for (var recent in this._recentButtons){
+            if (recent != excluded && this._recentButtons[recent].menu.isOpen){
+                if (animate)
+                    this._recentButtons[recent].toggleMenu();
+                else
+                    this._recentButtons[recent].closeMenu();
             }
         }
     },
