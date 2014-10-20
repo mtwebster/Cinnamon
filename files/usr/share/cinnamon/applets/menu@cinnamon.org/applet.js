@@ -533,7 +533,11 @@ RecentButton.prototype = {
     closeMenu: function() {
         this.menu.close();
     },
-    
+
+    hasLocalPath: function(file) {
+        return file.is_native() || file.get_path() != null;
+    },
+
     toggleMenu: function() {
         if (!this.menu.isOpen){
             let children = this.menu.box.get_children();
@@ -542,14 +546,16 @@ RecentButton.prototype = {
             }
             let menuItem;
 
-            let default_info = Gio.AppInfo.get_default_for_type(this.file.mimeType, false);
+            let file = Gio.File.new_for_uri(this.file.uri);
+
+            let default_info = Gio.AppInfo.get_default_for_type(this.file.mimeType, !this.hasLocalPath(file));
 
             if (default_info) {
                 menuItem = new RecentContextMenuItem(this,
                                                      _("Open with ") + default_info.get_display_name(),
                                                      true,
                                                      Lang.bind(this, function() {
-                                                         default_info.launch([Gio.File.new_for_uri(this.file.uri)], null, null);
+                                                         default_info.launch([file], null, null);
                                                          this.toggleMenu();
                                                          this.appsMenuButton.menu.close();
                                                      }));
@@ -561,6 +567,11 @@ RecentButton.prototype = {
             for (let i = 0; i < infos.length; i++) {
                 let info = infos[i];
 
+                file = Gio.File.new_for_uri(this.file.uri);
+
+                if (!this.hasLocalPath(file) && !info.supports_uris())
+                    continue;
+
                 if (info.equal(default_info))
                     continue;
 
@@ -568,7 +579,7 @@ RecentButton.prototype = {
                                                      _("Open with ") + info.get_display_name(),
                                                      false,
                                                      Lang.bind(this, function() {
-                                                         info.launch([Gio.File.new_for_uri(this.file.uri)], null, null);
+                                                         info.launch([file], null, null);
                                                          this.toggleMenu();
                                                          this.appsMenuButton.menu.close();
                                                      }));
