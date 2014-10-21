@@ -475,7 +475,7 @@ RecentContextMenuItem.prototype = {
         this.addActor(this.label);
 
         if (is_default)
-            this.label.style = this.label.style + "font-weight: bold;";
+            this.label.style = "font-weight: bold;";
     },
 
     activate: function (event) {
