@@ -118,6 +118,37 @@ VisibleChildIterator.prototype = {
     }
 };
 
+
+function NavMap(fav, cat, app) {
+    this._init(fav, cat, app);
+}
+
+NavMap.prototype = {
+    _init: function(fav, cat, app) {
+        this.columns = [fav, cat, app];
+        this.current = { col: 0; fav: 0; cat: 0; app: 0 };
+    },
+
+    go_up: function() {
+
+    },
+
+    go_down: function() {
+
+    },
+
+    go_left: function() {
+
+    },
+
+    go_right: function() {
+
+    }
+}
+
+
+
+
 function ApplicationContextMenuItem(appButton, label, action) {
     this._init(appButton, label, action);
 }
@@ -1223,6 +1254,7 @@ MyApplet.prototype = {
         let index = 0;
         this.appBoxIter.reloadVisible();
         this.catBoxIter.reloadVisible();
+        this.favBoxIter.reloadVisible();
 
         let keyCode = event.get_key_code();
         let modifierState = Cinnamon.get_event_state(event);
@@ -1235,7 +1267,45 @@ MyApplet.prototype = {
             return true;
         }
 
-        let index = this._selectedItemIndex;   
+
+
+        let map = new Map(this.favBoxIter,
+                          this.catBoxIter,
+                          this.appBoxIter);
+
+        switch (symbol) {
+            case Clutter.KEY_Up:
+                map.go_up();
+                break;
+            case Clutter.KEY_Down:
+                map.go_down();
+                break;
+            case Clutter.KEY_Left:
+                map.go_left();
+                break;
+            case Clutter.KEY_Right:
+                map.go_right();
+                break;
+        }
+
+
+
+
+
+
+
+
+
+        let index = this._selectedItemIndex;
+
+
+
+
+
+
+
+
+
 
         if (this._activeContainer === null && symbol == Clutter.KEY_Up) {
             this._activeContainer = this.applicationsBox;
@@ -2112,6 +2182,8 @@ MyApplet.prototype = {
         this.applicationsBox._vis_iter = this.appBoxIter;
         this.catBoxIter = new VisibleChildIterator(this, this.categoriesBox);
         this.categoriesBox._vis_iter = this.catBoxIter;
+        this.favBoxIter = new VisibleChildIterator(this, this.favoritesBox);
+        this.favoritesBox._vis_iter = this.favBoxIter;
         Mainloop.idle_add(Lang.bind(this, function() {
             this._clearAllSelections(true);
         }));
