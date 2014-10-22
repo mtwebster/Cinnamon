@@ -45,7 +45,10 @@ KeybindingManager.prototype = {
         this.kb_schema.connect("changed::custom-list", Lang.bind(this, this.on_customs_changed));
 
         this.media_key_settings = new Gio.Settings({ schema: MEDIA_KEYS_SCHEMA });
-        this.media_key_settings.connect("changed", Lang.bind(this, this.setup_media_keys));
+        this.media_key_settings.connect("change-event", Lang.bind(this, function() {
+            this.setup_media_keys();
+            return true;
+        }));
         this.setup_media_keys();
 
     },
@@ -73,6 +76,7 @@ KeybindingManager.prototype = {
             global.display.rebuild_keybindings();
             return true;
         }
+        log("adding: " + name + "..." + bindings.toString());
         if (!global.display.add_custom_keybinding(name, bindings, callback)) {
             global.logError("Warning, unable to bind hotkey with name '" + name + "'.  The selected keybinding could already be in use.");
             global.display.rebuild_keybindings();
@@ -114,9 +118,10 @@ KeybindingManager.prototype = {
     },
 
     setup_media_keys: function() {
+        global.dump_gjs_stack();
         for (let i = 0; i < MK.SEPARATOR; i++) {
             let bindings = this.media_key_settings.get_strv(CinnamonDesktop.desktop_get_media_key_string(i));
-            if (!bindings)
+            if (!bindings || (bindings && (bindings.toString().trim() == "")))
                 continue;
             this.addHotKeyArray("media-keys-" + i.toString(),
                            bindings,
@@ -125,12 +130,13 @@ KeybindingManager.prototype = {
 
         for (let i = MK.SEPARATOR + 1; i < MK.LAST; i++) {
             let bindings = this.media_key_settings.get_strv(CinnamonDesktop.desktop_get_media_key_string(i));
-            if (!bindings)
+            if (!bindings || (bindings && (bindings.toString().trim() == "")))
                 continue;
             this.addHotKeyArray("media-keys-" + i.toString(),
                            bindings,
                            Lang.bind(this, this.on_media_key_pressed, i));
         }
+        return true;
     },
 
     on_global_media_key_pressed: function(display, screen, event, kb, action) {
