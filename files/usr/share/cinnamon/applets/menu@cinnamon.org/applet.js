@@ -136,6 +136,15 @@ NavMap.prototype = {
         this.last_button = null;
     },
 
+    init_on_open: function() {
+        this.current_column = 1;
+        this.current_parent = this.columns[this.current_column].container;
+        this.last_button = null;
+        this.current_button = this.columns[this.current_column].getFirstVisible();
+
+        this.current_button._delegate.emit('enter-event');
+    },
+
     go_up: function() {
         let new_button = this.columns[this.current_column].getPrevVisible(this.current_button);
         if (new_button != this.current_button) {
@@ -1207,17 +1216,16 @@ MyApplet.prototype = {
             this.actor.add_style_pseudo_class('active');
             global.stage.set_key_focus(this.searchEntry);
             this._selectedItemIndex = null;
-            this.map.current_parent = null;
-            this.map.current_button = null;
 
+            this.map.init_on_open();
 
-            let n = Math.min(this._applicationsButtons.length,
-                             INITIAL_BUTTON_LOAD);
-            for (let i = 0; i < n; i++) {
-                this._applicationsButtons[i].actor.show();
-            }
-            this._allAppsCategoryButton.actor.style_class = "menu-category-button-selected";
-            Mainloop.idle_add(Lang.bind(this, this._initial_cat_selection, n));
+            // let n = Math.min(this._applicationsButtons.length,
+            //                  INITIAL_BUTTON_LOAD);
+            // for (let i = 0; i < n; i++) {
+            //     this._applicationsButtons[i].actor.show();
+            // }
+            // this._allAppsCategoryButton.actor.style_class = "menu-category-button-selected";
+            // Mainloop.idle_add(Lang.bind(this, this._initial_cat_selection, n));
         } else {
             this.actor.remove_style_pseudo_class('active');
             if (this.searchActive) {
@@ -1317,7 +1325,7 @@ MyApplet.prototype = {
 
 
 
-        let index = this._selectedItemIndex;
+        // let index = this._selectedItemIndex;
 
 
 
@@ -1328,107 +1336,107 @@ MyApplet.prototype = {
 
 
 
-        if (this.map.current_parent === null && symbol == Clutter.KEY_Up) {
-            this.map.current_parent = this.applicationsBox;
-            item_actor = this.appBoxIter.getLastVisible();
-            index = this.appBoxIter.getAbsoluteIndexOfChild(item_actor);
-        } else if (this.map.current_parent === null && symbol == Clutter.KEY_Down) {
-            this.map.current_parent = this.applicationsBox;
-            item_actor = this.appBoxIter.getFirstVisible();
-            index = this.appBoxIter.getAbsoluteIndexOfChild(item_actor);
-        } else if (symbol == Clutter.KEY_Up) {
-            if (this.map.current_parent==this.applicationsBox) {
-                this.map.last_button = this.applicationsBox.get_child_at_index(index);
-                item_actor = this.appBoxIter.getPrevVisible(this.map.last_button);
-                index = this.appBoxIter.getAbsoluteIndexOfChild(item_actor);
-                this._scrollToButton(item_actor._delegate);
-            } else {
-                this._previousTreeSelectedActor = this.categoriesBox.get_child_at_index(index);
-                this._previousTreeSelectedActor._delegate.isHovered = false;
-                item_actor = this.catBoxIter.getPrevVisible(this.map.current_button)
-                index = this.catBoxIter.getAbsoluteIndexOfChild(item_actor);
-            }
-        } else if (symbol == Clutter.KEY_Down) {
-            if (this.map.current_parent==this.applicationsBox) {
-                this.map.last_button = this.applicationsBox.get_child_at_index(index);
-                item_actor = this.appBoxIter.getNextVisible(this.map.last_button);
-                this._previousVisibleIndex = this.appBoxIter.getVisibleIndex(item_actor);
-                index = this.appBoxIter.getAbsoluteIndexOfChild(item_actor);
-                this._scrollToButton(item_actor._delegate);
-            } else {
-                this._previousTreeSelectedActor = this.categoriesBox.get_child_at_index(index);
-                this._previousTreeSelectedActor._delegate.isHovered = false;
-                item_actor = this.catBoxIter.getNextVisible(this.map.current_button)
-                index = this.catBoxIter.getAbsoluteIndexOfChild(item_actor);
-                this._previousTreeSelectedActor._delegate.emit('leave-event');
-            }
-        } else if (symbol == Clutter.KEY_Right && (this.map.current_parent !== this.applicationsBox)) {
-            if (this._previousVisibleIndex !== null) {
-                item_actor = this.appBoxIter.getVisibleItem(this._previousVisibleIndex);
-            } else {
-                item_actor = this.appBoxIter.getFirstVisible();
-            }
-            index = this.appBoxIter.getAbsoluteIndexOfChild(item_actor);
-        } else if (symbol == Clutter.KEY_Left && this.map.current_parent === this.applicationsBox && !this.searchActive) {
-            this.map.last_button = this.applicationsBox.get_child_at_index(index);
-            item_actor = (this._previousTreeSelectedActor != null) ? this._previousTreeSelectedActor : this.catBoxIter.getFirstVisible();
-            index = this.catBoxIter.getAbsoluteIndexOfChild(item_actor);
-            this._previousTreeSelectedActor = item_actor;
-        } else if (this.map.current_parent === this.applicationsBox && (symbol == Clutter.KEY_Return || symbol == Clutter.KP_Enter)) {
-            item_actor = this.applicationsBox.get_child_at_index(this._selectedItemIndex);
-            item_actor._delegate.activate();
-            return true;
-        } else if (this.searchFilesystem && (this._fileFolderAccessActive || symbol == Clutter.slash)) {
-            if (symbol == Clutter.Return || symbol == Clutter.KP_Enter) {
-                if (this._run(this.searchEntry.get_text())) {
-                    this.menu.close();
-                }
-                return true;
-            }
-            if (symbol == Clutter.Escape) {
-                this.searchEntry.set_text('');
-                this._fileFolderAccessActive = false;
-            }
-            if (symbol == Clutter.slash) {
-                // Need preload data before get completion. GFilenameCompleter load content of parent directory.
-                // Parent directory for /usr/include/ is /usr/. So need to add fake name('a').
-                let text = this.searchEntry.get_text().concat('/a');
-                let prefix;
-                if (text.lastIndexOf(' ') == -1)
-                    prefix = text;
-                else
-                    prefix = text.substr(text.lastIndexOf(' ') + 1);
-                this._getCompletion(prefix);
+        // if (this.map.current_parent === null && symbol == Clutter.KEY_Up) {
+        //     this.map.current_parent = this.applicationsBox;
+        //     item_actor = this.appBoxIter.getLastVisible();
+        //     index = this.appBoxIter.getAbsoluteIndexOfChild(item_actor);
+        // } else if (this.map.current_parent === null && symbol == Clutter.KEY_Down) {
+        //     this.map.current_parent = this.applicationsBox;
+        //     item_actor = this.appBoxIter.getFirstVisible();
+        //     index = this.appBoxIter.getAbsoluteIndexOfChild(item_actor);
+        // } else if (symbol == Clutter.KEY_Up) {
+        //     if (this.map.current_parent==this.applicationsBox) {
+        //         this.map.last_button = this.applicationsBox.get_child_at_index(index);
+        //         item_actor = this.appBoxIter.getPrevVisible(this.map.last_button);
+        //         index = this.appBoxIter.getAbsoluteIndexOfChild(item_actor);
+        //         this._scrollToButton(item_actor._delegate);
+        //     } else {
+        //         this._previousTreeSelectedActor = this.categoriesBox.get_child_at_index(index);
+        //         this._previousTreeSelectedActor._delegate.isHovered = false;
+        //         item_actor = this.catBoxIter.getPrevVisible(this.map.current_button)
+        //         index = this.catBoxIter.getAbsoluteIndexOfChild(item_actor);
+        //     }
+        // } else if (symbol == Clutter.KEY_Down) {
+        //     if (this.map.current_parent==this.applicationsBox) {
+        //         this.map.last_button = this.applicationsBox.get_child_at_index(index);
+        //         item_actor = this.appBoxIter.getNextVisible(this.map.last_button);
+        //         this._previousVisibleIndex = this.appBoxIter.getVisibleIndex(item_actor);
+        //         index = this.appBoxIter.getAbsoluteIndexOfChild(item_actor);
+        //         this._scrollToButton(item_actor._delegate);
+        //     } else {
+        //         this._previousTreeSelectedActor = this.categoriesBox.get_child_at_index(index);
+        //         this._previousTreeSelectedActor._delegate.isHovered = false;
+        //         item_actor = this.catBoxIter.getNextVisible(this.map.current_button)
+        //         index = this.catBoxIter.getAbsoluteIndexOfChild(item_actor);
+        //         this._previousTreeSelectedActor._delegate.emit('leave-event');
+        //     }
+        // } else if (symbol == Clutter.KEY_Right && (this.map.current_parent !== this.applicationsBox)) {
+        //     if (this._previousVisibleIndex !== null) {
+        //         item_actor = this.appBoxIter.getVisibleItem(this._previousVisibleIndex);
+        //     } else {
+        //         item_actor = this.appBoxIter.getFirstVisible();
+        //     }
+        //     index = this.appBoxIter.getAbsoluteIndexOfChild(item_actor);
+        // } else if (symbol == Clutter.KEY_Left && this.map.current_parent === this.applicationsBox && !this.searchActive) {
+        //     this.map.last_button = this.applicationsBox.get_child_at_index(index);
+        //     item_actor = (this._previousTreeSelectedActor != null) ? this._previousTreeSelectedActor : this.catBoxIter.getFirstVisible();
+        //     index = this.catBoxIter.getAbsoluteIndexOfChild(item_actor);
+        //     this._previousTreeSelectedActor = item_actor;
+        // } else if (this.map.current_parent === this.applicationsBox && (symbol == Clutter.KEY_Return || symbol == Clutter.KP_Enter)) {
+        //     item_actor = this.applicationsBox.get_child_at_index(this._selectedItemIndex);
+        //     item_actor._delegate.activate();
+        //     return true;
+        // } else if (this.searchFilesystem && (this._fileFolderAccessActive || symbol == Clutter.slash)) {
+        //     if (symbol == Clutter.Return || symbol == Clutter.KP_Enter) {
+        //         if (this._run(this.searchEntry.get_text())) {
+        //             this.menu.close();
+        //         }
+        //         return true;
+        //     }
+        //     if (symbol == Clutter.Escape) {
+        //         this.searchEntry.set_text('');
+        //         this._fileFolderAccessActive = false;
+        //     }
+        //     if (symbol == Clutter.slash) {
+        //         // Need preload data before get completion. GFilenameCompleter load content of parent directory.
+        //         // Parent directory for /usr/include/ is /usr/. So need to add fake name('a').
+        //         let text = this.searchEntry.get_text().concat('/a');
+        //         let prefix;
+        //         if (text.lastIndexOf(' ') == -1)
+        //             prefix = text;
+        //         else
+        //             prefix = text.substr(text.lastIndexOf(' ') + 1);
+        //         this._getCompletion(prefix);
 
-                return false;
-            }
-            if (symbol == Clutter.Tab) {
-                let text = actor.get_text();
-                let prefix;
-                if (text.lastIndexOf(' ') == -1)
-                    prefix = text;
-                else
-                    prefix = text.substr(text.lastIndexOf(' ') + 1);
-                let postfix = this._getCompletion(prefix);
-                if (postfix != null && postfix.length > 0) {
-                    actor.insert_text(postfix, -1);
-                    actor.set_cursor_position(text.length + postfix.length);
-                    if (postfix[postfix.length - 1] == '/')
-                        this._getCompletion(text + postfix + 'a');
-                }
+        //         return false;
+        //     }
+        //     if (symbol == Clutter.Tab) {
+        //         let text = actor.get_text();
+        //         let prefix;
+        //         if (text.lastIndexOf(' ') == -1)
+        //             prefix = text;
+        //         else
+        //             prefix = text.substr(text.lastIndexOf(' ') + 1);
+        //         let postfix = this._getCompletion(prefix);
+        //         if (postfix != null && postfix.length > 0) {
+        //             actor.insert_text(postfix, -1);
+        //             actor.set_cursor_position(text.length + postfix.length);
+        //             if (postfix[postfix.length - 1] == '/')
+        //                 this._getCompletion(text + postfix + 'a');
+        //         }
 
-                return true;
-            }
-            return false;
+        //         return true;
+        //     }
+        //     return false;
 
-        } else {
-            return false;
-        }
+        // } else {
+        //     return false;
+        // }
 
-        this._selectedItemIndex = index;
-        if (!item_actor || item_actor === this.searchEntry) {
-            return false;
-        }
+        // this._selectedItemIndex = index;
+        // if (!item_actor || item_actor === this.searchEntry) {
+        //     return false;
+        // }
         item_actor._delegate.emit('enter-event');
         return true;
     },
