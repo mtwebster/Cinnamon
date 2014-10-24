@@ -757,6 +757,20 @@ RecentCategoryButton.prototype = {
     }
 };
 
+function FavoritePopupMenu(parent) {
+    this._init(parent);
+}
+
+FavoritePopupMenu.prototype = {
+    __proto__: PopupMenu.PopupMenu.prototype,
+
+    _init: function(parent, orientation) {
+        PopupMenu.PopupMenu.prototype._init.call(this, parent.actor, 0.0, St.Side.LEFT, 0);
+        Main.uiGroup.add_actor(this.actor);
+        this.actor.hide();
+    }
+}
+
 function FavoritesButton(appsMenuButton, app, nbFavorites) {
     this._init(appsMenuButton, app, nbFavorites);
 }
@@ -781,6 +795,10 @@ FavoritesButton.prototype = {
 
         this._draggable = DND.makeDraggable(this.actor);     
         this.isDraggableApp = true;
+
+        this.menu = new FavoritePopupMenu(this);
+        this._menuManager = new PopupMenu.PopupMenuManager(this);
+        this._menuManager.addMenu(this.menu);
     },
     
     get_app_id: function() {
@@ -795,6 +813,33 @@ FavoritesButton.prototype = {
     // we show as the item is being dragged.
     getDragActorSource: function() {
         return this.actor;
+    },
+
+    _onButtonReleaseEvent: function (actor, event) {
+        if (event.get_button()==1){
+            this.activate(event);
+        }
+        if (event.get_button()==3){
+            if (!this.menu.isOpen)
+                this.appsMenuButton.closeContextMenus(this, true);
+            this.toggleMenu();
+        }
+        return true;
+    },
+
+    toggleMenu: function() {
+        if (!this.menu.isOpen) {
+            let children = this.menu.box.get_children();
+            for (var i in children) {
+                this.menu.box.remove_actor(children[i]);
+            }
+            let menuItem;
+            if (AppFavorites.getAppFavorites().isFavorite(this.app.get_id())){
+                menuItem = new ApplicationContextMenuItem(this, _("Remove from favorites"), "remove_from_favorites");
+                this.menu.addMenuItem(menuItem);
+            }
+        }
+        this.menu.toggle();
     }
 };
 
@@ -2239,6 +2284,15 @@ MyApplet.prototype = {
                     this._recentButtons[recent].toggleMenu();
                 else
                     this._recentButtons[recent].closeMenu();
+            }
+        }
+
+        for (var favorite in this._favoritesButtons){
+            if (favorite != excluded && this._favoritesButtons[favorite].menu.isOpen){
+                if (animate)
+                    this._favoritesButtons[favorite].toggleMenu();
+                else
+                    this._favoritesButtons[favorite].closeMenu();
             }
         }
     },
