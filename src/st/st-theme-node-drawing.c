@@ -1330,6 +1330,8 @@ st_theme_node_render_resources (StThemeNode   *node,
                                 float          width,
                                 float          height)
 {
+  ClutterBackend *backend = clutter_get_default_backend ();
+  CoglContext *ctx = clutter_backend_get_cogl_context (backend);
   StTextureCache *texture_cache;
   StBorderImage *border_image;
   gboolean has_border;
@@ -1448,10 +1450,13 @@ st_theme_node_render_resources (StThemeNode   *node,
           int texture_width = ceil (width);
           int texture_height = ceil (height);
 
-          buffer = cogl_texture_new_with_size (texture_width,
-                                               texture_height,
-                                               COGL_TEXTURE_NO_SLICING,
-                                               COGL_PIXEL_FORMAT_ANY);
+          buffer = COGL_TEXTURE (cogl_texture_2d_new_with_size (ctx,
+                                                                texture_width,
+                                                                texture_height
+#if COGL_VERSION < COGL_VERSION_ENCODE (1, 18, 0)
+                                                                ,COGL_PIXEL_FORMAT_ANY
+#endif
+                                                                ));
           offscreen = cogl_offscreen_new_to_texture (buffer);
 
           if (offscreen != COGL_INVALID_HANDLE)
