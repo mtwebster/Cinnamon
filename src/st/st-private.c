@@ -562,6 +562,9 @@ _st_create_shadow_material (StShadow   *shadow_spec,
 
   texture = COGL_TEXTURE (cogl_texture_2d_new_from_data (ctx, width_out, height_out,
                                                          COGL_PIXEL_FORMAT_A_8,
+#if COGL_VERSION < COGL_VERSION_ENCODE (1, 18, 0)
+                                                         COGL_PIXEL_FORMAT_ANY,
+#endif
                                                          rowstride_out,
                                                          pixels_out,
                                                          NULL));

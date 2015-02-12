@@ -583,13 +583,20 @@ data_to_cogl_texture (const guchar *data,
                                                         width,
                                                         height,
                                                         has_alpha ? COGL_PIXEL_FORMAT_RGBA_8888 : COGL_PIXEL_FORMAT_RGB_888,
+#if COGL_VERSION < COGL_VERSION_ENCODE (1, 18, 0)
+                                                        COGL_PIXEL_FORMAT_ANY,
+#endif
                                                         rowstride,
                                                         data,
                                                         NULL));
 
   texture = cogl_texture_2d_new_with_size (ctx,
                                            size,
-                                           size);
+                                           size
+#if COGL_VERSION < COGL_VERSION_ENCODE (1, 18, 0)
+                                           ,COGL_PIXEL_FORMAT_ANY
+#endif
+                                           );
 
   offscreen = cogl_offscreen_new_to_texture (texture);
 
@@ -606,6 +613,9 @@ data_to_cogl_texture (const guchar *data,
                                                           width,
                                                           height,
                                                           has_alpha ? COGL_PIXEL_FORMAT_RGBA_8888 : COGL_PIXEL_FORMAT_RGB_888,
+#if COGL_VERSION < COGL_VERSION_ENCODE (1, 18, 0)
+                                                          COGL_PIXEL_FORMAT_ANY,
+#endif
                                                           rowstride,
                                                           data,
                                                           NULL));
@@ -1435,6 +1445,9 @@ create_faded_icon_cpu (StTextureCache *cache,
                                                          width,
                                                          height,
                                                          have_alpha ? COGL_PIXEL_FORMAT_RGBA_8888 : COGL_PIXEL_FORMAT_RGB_888,
+#if COGL_VERSION < COGL_VERSION_ENCODE (1, 18, 0)
+                                                         COGL_PIXEL_FORMAT_ANY,
+#endif
                                                          rowstride,
                                                          pixels,
                                                          NULL));
@@ -1753,15 +1766,15 @@ st_texture_cache_load_uri_sync (StTextureCache *cache,
 
 
 /**
- * st_texture_cache_load_file_to_cogl_texture:
+ * st_texture_cache_load_file_to_cogl_texture: (skip)
  * @cache: A #StTextureCache
  * @file_path: Path to a file in supported image format
  *
  * This function synchronously loads the given file path
  * into a COGL texture.  On error, a warning is emitted
- * and %COGL_INVALID_HANDLE is returned.
+ * and %NULL is returned.
  *
- * Returns: (transfer full): a new #CoglHandle
+ * Returns: (transfer full): a new #CoglTexture
  */
 CoglTexture *
 st_texture_cache_load_file_to_cogl_texture (StTextureCache *cache,

@@ -169,6 +169,9 @@ create_corner_material (StCornerSpec *corner)
 
   texture = COGL_TEXTURE (cogl_texture_2d_new_from_data (ctx, size, size,
                                                          CLUTTER_CAIRO_FORMAT_ARGB32,
+#if COGL_VERSION < COGL_VERSION_ENCODE (1, 18, 0)
+                                                         COGL_PIXEL_FORMAT_ANY,
+#endif
                                                          rowstride,
                                                          data,
                                                          NULL));
@@ -1257,6 +1260,9 @@ st_theme_node_prerender_background (StThemeNode *node)
                                                          paint_box.x2 - paint_box.x1,
                                                          paint_box.y2 - paint_box.y1,
                                                          CLUTTER_CAIRO_FORMAT_ARGB32,
+#if COGL_VERSION < COGL_VERSION_ENCODE (1, 18, 0)
+                                                         COGL_PIXEL_FORMAT_ANY,
+#endif
                                                          rowstride,
                                                          data,
                                                          NULL));
