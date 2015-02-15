@@ -83,6 +83,53 @@ function _unpremultiply(color) {
                                blue: blue, alpha: color.alpha });
 };
 
+/* checkPanelUpgrade:
+ *
+ *Run from main, prior to PanelManager being initialized
+ * this handles the one-time transition between panel implementations
+ * to make this transition invisible to the user.  We will evaluate the
+ * desktop-layout key, and pre-set applets-enabled and panels-enabled
+ * appropriately.
+ */
+
+function checkPanelUpgrade()
+{
+    let oldLayout = global.settings.get_string("desktop-layout");
+
+    let doIt = false;
+
+    /* GLib >= 2.4 has get_user_value, use that if possible - this being null
+     * indicates either the user never changed from the default "traditional"
+     * panel layout, or else this upgrade has already been performed (since
+     * with this set of patches, its default value goes from traditional to nothing.)
+     * Either way, we don't need to do anything in this case.  With glib < 2.4,
+     * we instead check if the value is set to "" - either by result of the new
+     * default, or by this upgrade already having been run.
+     */
+
+    try {
+        doIt = (global.settings.get_user_value("desktop-layout") != null)
+    } catch (e) {
+        doIt = (global.settings.get_string("desktop-layout") != "");
+    }
+
+    if (!doIt)
+        return;
+
+    switch (oldLayout) {
+        case "flipped":
+            global.settings.set_strv("panels-enabled", ["1:0:top"]);
+            break;
+        case "classic":
+            global.settings.set_strv("panels-enabled", ["1:0:top", "2:0:bottom"]);
+            break;
+        case "traditional": /* Default (explicitly set) - no processing needed */
+        default:
+            break;
+    }
+
+    global.settings.reset("desktop-layout");
+}
 
 /**
  * PanelManager
