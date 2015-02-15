@@ -448,6 +448,11 @@
       <_summary></_summary>
     </key>
 
+    <key name="no-adjacent-panel-barriers" type="b">
+      <default>false</default>
+      <_summary>Whether to omit pointer barriers between adjacent panels.</_summary>
+    </key>
+
     <key type="b" name="panel-edit-mode">
       <default>false</default>
       <_summary>Panel edit mode</_summary>

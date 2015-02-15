@@ -40,6 +40,12 @@ const DEFAULT_VALUES = {"panels-autohide": "false",
                         "panels-height": "25",
                         "panels-resizable": "false",
                         "panels-scale-text-icons": "false"};
+
+const Direction = {
+    LEFT  : 0,
+    RIGHT : 1
+}
+
 // To make sure the panel corners blend nicely with the panel,
 // we draw background and borders the same way, e.g. drawing
 // them as filled shapes from the outside inwards instead of
@@ -329,6 +335,29 @@ PanelManager.prototype = {
             if (this.panels[i].monitorIndex == monitorIndex && this.panels[i].bottomPosition == bottomPosition)
                 return this.panels[i];
         }
+        return null;
+    },
+
+    getAdjacentPanel: function(currentPanelObj, direction) {
+        if (!(currentPanelObj instanceof Panel))
+            return null;
+
+        if (direction == Direction.LEFT &&
+            currentPanelObj.monitorIndex == 0)
+            return null;
+        else if (direction == Direction.RIGHT &&
+                 currentPanelObj.monitorIndex == (global.screen.get_n_monitors() - 1))
+            return null;
+
+        switch (direction) {
+            case Direction.LEFT:
+                return this.getPanel(currentPanelObj.monitorIndex - 1, currentPanelObj.bottomPosition);
+                break;
+            case Direction.RIGHT:
+                return this.getPanel(currentPanelObj.monitorIndex + 1, currentPanelObj.bottomPosition);
+                break;
+        }
+
         return null;
     },
 
@@ -1448,19 +1477,39 @@ Panel.prototype = {
         if (this._rightPanelBarrier)
             global.destroy_pointer_barrier(this._rightPanelBarrier);
 
+        let doLeft = true;
+        let doRight = true;
+        let freeEdges = global.settings.get_boolean("no-adjacent-panel-barriers");
+
+        if (Main.panelManager.getAdjacentPanel(this, Direction.LEFT) != null) {
+            doLeft = freeEdges;
+        }
+
+        if (Main.panelManager.getAdjacentPanel(this, Direction.RIGHT) != null) {
+            doRight = freeEdges;
+        }
+
         if (this.panelBox.height) {
             let panelTop = (this.bottomPosition ? this.monitor.y + this.monitor.height - this.panelBox.height : this.monitor.y);
             let panelBottom = (this.bottomPosition ? this.monitor.y + this.monitor.height : this.monitor.y + this.panelBox.height);
 
-            this._leftPanelBarrier = global.create_pointer_barrier(
-                this.monitor.x, panelTop,
-                this.monitor.x, panelBottom,
-                1 /* BarrierPositiveX */);
+            if (doLeft) {
+                this._leftPanelBarrier = global.create_pointer_barrier(
+                    this.monitor.x, panelTop,
+                    this.monitor.x, panelBottom,
+                    1 /* BarrierPositiveX */);
+            } else {
+                this._leftPanelBarrier = 0;
+            }
 
-            this._rightPanelBarrier = global.create_pointer_barrier(
-                this.monitor.x + this.monitor.width - 1, panelTop,
-                this.monitor.x + this.monitor.width - 1, panelBottom,
-                4 /* BarrierNegativeX */);
+            if (doRight) {
+                this._rightPanelBarrier = global.create_pointer_barrier(
+                    this.monitor.x + this.monitor.width - 1, panelTop,
+                    this.monitor.x + this.monitor.width - 1, panelBottom,
+                    4 /* BarrierNegativeX */);
+            } else {
+                this._rightPanelBarrier = 0;
+            }
         } else {
             this._leftPanelBarrier = 0;
             this._rightPanelBarrier = 0;
