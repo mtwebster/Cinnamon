@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys
 import dbus
-from gi.repository import GLib
+from gi.repository import GLib, Gtk, Gdk
 from SettingsWidgets import *
 
 class Module:
@@ -15,6 +15,8 @@ class Module:
 
         self.settings = Gio.Settings.new("org.cinnamon");
         self.settings.connect("changed::panels-enabled", self.on_panel_list_changed)
+        self.settings.connect("changed::no-adjacent-panel-barriers", lambda x,y: self.update_barrier_view())
+        Gdk.Screen.get_default().connect("monitors-changed", lambda x: self.update_barrier_view())
         self.model = Gtk.ListStore(str, str)
         self.proxy = dbus.SessionBus().get_object("org.Cinnamon", "/org/Cinnamon")
 
@@ -79,15 +81,34 @@ class Module:
 
             vbox.add(self.panel_content)
 
-            hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-            hbox.set_border_width(6)
-            hbox.add(GSettingsCheckButton(_("Panel edit mode"), "org.cinnamon", "panel-edit-mode", None))
-            vbox.add(hbox)
+            bg = SectionBg()
+            self.sidePage.add_widget(bg)
+
+            section = Section(_("General Panel Options"))
+            bg.add(section)
+
+            section.add(GSettingsCheckButton(_("Panel edit mode"), "org.cinnamon", "panel-edit-mode", None))
 
             add_panel_button = Gtk.Button(label=_("Add new panel"))
-            vbox.add(add_panel_button)
-            add_panel_button.connect("clicked", self.on_add_panel)
+            section.add(add_panel_button)
 
+            self.barrier_box = Gtk.Box(Gtk.Orientation.VERTICAL)
+            section.add(self.barrier_box)
+
+            #button = GSettingsCheckButton(_("Disable pointer barrier for adjacent panels"), "org.cinnamon", "no-adjacent-panel-barriers", None)
+            button_frame = Section(_("Select pointer barrier behavior when two panels are adjacent one another."))
+            self.barrier_box.pack_start(button_frame, False, False, 2)
+
+            self.barrier_button = Gtk.Button()
+            button_frame.pack_start(self.barrier_button, True, True, 2)
+
+            self.image_disabled = Gtk.Image.new_from_file("/usr/lib/cinnamon-settings/data/assets/pointer-barrier-disabled.svg")
+            self.image_enabled = Gtk.Image.new_from_file("/usr/lib/cinnamon-settings/data/assets/pointer-barrier-enabled.svg")
+
+            self.update_barrier_view()
+
+            add_panel_button.connect("clicked", self.on_add_panel)
+            self.barrier_button.connect("clicked", self.on_barrier_button_clicked)
             self.combo_box.connect("changed", self.on_combo_box_changed)
             # Widget is only hidden when switching panels
             self.combo_box.connect("unmap", self.on_combo_box_destroy)
@@ -101,6 +122,23 @@ class Module:
 
     def on_add_panel(self, widget):
         self.proxy.addPanelQuery(dbus_interface='org.Cinnamon')
+
+    def on_barrier_button_clicked(self, widget):
+        self.settings.set_boolean("no-adjacent-panel-barriers", not self.settings.get_boolean("no-adjacent-panel-barriers"))
+        self.update_barrier_view()
+
+    def update_barrier_view(self):
+        num_monitors = Gdk.Screen.get_default().get_n_monitors()
+
+        if self.settings.get_boolean("no-adjacent-panel-barriers"):
+            self.barrier_button.set_image(self.image_disabled)
+        else:
+            self.barrier_button.set_image(self.image_enabled)
+
+        if False:#num_monitors < 2:
+            self.barrier_box.hide()
+        else:
+            self.barrier_box.show_all()
 
     def update_view(self, widget):
         if len(self.model) == 0:
