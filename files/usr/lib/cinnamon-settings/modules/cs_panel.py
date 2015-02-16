@@ -41,8 +41,10 @@ class Module:
             self.combo_box.pack_start(renderer_text, True)
             self.combo_box.add_attribute(renderer_text, "text", 1)
             self.combo_box.set_id_column(0)
+            self.combo_box.set_border_width(6)
+            self.combo_box.set_halign(Gtk.Align.START)
 
-            self.panel_content.pack_start(self.combo_box, False, False, 2)
+            self.panel_content.add(self.combo_box)
 
             section = Section(_("Auto Hide Options"))
 
