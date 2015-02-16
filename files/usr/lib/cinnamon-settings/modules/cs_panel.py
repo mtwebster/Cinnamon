@@ -76,10 +76,8 @@ class Module:
             section.add_indented_expand(widget)
             self.widgets.append(widget)
             self.panel_content.add(section)
-
-            self.panel_content.add(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL))
-
             vbox.add(self.panel_content)
+
 
             bg = SectionBg()
             self.sidePage.add_widget(bg)
@@ -87,20 +85,27 @@ class Module:
             section = Section(_("General Panel Options"))
             bg.add(section)
 
-            section.add(GSettingsCheckButton(_("Panel edit mode"), "org.cinnamon", "panel-edit-mode", None))
+            hbox = Gtk.Box(Gtk.Orientation.HORIZONTAL)
+            section.add(hbox)
 
             add_panel_button = Gtk.Button(label=_("Add new panel"))
-            section.add(add_panel_button)
+            # section.add(add_panel_button)
+            hbox.pack_start(add_panel_button, False, False, 2)
+            toggle_button = Gtk.ToggleButton(label=_("Panel edit mode"))
 
-            self.barrier_box = Gtk.Box(Gtk.Orientation.VERTICAL)
+            self.settings.bind("panel-edit-mode", toggle_button, "active", Gio.SettingsBindFlags.DEFAULT)
+            hbox.pack_start(toggle_button, False, False, 2)
+
+            self.barrier_box = Gtk.VBox()
             section.add(self.barrier_box)
 
-            #button = GSettingsCheckButton(_("Disable pointer barrier for adjacent panels"), "org.cinnamon", "no-adjacent-panel-barriers", None)
-            button_frame = Section(_("Select pointer barrier behavior when two panels are adjacent one another."))
-            self.barrier_box.pack_start(button_frame, False, False, 2)
+            self.barrier_box.pack_start(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL), True, True, 2)
+
+            label = Gtk.Label(label=_("Pointer behavior when moving between two adjacent panels:"), xalign=0)
+            self.barrier_box.pack_start(label, False, False, 2)
 
             self.barrier_button = Gtk.Button()
-            button_frame.pack_start(self.barrier_button, True, True, 2)
+            self.barrier_box.pack_start(self.barrier_button, False, False, 2)
 
             self.image_disabled = Gtk.Image.new_from_file("/usr/lib/cinnamon-settings/data/assets/pointer-barrier-disabled.svg")
             self.image_enabled = Gtk.Image.new_from_file("/usr/lib/cinnamon-settings/data/assets/pointer-barrier-enabled.svg")
