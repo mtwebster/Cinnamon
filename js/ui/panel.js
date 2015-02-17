@@ -599,8 +599,8 @@ PanelDummy.prototype = {
         this.actor = new Cinnamon.GenericContainer({style_class: "panel-dummy", reactive: true, track_hover: true, important: true});
         Main.layoutManager.addChrome(this.actor, { addToWindowgroup: false });
 
-        this.actor.set_size(this.monitor.width, 25);
-        this.actor.set_position(this.monitor.x, bottomPosition ? this.monitor.y + this.monitor.height - 25 : this.monitor.y);
+        this.actor.set_size(this.monitor.width, 25 * global.ui_scale);
+        this.actor.set_position(this.monitor.x, bottomPosition ? this.monitor.y + this.monitor.height - (25 * global.ui_scale) : this.monitor.y);
 
         this.actor.connect('button-press-event', Lang.bind(this, this._onClicked));
         this.actor.connect('enter-event', Lang.bind(this, this._onEnter));
