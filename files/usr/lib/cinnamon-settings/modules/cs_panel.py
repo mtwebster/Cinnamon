@@ -4,6 +4,12 @@ import dbus
 from gi.repository import GLib, Gtk, Gdk
 from SettingsWidgets import *
 
+class Monitor:
+    def __init__(self, index):
+        self.index = index
+        self.top = False
+        self.bottom = False
+
 class Module:
     def __init__(self, content_box):
         keywords = _("panel, height, bottom, top, autohide, size, layout")
@@ -88,9 +94,9 @@ class Module:
             hbox = Gtk.Box(Gtk.Orientation.HORIZONTAL)
             section.add(hbox)
 
-            add_panel_button = Gtk.Button(label=_("Add new panel"))
-            # section.add(add_panel_button)
-            hbox.pack_start(add_panel_button, False, False, 2)
+            self.add_panel_button = Gtk.Button(label=_("Add new panel"))
+
+            hbox.pack_start(self.add_panel_button, False, False, 2)
             toggle_button = Gtk.ToggleButton(label=_("Panel edit mode"))
 
             self.settings.bind("panel-edit-mode", toggle_button, "active", Gio.SettingsBindFlags.DEFAULT)
@@ -98,7 +104,7 @@ class Module:
 
             section.add(GSettingsCheckButton(_("Allow the pointer to pass through the edges of adjacent panels"), "org.cinnamon", "no-adjacent-panel-barriers", None))
 
-            add_panel_button.connect("clicked", self.on_add_panel)
+            self.add_panel_button.connect("clicked", self.on_add_panel)
             self.combo_box.connect("changed", self.on_combo_box_changed)
             # Widget is only hidden when switching panels
             self.combo_box.connect("unmap", self.on_combo_box_destroy)
@@ -126,14 +132,22 @@ class Module:
     def on_panel_list_changed(self, schema, key):
         self.model.clear()
         panels = self.settings.get_strv("panels-enabled")
+
+        n_mons = Gdk.Screen.get_default().get_n_monitors()
+        monitor_layout = {}
+
         selected = None
         for panel in panels:
             titer = self.model.insert_before(None, None)
-            panel_id = panel.split(":")[0]
+            panel_id, monitor_id, position = panel.split(":")
             self.model.set_value(titer, 0, panel_id)
             self.model.set_value(titer, 1, "Panel " + panel_id)
             if panel_id == self.panel_id:
                 selected = titer
+
+            if monitor_layout["mon-" + monitor_id] == None:
+                monitor_layout["mon-" + monitor_id] = Monitor(monitor_id)
+            monitor_layout["mon-" + monitor_id][position] = True
 
         if not selected:
             selected = self.model.get_iter_first()
@@ -145,6 +159,20 @@ class Module:
             self.panel_content.hide()
         else:
             self.panel_content.show()
+
+        show_add = False
+        i = 0
+        while i < n_mons:
+            if monitor_layout["mon-" + i] == None:
+                show_add = True
+                break
+            mon = monitor_layout["mon-" + i]
+            if mon.top == False or mon.bottom == False:
+                show_add = True
+                break
+            i += 1
+
+        gtk_widget_set_sensitive(self.add_panel_button, show_add)
 
     def on_combo_box_changed(self, widget):
         if self.panel_id:
