@@ -5,8 +5,7 @@ from gi.repository import GLib, Gtk, Gdk
 from SettingsWidgets import *
 
 class Monitor:
-    def __init__(self, index):
-        self.index = index
+    def __init__(self):
         self.top = False
         self.bottom = False
 
@@ -134,7 +133,9 @@ class Module:
         panels = self.settings.get_strv("panels-enabled")
 
         n_mons = Gdk.Screen.get_default().get_n_monitors()
-        monitor_layout = {}
+        monitor_layout = []
+        for i in range(0, n_mons):
+            monitor_layout.append(Monitor())
 
         selected = None
         for panel in panels:
@@ -145,9 +146,12 @@ class Module:
             if panel_id == self.panel_id:
                 selected = titer
 
-            if monitor_layout["mon-" + monitor_id] == None:
-                monitor_layout["mon-" + monitor_id] = Monitor(monitor_id)
-            monitor_layout["mon-" + monitor_id][position] = True
+            monitor_id = int(monitor_id)
+            if monitor_id < n_mons:
+                if "top" in position:
+                    monitor_layout[monitor_id].top = True
+                else:
+                    monitor_layout[monitor_id].bottom = True
 
         if not selected:
             selected = self.model.get_iter_first()
@@ -161,18 +165,13 @@ class Module:
             self.panel_content.show()
 
         show_add = False
-        i = 0
-        while i < n_mons:
-            if monitor_layout["mon-" + i] == None:
-                show_add = True
-                break
-            mon = monitor_layout["mon-" + i]
-            if mon.top == False or mon.bottom == False:
+        for i in range(0, n_mons):
+            if monitor_layout[i].top == False or monitor_layout[i].bottom == False:
                 show_add = True
                 break
             i += 1
 
-        gtk_widget_set_sensitive(self.add_panel_button, show_add)
+        self.add_panel_button.set_sensitive(show_add)
 
     def on_combo_box_changed(self, widget):
         if self.panel_id:
