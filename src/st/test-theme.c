@@ -430,7 +430,7 @@ main (int argc, char **argv)
     return 1;
 
   theme = st_theme_new ("st/test-theme.css",
-                        NULL, NULL);
+                        NULL);
 
   stage = clutter_stage_new ();
   context = st_theme_context_get_for_stage (CLUTTER_STAGE (stage));

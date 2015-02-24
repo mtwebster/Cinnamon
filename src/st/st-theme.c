@@ -63,11 +63,10 @@ struct _StTheme
 {
   GObject parent;
 
-  char *application_stylesheet;
-  char *default_stylesheet;
   char *theme_stylesheet;
+  char *fallback_theme_location;
 
-  char *fallback_stylesheet;
+  StSassContext *sass_c;
 
   GSList *custom_stylesheets;
 
@@ -86,10 +85,9 @@ struct _StThemeClass
 enum
 {
   PROP_0,
-  PROP_APPLICATION_STYLESHEET,
   PROP_THEME_STYLESHEET,
-  PROP_DEFAULT_STYLESHEET,
-  PROP_FALLBACK_STYLESHEET
+  PROP_SASS_CONTEXT,
+  PROP_FALLBACK_THEME_LOCATION
 };
 
 enum
@@ -125,20 +123,6 @@ st_theme_class_init (StThemeClass *klass)
   object_class->get_property = st_theme_get_property;
 
   /**
-   * StTheme:application-stylesheet:
-   *
-   * The highest priority stylesheet, representing application-specific
-   * styling; this is associated with the CSS "author" stylesheet.
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_APPLICATION_STYLESHEET,
-                                   g_param_spec_string ("application-stylesheet",
-                                                        "Application Stylesheet",
-                                                        "Stylesheet with application-specific styling",
-                                                        NULL,
-                                                        G_PARAM_READABLE | G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
-
-  /**
    * StTheme:theme-stylesheet:
    *
    * The second priority stylesheet, representing theme-specific styling;
@@ -153,32 +137,31 @@ st_theme_class_init (StThemeClass *klass)
                                                         G_PARAM_READABLE | G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
 
   /**
-   * StTheme:default-stylesheet:
-   *
-   * The lowest priority stylesheet, representing global default
-   * styling; this is associated with the CSS "user agent" stylesheet.
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_DEFAULT_STYLESHEET,
-                                   g_param_spec_string ("default-stylesheet",
-                                                        "Default Stylesheet",
-                                                        "Stylesheet with global default styling",
-                                                        NULL,
-                                                        G_PARAM_READABLE | G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
-
-  /**
    * StTheme:fallback-stylesheet:
    *
    * Fallback stylesheet - non-cascading.  It is applied only if the user-selected stylesheets
    * fail to return any properties, and the StWidget has its "important" property set.
    */
   g_object_class_install_property (object_class,
-                                   PROP_FALLBACK_STYLESHEET,
-                                   g_param_spec_string ("fallback-stylesheet",
-                                                        "Fallback Stylesheet",
+                                   PROP_FALLBACK_THEME_LOCATION,
+                                   g_param_spec_string ("fallback-theme-location",
+                                                        "Fallback Stylesheet location",
                                                         "Fallback stylesheet for important system widgets.",
                                                         NULL,
                                                         G_PARAM_READABLE | G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+
+  /**
+   * StTheme:sass-context:
+   *
+   * The SASS context for the current theme (may be %NULL)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SASS_CONTEXT,
+                                   g_param_spec_object ("sass-context",
+                                                        "The sass context",
+                                                        "The sass context",
+                                                        ST_TYPE_SASS_CONTEXT,
+                                                        G_PARAM_READABLE | G_PARAM_WRITABLE));
 
   signals[STYLESHEETS_CHANGED] = g_signal_new ("custom-stylesheets-changed",
                                                G_TYPE_FROM_CLASS (klass),
@@ -212,6 +195,32 @@ parse_stylesheet (const char  *filename,
   return stylesheet;
 }
 
+static CRStyleSheet *
+parse_buffer (const gchar  *buffer,
+                  GError     **error)
+{
+  enum CRStatus status;
+  CRStyleSheet *stylesheet;
+
+  if (buffer == NULL)
+    return NULL;
+
+  status = cr_om_parser_simply_parse_buf ((const guchar *) buffer,
+                                          strlen (buffer),
+                                          CR_UTF_8,
+                                          &stylesheet);
+
+  if (status != CR_OK)
+    {
+      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+                   "Error parsing stylesheet '%s'; errcode:%d", "FIXME", status);
+      return NULL;
+    }
+
+  return stylesheet;
+}
+
+
 CRDeclaration *
 _st_theme_parse_declaration_list (const char *str)
 {
@@ -227,6 +236,22 @@ parse_stylesheet_nofail (const char *filename)
   CRStyleSheet *result;
 
   result = parse_stylesheet (filename, &error);
+  if (error)
+    {
+      g_warning ("%s", error->message);
+      g_clear_error (&error);
+    }
+  return result;
+}
+
+/* Just g_warning for now until we have something nicer to do */
+static CRStyleSheet *
+parse_stylesheet_buffer_nofail (const gchar *buffer)
+{
+  GError *error = NULL;
+  CRStyleSheet *result;
+
+  result = parse_buffer (buffer, &error);
   if (error)
     {
       g_warning ("%s", error->message);
@@ -322,31 +347,80 @@ st_theme_constructor (GType                  type,
 {
   GObject *object;
   StTheme *theme;
-  CRStyleSheet *application_stylesheet;
   CRStyleSheet *theme_stylesheet;
-  CRStyleSheet *default_stylesheet;
 
   object = (*G_OBJECT_CLASS (st_theme_parent_class)->constructor) (type,
                                                                       n_construct_properties,
                                                                       construct_properties);
   theme = ST_THEME (object);
 
-  application_stylesheet = parse_stylesheet_nofail (theme->application_stylesheet);
-  theme_stylesheet = parse_stylesheet_nofail (theme->theme_stylesheet);
-  default_stylesheet = parse_stylesheet_nofail (theme->default_stylesheet);
+  GError *error = NULL;
 
-  theme->fallback_cr_stylesheet = parse_stylesheet_nofail (theme->fallback_stylesheet);
+  StSassContext *sass_c = NULL;
+  gchar *stylesheet = NULL;
 
-  theme->cascade = cr_cascade_new (application_stylesheet,
-                                   theme_stylesheet,
-                                   default_stylesheet);
+  /* Check for a SASS theme */
 
-  if (theme->cascade == NULL)
-    g_error ("Out of memory when creating cascade object");
+  gchar *stylesheet_path = NULL;
 
-  insert_stylesheet (theme, theme->application_stylesheet, application_stylesheet);
-  insert_stylesheet (theme, theme->theme_stylesheet, theme_stylesheet);
-  insert_stylesheet (theme, theme->default_stylesheet, default_stylesheet);
+  stylesheet_path = g_build_filename (theme->theme_stylesheet, "cinnamon.scss", NULL);
+
+  if (g_file_test (stylesheet_path, G_FILE_TEST_EXISTS)) {
+      // sass_c = st_sass_context_new (stylesheet_path);
+
+      // if (sass_c) {
+      //     stylesheet = st_sass_context_get_stylesheet (sass_c);
+      // }
+  }
+
+  g_free (stylesheet_path);
+
+  if (sass_c && stylesheet) {
+      goto done;
+  }
+
+  /* Check for a conventional theme */
+
+  stylesheet_path = NULL;
+  stylesheet_path = g_build_filename (theme->theme_stylesheet, "cinnamon.css", NULL);
+
+  if (g_file_test (stylesheet_path, G_FILE_TEST_EXISTS)) {
+      gchar *buffer = NULL;
+
+      if (!g_file_get_contents (stylesheet_path, &buffer, NULL, &error)) {
+          g_free (buffer);
+          goto done;
+      }
+
+      if (buffer) {
+          stylesheet = buffer;
+      }
+  }
+
+done:
+
+  if (stylesheet) {
+    theme_stylesheet = parse_stylesheet_buffer_nofail (stylesheet);
+
+    gchar *fallback_filename = g_build_filename (theme->fallback_theme_location, "cinnamon.css", NULL);
+    theme->fallback_cr_stylesheet = parse_stylesheet_nofail (fallback_filename);
+    g_free (fallback_filename);
+
+    theme->cascade = cr_cascade_new (NULL,
+                                    theme_stylesheet,
+                                    NULL);
+
+    if (theme->cascade == NULL)
+      g_error ("Out of memory when creating cascade object");
+
+    if (sass_c)
+      theme->sass_c = sass_c;
+
+    insert_stylesheet (theme, stylesheet_path, theme_stylesheet);
+  }
+
+  g_free (stylesheet);
+  g_free (stylesheet_path);
 
   return object;
 }
@@ -363,10 +437,10 @@ st_theme_finalize (GObject * object)
   g_hash_table_destroy (theme->stylesheets_by_filename);
   g_hash_table_destroy (theme->filenames_by_stylesheet);
 
-  g_free (theme->application_stylesheet);
   g_free (theme->theme_stylesheet);
-  g_free (theme->default_stylesheet);
-  g_free (theme->fallback_stylesheet);
+  g_free (theme->fallback_theme_location);
+  if (theme->sass_c)
+    g_object_unref (theme->sass_c);
 
   if (theme->cascade)
     {
@@ -387,18 +461,6 @@ st_theme_set_property (GObject      *object,
 
   switch (prop_id)
     {
-    case PROP_APPLICATION_STYLESHEET:
-      {
-        const char *path = g_value_get_string (value);
-
-        if (path != theme->application_stylesheet)
-          {
-            g_free (theme->application_stylesheet);
-            theme->application_stylesheet = g_strdup (path);
-          }
-
-        break;
-      }
     case PROP_THEME_STYLESHEET:
       {
         const char *path = g_value_get_string (value);
@@ -411,28 +473,21 @@ st_theme_set_property (GObject      *object,
 
         break;
       }
-    case PROP_DEFAULT_STYLESHEET:
+    case PROP_FALLBACK_THEME_LOCATION:
       {
         const char *path = g_value_get_string (value);
 
-        if (path != theme->default_stylesheet)
+        if (path != theme->fallback_theme_location)
           {
-            g_free (theme->default_stylesheet);
-            theme->default_stylesheet = g_strdup (path);
+            g_free (theme->fallback_theme_location);
+            theme->fallback_theme_location = g_strdup (path);
           }
 
         break;
       }
-    case PROP_FALLBACK_STYLESHEET:
+    case PROP_SASS_CONTEXT:
       {
-        const char *path = g_value_get_string (value);
-
-        if (path != theme->fallback_stylesheet)
-          {
-            g_free (theme->fallback_stylesheet);
-            theme->fallback_stylesheet = g_strdup (path);
-          }
-
+        theme->sass_c = g_object_ref (g_value_get_object (value));
         break;
       }
     default:
@@ -451,17 +506,14 @@ st_theme_get_property (GObject    *object,
 
   switch (prop_id)
     {
-    case PROP_APPLICATION_STYLESHEET:
-      g_value_set_string (value, theme->application_stylesheet);
-      break;
     case PROP_THEME_STYLESHEET:
       g_value_set_string (value, theme->theme_stylesheet);
       break;
-    case PROP_DEFAULT_STYLESHEET:
-      g_value_set_string (value, theme->default_stylesheet);
+    case PROP_FALLBACK_THEME_LOCATION:
+      g_value_set_string (value, theme->fallback_theme_location);
       break;
-    case PROP_FALLBACK_STYLESHEET:
-      g_value_set_string (value, theme->fallback_stylesheet);
+    case PROP_SASS_CONTEXT:
+      g_value_take_object (value, theme->sass_c);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -471,26 +523,19 @@ st_theme_get_property (GObject    *object,
 
 /**
  * st_theme_new:
- * @application_stylesheet: The highest priority stylesheet, representing application-specific
- *   styling; this is associated with the CSS "author" stylesheet, may be %NULL
- * @theme_stylesheet: The second priority stylesheet, representing theme-specific styling ;
- *   this is associated with the CSS "user" stylesheet, may be %NULL
- * @default_stylesheet: The lowest priority stylesheet, representing global default styling;
- *   this is associated with the CSS "user agent" stylesheet, may be %NULL
+ * @stylesheet: Starting parsed stylesheet to load
+ * @sass_c: The SASS context, may be %NULL
  *
  * Return value: the newly created theme object
  **/
 StTheme *
-st_theme_new (const char       *application_stylesheet,
-              const char       *theme_stylesheet,
-              const char       *default_stylesheet)
+st_theme_new (const gchar         *stylesheet_path,
+              const gchar         *fallback_path)
 {
   StTheme *theme = g_object_new (ST_TYPE_THEME,
-                                    "application-stylesheet", application_stylesheet,
-                                    "theme-stylesheet", theme_stylesheet,
-                                    "default-stylesheet", default_stylesheet,
-                                    NULL);
-
+                                 "theme-stylesheet", stylesheet_path,
+                                 "fallback-theme-location", fallback_path,
+                                 NULL);
   return theme;
 }
 

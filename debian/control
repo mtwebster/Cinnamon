@@ -38,6 +38,7 @@ Build-Depends: debhelper (>= 9),
                libpulse-dev,
                libpolkit-agent-1-dev (>= 0.100),
                libjson-glib-dev (>= 0.13.2),
+               libsass-dev,
                gtk-doc-tools
 Standards-Version: 3.9.5
 Homepage: http://cinnamon.linuxmint.com
@@ -97,6 +98,7 @@ Depends: cinnamon-common (= ${source:Version}),
          gkbd-capplet,
          python-pyinotify,
          metacity,
+         libsass1,
          gnome-panel | tint2
 Recommends: gnome-themes-standard, gnome-terminal, cinnamon-bluetooth
 Provides: notification-daemon, x-window-manager

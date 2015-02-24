@@ -23,6 +23,7 @@
 #include <glib-object.h>
 
 #include "st-theme-node.h"
+#include "st-sass-context.h"
 
 G_BEGIN_DECLS
 
@@ -47,13 +48,15 @@ typedef struct _StThemeClass StThemeClass;
 
 GType  st_theme_get_type (void) G_GNUC_CONST;
 
-StTheme *st_theme_new (const char *application_stylesheet,
-                       const char *theme_stylesheet,
-                       const char *default_stylesheet);
+StTheme *st_theme_new (const gchar   *stylesheet_path,
+                       const gchar   *fallback_path);
 
 gboolean  st_theme_load_stylesheet        (StTheme *theme, const char *path, GError **error);
 void      st_theme_unload_stylesheet      (StTheme *theme, const char *path);
 GSList   *st_theme_get_custom_stylesheets (StTheme *theme);
+
+gboolean  st_theme_load_theme_by_name     (StTheme *theme, const char *name, GError **error);
+gboolean  st_theme_load_theme_by_location (StTheme *theme, const char *dir, GError **error);
 
 G_END_DECLS
 

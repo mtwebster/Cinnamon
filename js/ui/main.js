@@ -107,7 +107,6 @@ const WindowAttentionHandler = imports.ui.windowAttentionHandler;
 const Scripting = imports.ui.scripting;
 const CinnamonDBus = imports.ui.cinnamonDBus;
 const WindowManager = imports.ui.windowManager;
-const ThemeManager = imports.ui.themeManager;
 const Magnifier = imports.ui.magnifier;
 const XdndHandler = imports.ui.xdndHandler;
 const StatusIconDispatcher = imports.ui.statusIconDispatcher;
@@ -154,7 +153,7 @@ let themeManager = null;
 let keybindingManager = null;
 let _errorLogStack = [];
 let _startDate;
-let _defaultCssStylesheet = null;
+let _defaultThemeFolder = null;
 let _cssStylesheet = null;
 let dynamicWorkspaces = null;
 let tracker = null;
@@ -311,12 +310,18 @@ function start() {
     global.stage.no_clear_hint = true;
     
     Gtk.IconTheme.get_default().append_search_path("/usr/share/cinnamon/icons/");
-    _defaultCssStylesheet = global.datadir + '/theme/cinnamon.css';    
+    _defaultThemeFolder = global.datadir + '/theme';
 
     soundManager = new SoundManager.SoundManager();
 
-    themeManager = new ThemeManager.ThemeManager();
+    themeManager = new Cinnamon.ThemeManager();
 
+    themeManager.connect("initialized", function() {
+        postThemeInit(cinnamonStartTime);
+    });
+}
+
+function postThemeInit(cinnamonStartTime) {
     settingsManager = new Settings.SettingsManager();
 
     backgroundManager = new BackgroundManager.BackgroundManager();
@@ -443,7 +448,7 @@ function start() {
 
     _nWorkspacesChanged();
 
-    startTime = new Date().getTime();
+    let startTime = new Date().getTime();
     AppletManager.init();
     global.log('AppletManager.init() started in %d ms'.format(new Date().getTime() - startTime));
 
@@ -796,46 +801,46 @@ function _nWorkspacesChanged() {
 }
 
 /**
- * getThemeStylesheet:
+ * getTheme:
  *
- * Get the theme CSS file that Cinnamon will load
+ * Get the theme that Cinnamon will load
  *
- * Returns (string): A file path that contains the theme CSS,
+ * Returns (string): The name of the currently set theme,
  *                   null if using the default
  */
-function getThemeStylesheet()
+function getTheme()
 {
-    return _cssStylesheet;
+    return _theme;
 }
 
 /**
- * setThemeStylesheet:
- * @cssStylesheet (string): A file path that contains the theme CSS,
- *                         set it to null to use the default
+ * setTheme:
+ * @theme_name (string): The name of the theme to use.
+ *                       Set to null to use the default.
  *
- * Set the theme CSS file that Cinnamon will load
+ * Set the theme that Cinnamon will load
  */
-function setThemeStylesheet(cssStylesheet)
+function setTheme(theme_name)
 {
-    _cssStylesheet = cssStylesheet;
+    _theme = name;
 }
 
 /**
  * loadTheme:
  *
- * Reloads the theme CSS file
+ * Reloads the theme
  */
 function loadTheme() {
     let themeContext = St.ThemeContext.get_for_stage (global.stage);
-    let theme = new St.Theme ({ fallback_stylesheet: _defaultCssStylesheet });
-    let stylesheetLoaded = false;
-    if (_cssStylesheet != null) {
-        stylesheetLoaded = theme.load_stylesheet(_cssStylesheet);
+    let theme = new St.Theme ({ fallback_theme_location: _defaultThemeFolder });
+    let themeLoaded = false;
+    if (_theme != null) {
+        themeLoaded = theme.load_theme_by_name(_theme);
     }
-    if (!stylesheetLoaded) {
-        theme.load_stylesheet(_defaultCssStylesheet);
-        if (_cssStylesheet != null) {
-            global.logError("There was some problem parsing the theme: " + _cssStylesheet + ".  Falling back to the default theme.");
+    if (!themeLoaded) {
+        theme.load_theme_by_location(_defaultThemeFolder);
+        if (_theme != null) {
+            global.logError("There was some problem parsing the theme: " + theme + ".  Falling back to the default theme.");
         }
     }
 

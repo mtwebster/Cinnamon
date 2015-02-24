@@ -89,6 +89,7 @@ st_source_h =					\
 	st/st-overflow-box.h			\
 	st/st-polygon.h             \
 	st/st-private.h				\
+    st/st-sass-context.h        \
 	st/st-scrollable.h			\
 	st/st-scroll-bar.h			\
 	st/st-scroll-view.h			\
@@ -148,6 +149,7 @@ st_source_c =					\
 	st/st-overflow-box.c			\
 	st/st-polygon.c             \
 	st/st-private.c				\
+    st/st-sass-context.c        \
 	st/st-scrollable.c			\
 	st/st-scroll-bar.c			\
 	st/st-scroll-view.c			\
