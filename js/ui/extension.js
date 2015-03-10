@@ -535,3 +535,37 @@ function get_max_instances (uuid) {
     }
     return 1;
 }
+
+function get_current_extension() {
+    let stack = (new Error()).stack;
+
+    // Assuming we're importing this directly from an extension (and we shouldn't
+    // ever not be), its UUID should be directly in the path here.
+    let extensionStackLine = stack.split('\n')[1];
+    if (!extensionStackLine)
+        throw new Error('Could not find current extension');
+
+    // The stack line is like:
+    //   init([object Object])@/home/user/data/gnome-shell/extensions/u@u.id/prefs.js:8
+    //
+    // In the case that we're importing from
+    // module scope, the first field is blank:
+    //   @/home/user/data/gnome-shell/extensions/u@u.id/prefs.js:8
+    let match = new RegExp('@(.+):\\d+').exec(extensionStackLine);
+    if (!match)
+        throw new Error('Could not find current extension');
+
+    let path = match[1];
+    let file = Gio.File.new_for_path(path);
+
+    // Walk up the directory tree, looking for an extesion with
+    // the same UUID as a directory name.
+    while (file != null) {
+        let extension = extensions[file.get_basename()];
+        if (extension !== undefined)
+            return extension;
+        file = file.get_parent();
+    }
+
+    throw new Error('Could not find current extension');
+}
