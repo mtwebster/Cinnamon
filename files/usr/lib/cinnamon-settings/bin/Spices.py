@@ -22,6 +22,7 @@ try:
     import shutil
     import cgi
     import subprocess
+    import thread
 except Exception, detail:
     print detail
     sys.exit(1)
@@ -173,24 +174,24 @@ class Spice_Harvester:
         os.system("xdg-open '%s/%ss/view/%s'" % (URL_SPICES_HOME, self.collection_type, appletData['spices-id']))
         return
         
-        screenshot_filename = os.path.basename(appletData['screenshot'])
-        screenshot_path = os.path.join(self.get_cache_folder(), screenshot_filename)
-        appletData['screenshot_path'] = screenshot_path
-        appletData['screenshot_filename'] = screenshot_filename
+        # screenshot_filename = os.path.basename(appletData['screenshot'])
+        # screenshot_path = os.path.join(self.get_cache_folder(), screenshot_filename)
+        # appletData['screenshot_path'] = screenshot_path
+        # appletData['screenshot_filename'] = screenshot_filename
 
-        if not os.path.exists(screenshot_path):
-            f = open(screenshot_path, 'w')
-            self.download_url = URL_SPICES_HOME + appletData['screenshot']
-            self.download_with_progressbar(f, screenshot_path, _("Downloading screenshot"), False)
+        # if not os.path.exists(screenshot_path):
+        #     f = open(screenshot_path, 'w')
+        #     self.download_url = URL_SPICES_HOME + appletData['screenshot']
+        #     self.download_with_progressbar(f, screenshot_path, _("Downloading screenshot"), False)
 
-        template = open(os.path.realpath(os.path.dirname(os.path.abspath(__file__)) + "/../data/spices/applet-detail.html")).read()
-        subs = {}
-        subs['appletData'] = json.dumps(appletData, sort_keys=False, indent=3)
-        html = string.Template(template).safe_substitute(subs)
+        # template = open(os.path.realpath(os.path.dirname(os.path.abspath(__file__)) + "/../data/spices/applet-detail.html")).read()
+        # subs = {}
+        # subs['appletData'] = json.dumps(appletData, sort_keys=False, indent=3)
+        # html = string.Template(template).safe_substitute(subs)
 
-        # Prevent flashing previously viewed
-        self._sigLoadFinished = self.browser.connect("document-load-finished", lambda x, y: self.real_show_detail())
-        self.browser.load_html_string(html, "file:///")
+        # # Prevent flashing previously viewed
+        # self._sigLoadFinished = self.browser.connect("document-load-finished", lambda x, y: self.real_show_detail())
+        # self.browser.load_html_string(html, "file:///")
 
     def real_show_detail(self):
         self.browser.show()
@@ -239,22 +240,26 @@ class Spice_Harvester:
 
         return install_folder
 
-    def load(self, onDone, force=False):
+    def load(self, onDone, force):
         self.abort_download = ABORT_NONE
         if (self.has_cache and not force):
             self.load_cache()
         else:
-            self.progresslabel.set_text(_("Refreshing index..."))
-            self.progress_window.show()
+            GObject.idle_add(self.present_progress_window_load_thread)
             self.refresh_cache()
 
-        onDone(self.index_cache)
+        GObject.idle_add(onDone, self.index_cache)
+        thread.exit()
 
-    def refresh_cache(self, load_assets=True):
-        self.download_url = self.get_index_url()
+    def present_progress_window_load_thread(self):
+        self.progresslabel.set_text(_("Refreshing index..."))
+        self.progress_window.show()
         self.progressbar.set_fraction(0)
         self.progress_bar_pulse()
 
+    def refresh_cache(self, load_assets=True):
+        self.download_url = self.get_index_url()
+        
         filename = os.path.join(self.cache_folder, "index.json")
         f = open(filename, 'w')
         self.download(f, filename)
@@ -263,7 +268,12 @@ class Spice_Harvester:
         #print "Loaded index, now we know about %d spices." % len(self.index_cache)
         
         if load_assets:
+            GObject.idle_add(self.progress_window_load_assets_thread)
             self.load_assets()
+
+    def progress_window_load_assets_thread(self):
+        self.progresslabel.set_text(_("Refreshing cache..."))
+        self.progress_button_abort.set_sensitive(True)
 
     def load_cache(self):
         filename = os.path.join(self.cache_folder, "index.json")
@@ -278,8 +288,6 @@ class Spice_Harvester:
             self.errorMessage(_("Something went wrong with the spices download.  Please try refreshing the list again."), str(detail))
 
     def load_assets(self):
-        self.progresslabel.set_text(_("Refreshing cache..."))
-        self.progress_button_abort.set_sensitive(True)
         needs_refresh = 0
         used_thumbs = []
 
@@ -337,7 +345,7 @@ class Spice_Harvester:
             except:
                 pass
 
-        self.progress_window.hide()
+        GObject.idle_add(self.progress_window.hide)
 
         self.download_total_files = 0
         self.download_current_file = 0
@@ -550,23 +558,23 @@ class Spice_Harvester:
     def on_refresh_clicked(self):
         self.load_index()
 
-    def download_with_progressbar(self, outfd, outfile, caption='Please wait..', waitForClose=True):
-        self.progressbar.set_fraction(0)
-        self.progressbar.set_text('0%')        
-        self.progresslabel.set_text(caption)
-        self.progress_window.show()
+    # def download_with_progressbar(self, outfd, outfile, caption='Please wait..', waitForClose=True):
+    #     self.progressbar.set_fraction(0)
+    #     self.progressbar.set_text('0%')        
+    #     self.progresslabel.set_text(caption)
+    #     self.progress_window.show()
 
-        while Gtk.events_pending():
-            Gtk.main_iteration()
+    #     while Gtk.events_pending():
+    #         Gtk.main_iteration()
         
-        self.progress_bar_pulse()
-        self.download(outfd, outfile)
+    #     self.progress_bar_pulse()
+    #     self.download(outfd, outfile)
 
-        if not waitForClose:
-            time.sleep(0.5)
-            self.progress_window.hide()
-        else:
-            self.progress_button_abort.set_sensitive(False)
+    #     if not waitForClose:
+    #         time.sleep(0.5)
+    #         self.progress_window.hide()
+    #     else:
+    #         self.progress_button_abort.set_sensitive(False)
 
     def progress_bar_pulse(self):       
         count = 0
@@ -580,7 +588,7 @@ class Spice_Harvester:
 
     def download(self, outfd, outfile):
         url = self.download_url
-        self.progress_button_abort.set_sensitive(True)
+        GObject.idle_add(self.progress_button_abort.set_sensitive, True)
         try:
             self.url_retrieve(url, outfd, self.reporthook)
         except KeyboardInterrupt:
@@ -588,7 +596,7 @@ class Spice_Harvester:
                 os.remove(outfile)
             except OSError:
                 pass
-            self.progress_window.hide()
+            GObject.idle_add(self.progress_window.hide)
             if self.abort_download == ABORT_ERROR:
                 self.errorMessage(_("An error occurred while trying to access the server.  Please try again in a little while."), self.error)
             raise Exception(_("Download aborted."))
@@ -635,7 +643,7 @@ class Spice_Harvester:
                 if not data:
                     break
                 f.write(data)
-                reporthook(count, blockSize, totalSize)
+                GObject.idle_add(reporthook, count, blockSize, totalSize)
         except KeyboardInterrupt:
             f.close()
             self.abort_download = ABORT_USER

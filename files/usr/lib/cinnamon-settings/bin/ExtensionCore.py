@@ -10,6 +10,7 @@ try:
     import os.path
     import sys
     import time
+    import thread
     import urllib2
     import os
     import os.path
@@ -871,7 +872,8 @@ class ExtensionSidePage (SidePage):
     def load_spices(self, force=False):
         # if self.spices.get_webkit_enabled():
         self.update_list = {}
-        self.spices.load(self.on_spice_load, force)
+
+        thread.start_new_thread(self.spices.load, (self.on_spice_load, force))
 
     def install_extensions(self):
         if len(self.install_list) > 0:
@@ -1030,7 +1032,7 @@ Please contact the developer.""")
         name = self.stack.get_visible_child_name()
         if name == "more" and len(self.gm_model) == 0:
             self.load_spices()
-        GLib.timeout_add(1, self.focus, name)
+        self.focus(name)
 
     def focus(self, name):
         if name == "installed":
