@@ -1071,11 +1071,6 @@ MyApplet.prototype = {
 
             this._refreshAll();
 
-            // refresh when the icon theme changes
-            this._desktopSettings = new Gio.Settings( {schema: "org.cinnamon.desktop.interface"} );
-            this._iconTheme = this._desktopSettings.get_string("icon-theme");
-            this._desktopSettings.connect("changed::icon-theme", Lang.bind(this, this._onIconThemeChanged));
-
             // refresh when the active display scale changes
             this._cinnamonSettings = new Gio.Settings( {schema: "org.cinnamon"} );
             this._activeDisplayScale =  this._cinnamonSettings.get_int("active-display-scale");
@@ -1091,15 +1086,6 @@ MyApplet.prototype = {
             if (!Main.overview.visible && !Main.expo.visible)
                 this.menu.toggle_with_options(false);
         }));
-    },
-
-    _onIconThemeChanged: function() {
-        let iconTheme = this._desktopSettings.get_string("icon-theme");
-        if (iconTheme != this._iconTheme) {
-            this._iconTheme = iconTheme;
-            global.log("Menu applet: Icon theme changed!");
-            this._refreshAll();
-        }
     },
 
     _onActiveDisplayScaleChanged: function() {
