@@ -224,6 +224,17 @@ function _initUserSession() {
     });
 }
 
+function do_shutdown_sequence() {
+    log("doing js shutdown");
+    panelManager.panels.forEach(function (panel) {
+        panel.actor.hide();
+    });
+
+    global.get_window_actors().forEach(function (w) {
+        w.get_meta_window().hide_no_effects();
+    })
+}
+
 function _reparentActor(actor, newParent) {
     let parent = actor.get_parent();
     if (parent)
@@ -475,6 +486,8 @@ function start() {
         if (do_login_sound)
             soundManager.play_once_per_session('login');
     }
+
+    global.connect('shutdown', do_shutdown_sequence);
 
     global.log('Cinnamon took %d ms to start'.format(new Date().getTime() - cinnamonStartTime));
 }

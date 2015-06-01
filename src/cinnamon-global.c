@@ -115,6 +115,7 @@ enum
  XDND_ENTER,
  NOTIFY_ERROR,
  SCALE_CHANGED,
+ SHUTDOWN,
  LAST_SIGNAL
 };
 
@@ -277,11 +278,16 @@ static void
 cinnamon_global_finalize (GObject *object)
 {
   CinnamonGlobal *global = CINNAMON_GLOBAL (object);
-
+g_printerr ("finalizing global\n");
   g_object_unref (global->js_context);
+g_printerr ("finalizing global1\n");
+
   gtk_widget_destroy (GTK_WIDGET (global->grab_notifier));
+g_printerr ("finalizing global2\n");
   g_object_unref (global->settings);
+g_printerr ("finalizing global3\n");
   g_object_unref (global->interface_settings);
+g_printerr ("finalizing global4\n");
 
   the_object = NULL;
 
@@ -340,6 +346,15 @@ cinnamon_global_class_init (CinnamonGlobalClass *klass)
 
   cinnamon_global_signals[SCALE_CHANGED] =
       g_signal_new ("scale-changed",
+                    G_TYPE_FROM_CLASS (klass),
+                    G_SIGNAL_RUN_LAST,
+                    0,
+                    NULL, NULL,
+                    g_cclosure_marshal_VOID__VOID,
+                    G_TYPE_NONE, 0);
+
+  cinnamon_global_signals[SHUTDOWN] =
+      g_signal_new ("shutdown",
                     G_TYPE_FROM_CLASS (klass),
                     G_SIGNAL_RUN_LAST,
                     0,
@@ -1315,6 +1330,16 @@ cinnamon_global_reexec_self (CinnamonGlobal *global)
   execvp (arr->pdata[0], (char**)arr->pdata);
   g_warning ("failed to reexec: %s", g_strerror (errno));
   g_ptr_array_free (arr, TRUE);
+}
+
+void
+cinnamon_global_shutdown (void)
+{
+    g_signal_emit_by_name (the_object, "shutdown");
+
+    // GList *toplevels = gdk_screen_get_toplevel_windows (the_object->gdk_screen);
+    // g_list_foreach (toplevels, (GFunc) gdk_window_hide, NULL);
+    // g_list_free (toplevels);
 }
 
 static void
