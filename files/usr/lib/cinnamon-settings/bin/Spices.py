@@ -283,6 +283,14 @@ class Spice_Harvester:
 
         return install_folder
 
+    def fetch_urlobj(self, url):
+        try:
+            urlobj = urllib2.urlopen(url)
+            assert urlobj.getcode() == 200
+            return urlobj
+        except:
+            return None
+
     def load(self, onDone, force):
         self.abort_download = ABORT_NONE
         if (self.has_cache and not force):
@@ -388,11 +396,12 @@ class Spice_Harvester:
     def load_assets_thread(self, f, icon_path, url):
         valid = True
         try:
-            urllib2.urlopen(url).getcode()
+            urlobj = urllib2.urlopen(url)
+            assert urlobj.getcode() == 200
         except:
             valid = False
         if valid:
-            self.download(f, icon_path, url)
+            self.download(f, icon_path, urlobj)
 
         self.load_assets_done()
         thread.exit()
@@ -653,10 +662,10 @@ class Spice_Harvester:
             while Gtk.events_pending():
                 Gtk.main_iteration()
 
-    def download(self, outfd, outfile, url):
+    def download(self, outfd, outfile, urlobj):
         ui_thread_do(self.progress_button_abort.set_sensitive, True)
         try:
-            self.url_retrieve(url, outfd, self.reporthook)
+            self.url_retrieve(urlobj, outfd, self.reporthook)
         except KeyboardInterrupt:
             try:
                 os.remove(outfile)
@@ -686,19 +695,12 @@ class Spice_Harvester:
         while Gtk.events_pending():
             Gtk.main_iteration()
 
-    def url_retrieve(self, url, f, reporthook):
+    def url_retrieve(self, urlobj, f, reporthook):
         #Like the one in urllib. Unlike urllib.retrieve url_retrieve
         #can be interrupted. KeyboardInterrupt exception is rasied when
         #interrupted.
         count = 0
         blockSize = 1024 * 8
-        try:
-            urlobj = urllib2.urlopen(url)
-        except Exception, detail:
-            f.close()
-            self.abort_download = ABORT_ERROR
-            self.error = detail
-            raise KeyboardInterrupt
 
         totalSize = int(urlobj.info()['content-length'])
 
