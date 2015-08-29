@@ -439,6 +439,7 @@ st_theme_finalize (GObject * object)
 
   g_free (theme->theme_stylesheet);
   g_free (theme->fallback_theme_location);
+
   if (theme->sass_c)
     g_object_unref (theme->sass_c);
 

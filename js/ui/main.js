@@ -153,8 +153,6 @@ let themeManager = null;
 let keybindingManager = null;
 let _errorLogStack = [];
 let _startDate;
-let _defaultThemeFolder = null;
-let _cssStylesheet = null;
 let dynamicWorkspaces = null;
 let tracker = null;
 let settingsManager = null;
@@ -310,7 +308,6 @@ function start() {
     global.stage.no_clear_hint = true;
     
     Gtk.IconTheme.get_default().append_search_path("/usr/share/cinnamon/icons/");
-    _defaultThemeFolder = global.datadir + '/theme';
 
     soundManager = new SoundManager.SoundManager();
 
@@ -810,7 +807,7 @@ function _nWorkspacesChanged() {
  */
 function getTheme()
 {
-    return _theme;
+    return themeManager.current_theme_name;
 }
 
 /**
@@ -822,7 +819,7 @@ function getTheme()
  */
 function setTheme(theme_name)
 {
-    _theme = name;
+    themeManager.current_theme_name = theme_name;
 }
 
 /**
@@ -831,20 +828,7 @@ function setTheme(theme_name)
  * Reloads the theme
  */
 function loadTheme() {
-    let themeContext = St.ThemeContext.get_for_stage (global.stage);
-    let theme = new St.Theme ({ fallback_theme_location: _defaultThemeFolder });
-    let themeLoaded = false;
-    if (_theme != null) {
-        themeLoaded = theme.load_theme_by_name(_theme);
-    }
-    if (!themeLoaded) {
-        theme.load_theme_by_location(_defaultThemeFolder);
-        if (_theme != null) {
-            global.logError("There was some problem parsing the theme: " + theme + ".  Falling back to the default theme.");
-        }
-    }
-
-    themeContext.set_theme (theme);
+    themeManager.load_theme();
 }
 
 /**
