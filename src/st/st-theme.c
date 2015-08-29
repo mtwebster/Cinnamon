@@ -41,7 +41,7 @@
 #include <string.h>
 
 #include <gio/gio.h>
-
+#include "sass_context.h"
 #include "st-theme-node.h"
 #include "st-theme-private.h"
 
@@ -66,7 +66,7 @@ struct _StTheme
   char *theme_stylesheet;
   char *fallback_theme_location;
 
-  StSassContext *sass_c;
+  struct Sass_File_Context *sass_c;
 
   GSList *custom_stylesheets;
 
@@ -356,7 +356,7 @@ st_theme_constructor (GType                  type,
 
   GError *error = NULL;
 
-  StSassContext *sass_c = NULL;
+  struct Sass_File_Context *sass_c = NULL;
   gchar *stylesheet = NULL;
 
   /* Check for a SASS theme */
@@ -366,17 +366,28 @@ st_theme_constructor (GType                  type,
   stylesheet_path = g_build_filename (theme->theme_stylesheet, "cinnamon.scss", NULL);
 
   if (g_file_test (stylesheet_path, G_FILE_TEST_EXISTS)) {
-      // sass_c = st_sass_context_new (stylesheet_path);
+    g_printerr ("Attempting to parse SASS theme: %s\n", theme->theme_stylesheet);
 
-      // if (sass_c) {
-      //     stylesheet = st_sass_context_get_stylesheet (sass_c);
-      // }
+    struct Sass_File_Context* file_ctx = sass_make_file_context(stylesheet_path);
+    struct Sass_Context* ctx = sass_file_context_get_context(file_ctx);
+
+    gint status = sass_compile_file_context(file_ctx);
+
+    // print the result or the error to the stdout
+    if (status == 0) {
+      stylesheet = (gchar *) sass_context_get_output_string(ctx);
+    } else {
+      g_printerr ("Error parsing SASS theme: %s", sass_context_get_error_message(ctx));
+    }
+
+    sass_c = file_ctx;
   }
 
   g_free (stylesheet_path);
 
   if (sass_c && stylesheet) {
-      goto done;
+    g_printerr ("Using SASS theme: %s\n", theme->theme_stylesheet);
+    goto done;
   }
 
   /* Check for a conventional theme */
@@ -418,8 +429,9 @@ done:
 
     insert_stylesheet (theme, stylesheet_path, theme_stylesheet);
   }
+  if (!sass_c)
+    g_free (stylesheet);
 
-  g_free (stylesheet);
   g_free (stylesheet_path);
 
   return object;
@@ -441,7 +453,7 @@ st_theme_finalize (GObject * object)
   g_free (theme->fallback_theme_location);
 
   if (theme->sass_c)
-    g_object_unref (theme->sass_c);
+    sass_delete_file_context(theme->sass_c);
 
   if (theme->cascade)
     {

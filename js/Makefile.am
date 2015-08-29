@@ -73,7 +73,6 @@ nobase_dist_js_DATA = \
 	ui/systray.js       \
 	ui/cinnamonDBus.js		\
 	ui/statusIconDispatcher.js	\
-	ui/themeManager.js	\
 	ui/tooltips.js	\
 	ui/tweener.js		\
 	ui/windowAttentionHandler.js	\
