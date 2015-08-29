@@ -23,7 +23,6 @@
 #include <glib-object.h>
 
 #include "st-theme-node.h"
-#include "st-sass-context.h"
 
 G_BEGIN_DECLS
 
