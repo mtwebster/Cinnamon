@@ -63,10 +63,12 @@ struct _StTheme
 {
   GObject parent;
 
+  gboolean is_sass;
+
   char *theme_stylesheet;
   char *fallback_theme_location;
 
-  struct Sass_File_Context *sass_c;
+  char *theme_variables;
 
   GSList *custom_stylesheets;
 
@@ -86,8 +88,9 @@ enum
 {
   PROP_0,
   PROP_THEME_STYLESHEET,
-  PROP_SASS_CONTEXT,
-  PROP_FALLBACK_THEME_LOCATION
+  PROP_THEME_VARIABLES,
+  PROP_FALLBACK_THEME_LOCATION,
+  PROP_THEME_IS_SASS
 };
 
 enum
@@ -110,6 +113,8 @@ st_theme_init (StTheme *theme)
   theme->stylesheets_by_filename = g_hash_table_new_full (g_str_hash, g_str_equal,
                                                           (GDestroyNotify)g_free, (GDestroyNotify)cr_stylesheet_unref);
   theme->filenames_by_stylesheet = g_hash_table_new (g_direct_hash, g_direct_equal);
+  theme->theme_variables = NULL;
+  theme->is_sass = FALSE;
 }
 
 static void
@@ -151,17 +156,30 @@ st_theme_class_init (StThemeClass *klass)
                                                         G_PARAM_READABLE | G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
 
   /**
-   * StTheme:sass-context:
+   * StTheme:theme-variables:
    *
-   * The SASS context for the current theme (may be %NULL)
+   * The string containing SASS theme variables (may be %NULL)
    */
   g_object_class_install_property (object_class,
-                                   PROP_SASS_CONTEXT,
-                                   g_param_spec_object ("sass-context",
-                                                        "The sass context",
-                                                        "The sass context",
-                                                        ST_TYPE_SASS_CONTEXT,
-                                                        G_PARAM_READABLE | G_PARAM_WRITABLE));
+                                   PROP_THEME_VARIABLES,
+                                   g_param_spec_string ("theme-variables",
+                                                         "Contents of cinnamon-variables.scss",
+                                                         "Variables for the current theme",
+                                                         NULL,
+                                                         G_PARAM_READABLE | G_PARAM_WRITABLE));
+
+  /**
+   * StTheme:is-sass:
+   *
+   * Whether or not the base theme uses SASS
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_THEME_IS_SASS,
+                                   g_param_spec_boolean ("is-sass",
+                                                         "Whether the theme uses SASS",
+                                                         "Whether the theme uses SASS",
+                                                         FALSE,
+                                                         G_PARAM_READABLE | G_PARAM_WRITABLE));
 
   signals[STYLESHEETS_CHANGED] = g_signal_new ("custom-stylesheets-changed",
                                                G_TYPE_FROM_CLASS (klass),
@@ -228,20 +246,63 @@ _st_theme_parse_declaration_list (const char *str)
                                              CR_UTF_8);
 }
 
-/* Just g_warning for now until we have something nicer to do */
-static CRStyleSheet *
-parse_stylesheet_nofail (const char *filename)
+static gchar *
+read_file_contents (const gchar *path)
 {
   GError *error = NULL;
-  CRStyleSheet *result;
+  gchar *buffer = NULL;
 
-  result = parse_stylesheet (filename, &error);
-  if (error)
-    {
-      g_warning ("%s", error->message);
-      g_clear_error (&error);
-    }
-  return result;
+  if (!g_file_get_contents (path, &buffer, NULL, &error)) {
+        g_free (buffer);
+        g_error_free (error);
+        return NULL;
+  }
+
+  return buffer;
+}
+
+static gchar *
+process_scss_data (StTheme *theme, const gchar *buffer, const gchar *dir)
+{
+  gchar *ret = NULL;
+  gchar *prepended_buffer = NULL;
+
+  if (theme->theme_variables)
+    prepended_buffer = g_strconcat (theme->theme_variables, "\n", buffer, NULL);
+  else
+    prepended_buffer = g_strdup (buffer);
+
+  struct Sass_Data_Context *data_ctx = sass_make_data_context (prepended_buffer);
+  struct Sass_Context *ctx = sass_data_context_get_context (data_ctx);
+  struct Sass_Options* ctx_opt = sass_context_get_options(ctx);
+
+  sass_option_set_include_path (ctx_opt, dir);
+
+  gint status = sass_compile_data_context (data_ctx);
+
+  if (status == 0) {
+    ret = g_strdup (sass_context_get_output_string (ctx));
+  } else {
+    g_printerr ("Error parsing SASS data: %s", sass_context_get_error_message (ctx));
+  }
+
+  sass_delete_data_context (data_ctx);
+
+  return ret;
+}
+
+static gchar *
+process_scss_file (StTheme *theme, const gchar *path, const gchar *dir)
+{
+  gchar *buffer = read_file_contents (path);
+g_printerr ("boo\n");
+  if (!buffer)
+    return NULL;
+
+  gchar *ret = process_scss_data (theme, buffer, dir);
+  g_clear_pointer (&buffer, g_free);
+
+  return ret;
 }
 
 /* Just g_warning for now until we have something nicer to do */
@@ -283,16 +344,31 @@ st_theme_load_stylesheet (StTheme    *theme,
                           GError    **error)
 {
   CRStyleSheet *stylesheet;
+  gchar *buffer = NULL;
 
-  stylesheet = parse_stylesheet_nofail (path);
-  if (!stylesheet)
+  if (theme->is_sass && g_str_has_suffix (path, ".scss")) {
+    gchar *include_path = g_path_get_dirname (path);
+
+    buffer = process_scss_file (theme, path, include_path);
+
+    g_free (include_path);
+  } else {
+    buffer = read_file_contents (path);
+  }
+
+  stylesheet = parse_stylesheet_buffer_nofail (buffer);
+
+  if (!stylesheet) {
+    g_free (buffer);
     return FALSE;
+  }
+
+  g_free (buffer);
 
   insert_stylesheet (theme, path, stylesheet);
   cr_stylesheet_ref (stylesheet);
   theme->custom_stylesheets = g_slist_prepend (theme->custom_stylesheets, stylesheet);
   g_signal_emit (theme, signals[STYLESHEETS_CHANGED], 0);
-
   return TRUE;
 }
 
@@ -340,6 +416,50 @@ st_theme_get_custom_stylesheets (StTheme *theme)
   return result;
 }
 
+static void
+read_sass_variables (StTheme *theme)
+{
+  gchar *var_path = g_build_filename (theme->theme_stylesheet, "cinnamon-variables.scss", NULL);
+
+  theme->theme_variables = read_file_contents (var_path);
+  g_free (var_path);
+}
+
+static gchar *
+process_theme (StTheme *theme, const gchar *dir, gchar **used_name, gboolean *is_sass)
+{
+  gchar *stylesheet_contents = NULL;
+  gchar *stylesheet_path = g_build_filename (dir, "cinnamon.scss", NULL);
+
+  stylesheet_contents = process_scss_file (theme, stylesheet_path, dir);
+
+  if (stylesheet_contents) {
+    if (is_sass)
+      *is_sass = TRUE;
+    if (used_name)
+      *used_name = stylesheet_path;
+    return stylesheet_contents;
+  }
+
+  g_clear_pointer (&stylesheet_path, g_free);
+
+  stylesheet_path = g_build_filename (dir, "cinnamon.css", NULL);
+
+  stylesheet_contents = read_file_contents (stylesheet_path);
+
+  if (stylesheet_contents) {
+    if (is_sass)
+      *is_sass = FALSE;
+    if (used_name)
+      *used_name = stylesheet_path;
+    return stylesheet_contents;
+  }
+
+  g_free (stylesheet_path);
+
+  return NULL;
+}
+
 static GObject *
 st_theme_constructor (GType                  type,
                       guint                  n_construct_properties,
@@ -354,69 +474,18 @@ st_theme_constructor (GType                  type,
                                                                       construct_properties);
   theme = ST_THEME (object);
 
-  GError *error = NULL;
+  read_sass_variables (theme);
 
-  struct Sass_File_Context *sass_c = NULL;
   gchar *stylesheet = NULL;
-
-  /* Check for a SASS theme */
-
   gchar *stylesheet_path = NULL;
+  gboolean is_sass = FALSE;
 
-  stylesheet_path = g_build_filename (theme->theme_stylesheet, "cinnamon.scss", NULL);
+  stylesheet = process_theme (theme, theme->theme_stylesheet, &stylesheet_path, &is_sass);
 
-  if (g_file_test (stylesheet_path, G_FILE_TEST_EXISTS)) {
-    g_printerr ("Attempting to parse SASS theme: %s\n", theme->theme_stylesheet);
-
-    struct Sass_File_Context* file_ctx = sass_make_file_context(stylesheet_path);
-    struct Sass_Context* ctx = sass_file_context_get_context(file_ctx);
-
-    gint status = sass_compile_file_context(file_ctx);
-
-    // print the result or the error to the stdout
-    if (status == 0) {
-      stylesheet = (gchar *) sass_context_get_output_string(ctx);
-    } else {
-      g_printerr ("Error parsing SASS theme: %s", sass_context_get_error_message(ctx));
-    }
-
-    sass_c = file_ctx;
-  }
-
-  g_free (stylesheet_path);
-
-  if (sass_c && stylesheet) {
-    g_printerr ("Using SASS theme: %s\n", theme->theme_stylesheet);
-    goto done;
-  }
-
-  /* Check for a conventional theme */
-
-  stylesheet_path = NULL;
-  stylesheet_path = g_build_filename (theme->theme_stylesheet, "cinnamon.css", NULL);
-
-  if (g_file_test (stylesheet_path, G_FILE_TEST_EXISTS)) {
-      gchar *buffer = NULL;
-
-      if (!g_file_get_contents (stylesheet_path, &buffer, NULL, &error)) {
-          g_free (buffer);
-          goto done;
-      }
-
-      if (buffer) {
-          stylesheet = buffer;
-      }
-  }
-
-done:
+  theme->is_sass = is_sass;
 
   if (stylesheet) {
     theme_stylesheet = parse_stylesheet_buffer_nofail (stylesheet);
-
-    gchar *fallback_filename = g_build_filename (theme->fallback_theme_location, "cinnamon.css", NULL);
-    theme->fallback_cr_stylesheet = parse_stylesheet_nofail (fallback_filename);
-    g_free (fallback_filename);
-
     theme->cascade = cr_cascade_new (NULL,
                                     theme_stylesheet,
                                     NULL);
@@ -424,15 +493,19 @@ done:
     if (theme->cascade == NULL)
       g_error ("Out of memory when creating cascade object");
 
-    if (sass_c)
-      theme->sass_c = sass_c;
-
     insert_stylesheet (theme, stylesheet_path, theme_stylesheet);
   }
-  if (!sass_c)
-    g_free (stylesheet);
 
-  g_free (stylesheet_path);
+  g_clear_pointer (&stylesheet_path, g_free);
+  g_clear_pointer (&stylesheet, g_free);
+
+  stylesheet = process_theme (theme, theme->fallback_theme_location, NULL, NULL);
+
+  if (stylesheet) {
+    theme->fallback_cr_stylesheet = parse_stylesheet_buffer_nofail (stylesheet);
+  }
+
+  g_free (stylesheet);
 
   return object;
 }
@@ -452,8 +525,7 @@ st_theme_finalize (GObject * object)
   g_free (theme->theme_stylesheet);
   g_free (theme->fallback_theme_location);
 
-  if (theme->sass_c)
-    sass_delete_file_context(theme->sass_c);
+  g_free (theme->theme_variables);
 
   if (theme->cascade)
     {
@@ -478,7 +550,7 @@ st_theme_set_property (GObject      *object,
       {
         const char *path = g_value_get_string (value);
 
-        if (path != theme->theme_stylesheet)
+        if (g_strcmp0 (path, theme->theme_stylesheet) != 0)
           {
             g_free (theme->theme_stylesheet);
             theme->theme_stylesheet = g_strdup (path);
@@ -490,7 +562,7 @@ st_theme_set_property (GObject      *object,
       {
         const char *path = g_value_get_string (value);
 
-        if (path != theme->fallback_theme_location)
+        if (g_strcmp0 (path, theme->fallback_theme_location) != 0)
           {
             g_free (theme->fallback_theme_location);
             theme->fallback_theme_location = g_strdup (path);
@@ -498,9 +570,16 @@ st_theme_set_property (GObject      *object,
 
         break;
       }
-    case PROP_SASS_CONTEXT:
+    case PROP_THEME_VARIABLES:
       {
-        theme->sass_c = g_object_ref (g_value_get_object (value));
+        const char *string = g_value_get_string (value);
+
+        if (g_strcmp0 (string, theme->theme_variables) != 0)
+          {
+            g_free (theme->theme_variables);
+            theme->theme_variables = g_strdup (string);
+          }
+
         break;
       }
     default:
@@ -525,8 +604,11 @@ st_theme_get_property (GObject    *object,
     case PROP_FALLBACK_THEME_LOCATION:
       g_value_set_string (value, theme->fallback_theme_location);
       break;
-    case PROP_SASS_CONTEXT:
-      g_value_take_object (value, theme->sass_c);
+    case PROP_THEME_VARIABLES:
+      g_value_set_string (value, theme->theme_variables);
+      break;
+    case PROP_THEME_IS_SASS:
+      g_value_set_boolean (value, theme->is_sass);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);

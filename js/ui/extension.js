@@ -161,11 +161,12 @@ Extension.prototype = {
         }
 
         this.ensureFileExists(this.dir.get_child(this.lowerType + '.js'));
-        this.loadStylesheet(this.dir.get_child('stylesheet.css'));
+
+        this.loadStylesheet(this.dir);
         
         if (this.stylesheet) {
             Main.themeManager.connect('theme-set', Lang.bind(this, function() {
-                this.loadStylesheet(this.dir.get_child('stylesheet.css'));
+                this.loadStylesheet(this.dir);
             }));
         }
         this.loadIconDirectory(this.dir);
@@ -297,21 +298,30 @@ Extension.prototype = {
         }
     },
 
-    loadStylesheet: function (file) {
-        if (file.query_exists(null)) {
-            try {
-                let themeContext = St.ThemeContext.get_for_stage(global.stage);
-                this.theme = themeContext.get_theme();
-            } catch (e) {
-                throw this.logError('Error trying to get theme', e);
-            }
+    loadStylesheet: function (dir) {
+        try {
+            let themeContext = St.ThemeContext.get_for_stage(global.stage);
+            this.theme = themeContext.get_theme();
+        } catch (e) {
+            throw this.logError('Error trying to get theme', e);
+        }
 
-            try {
-                this.theme.load_stylesheet(file.get_path());
-                this.stylesheet = file.get_path();
-            } catch (e) {
-                throw this.logError('Stylesheet parse error', e);
+        let file;
+
+        if (this.theme.is_sass) {
+            file = dir.get_child("stylesheet.scss");
+            if (!file.query_exists(null)) {
+                file = dir.get_child("stylesheet.css");
             }
+        } else {
+            file = dir.get_child("stylesheet.css");
+        }
+
+        try {
+            this.theme.load_stylesheet(file.get_path());
+            this.stylesheet = file.get_path();
+        } catch (e) {
+            throw this.logError('Stylesheet parse error', e);
         }
     },
 
