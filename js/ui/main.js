@@ -316,9 +316,7 @@ function start() {
     themeManager.connect("initialized", function() {
         postThemeInit(cinnamonStartTime);
     });
-}
 
-function postThemeInit(cinnamonStartTime) {
     settingsManager = new Settings.SettingsManager();
 
     backgroundManager = new BackgroundManager.BackgroundManager();
@@ -364,6 +362,9 @@ function postThemeInit(cinnamonStartTime) {
 
     global.reparentActor(global.top_window_group, global.stage);
 
+}
+
+function postThemeInit(cinnamonStartTime) {
     layoutManager = new Layout.LayoutManager();
 
     Panel.checkPanelUpgrade();

@@ -295,7 +295,7 @@ static gchar *
 process_scss_file (StTheme *theme, const gchar *path, const gchar *dir)
 {
   gchar *buffer = read_file_contents (path);
-g_printerr ("boo\n");
+
   if (!buffer)
     return NULL;
 
