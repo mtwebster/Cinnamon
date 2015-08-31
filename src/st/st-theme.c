@@ -467,7 +467,6 @@ st_theme_constructor (GType                  type,
 {
   GObject *object;
   StTheme *theme;
-  CRStyleSheet *theme_stylesheet;
 
   object = (*G_OBJECT_CLASS (st_theme_parent_class)->constructor) (type,
                                                                       n_construct_properties,
@@ -485,6 +484,8 @@ st_theme_constructor (GType                  type,
   theme->is_sass = is_sass;
 
   if (stylesheet) {
+    CRStyleSheet *theme_stylesheet;
+
     theme_stylesheet = parse_stylesheet_buffer_nofail (stylesheet);
     theme->cascade = cr_cascade_new (NULL,
                                     theme_stylesheet,
@@ -1156,7 +1157,6 @@ _st_theme_get_matched_properties (StTheme        *theme,
                                   StThemeNode    *node)
 {
   enum CRStyleOrigin origin = 0;
-  CRStyleSheet *sheet = NULL;
   GSList *iter;
 
   g_return_val_if_fail (ST_IS_THEME (theme), NULL);
@@ -1166,6 +1166,8 @@ _st_theme_get_matched_properties (StTheme        *theme,
 
   for (origin = ORIGIN_UA; origin < NB_ORIGINS; origin++)
     {
+      CRStyleSheet *sheet = NULL;
+
       sheet = cr_cascade_get_sheet (theme->cascade, origin);
       if (!sheet)
         continue;

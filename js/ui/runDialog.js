@@ -39,7 +39,7 @@ const DEVEL_COMMANDS = { 'lg': x => Main.createLookingGlass().open(),
                          'r': x => global.reexec_self(),
                          'restart': x => global.reexec_self(),
                          'debugexit': x => Meta.quit(Meta.ExitCode.ERROR),
-                         'rt': x => Main.themeManager._changeTheme() };
+                         'rt': x => Main.loadTheme() };
 
 /**
  * completeCommand:
