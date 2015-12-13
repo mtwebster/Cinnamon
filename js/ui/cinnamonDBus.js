@@ -99,6 +99,7 @@ const CinnamonIface =
                 <arg type="i" direction="in" name="process_id" /> \
                 <arg type="s" direction="in" name="result" /> \
             </method> \
+            <method name="ToggleKeyboard"/> \
         </interface> \
     </node>';
 
@@ -377,6 +378,10 @@ Cinnamon.prototype = {
         {
             Util.subprocess_callbacks[process_id](result);
         }
+    },
+
+    ToggleKeyboard: function() {
+        Main.keyboard.toggle();
     },
 
     CinnamonVersion: Config.PACKAGE_VERSION
