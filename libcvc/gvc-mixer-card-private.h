@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2008 Red Hat, Inc.
+ * Copyright (C) 2008-2009 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,22 +14,22 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street - Suite 500, Boston, MA 02110-1335, USA.
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  */
 
-#ifndef __GVC_MIXER_CONTROL_PRIVATE_H
-#define __GVC_MIXER_CONTROL_PRIVATE_H
+#ifndef __GVC_MIXER_CARD_PRIVATE_H
+#define __GVC_MIXER_CARD_PRIVATE_H
 
-#include <glib-object.h>
 #include <pulse/pulseaudio.h>
-#include "gvc-mixer-stream.h"
 #include "gvc-mixer-card.h"
 
 G_BEGIN_DECLS
 
-pa_context *        gvc_mixer_control_get_pa_context      (GvcMixerControl *control);
+GvcMixerCard *        gvc_mixer_card_new               (pa_context   *context,
+                                                        guint         index);
+pa_context *          gvc_mixer_card_get_pa_context    (GvcMixerCard *card);
 
 G_END_DECLS
 
-#endif /* __GVC_MIXER_CONTROL_PRIVATE_H */
+#endif /* __GVC_MIXER_CARD_PRIVATE_H */

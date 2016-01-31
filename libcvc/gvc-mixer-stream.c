@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street - Suite 500, Boston, MA 02110-1335, USA.
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  */
 
@@ -42,12 +42,13 @@ struct GvcMixerStreamPrivate
         pa_context    *pa_context;
         guint          id;
         guint          index;
-        gint           card_index;
+        guint          card_index;
         GvcChannelMap *channel_map;
         char          *name;
         char          *description;
         char          *application_id;
         char          *icon_name;
+        char          *form_factor;
         char          *sysfs_path;
         gboolean       is_muted;
         gboolean       can_decibel;
@@ -71,6 +72,7 @@ enum
         PROP_DESCRIPTION,
         PROP_APPLICATION_ID,
         PROP_ICON_NAME,
+        PROP_FORM_FACTOR,
         PROP_SYSFS_PATH,
         PROP_VOLUME,
         PROP_DECIBEL,
@@ -82,11 +84,33 @@ enum
         PROP_PORT,
 };
 
-static void     gvc_mixer_stream_class_init (GvcMixerStreamClass *klass);
-static void     gvc_mixer_stream_init       (GvcMixerStream      *mixer_stream);
 static void     gvc_mixer_stream_finalize   (GObject            *object);
 
 G_DEFINE_ABSTRACT_TYPE (GvcMixerStream, gvc_mixer_stream, G_TYPE_OBJECT)
+
+static void
+free_port (GvcMixerStreamPort *p)
+{
+        g_free (p->port);
+        g_free (p->human_port);
+        g_slice_free (GvcMixerStreamPort, p);
+}
+
+static GvcMixerStreamPort *
+dup_port (GvcMixerStreamPort *p)
+{
+        GvcMixerStreamPort *m;
+
+        m = g_slice_new (GvcMixerStreamPort);
+
+        *m = *p;
+        m->port = g_strdup (p->port);
+        m->human_port = g_strdup (p->human_port);
+
+        return m;
+}
+
+G_DEFINE_BOXED_TYPE (GvcMixerStreamPort, gvc_mixer_stream_port, dup_port, free_port)
 
 static guint32
 get_next_stream_serial (void)
@@ -391,6 +415,13 @@ gvc_mixer_stream_get_icon_name (GvcMixerStream *stream)
 }
 
 const char *
+gvc_mixer_stream_get_form_factor (GvcMixerStream *stream)
+{
+        g_return_val_if_fail (GVC_IS_MIXER_STREAM (stream), NULL);
+        return stream->priv->form_factor;
+}
+
+const char *
 gvc_mixer_stream_get_sysfs_path (GvcMixerStream *stream)
 {
         g_return_val_if_fail (GVC_IS_MIXER_STREAM (stream), NULL);
@@ -421,6 +452,19 @@ gvc_mixer_stream_set_icon_name (GvcMixerStream *stream,
         g_free (stream->priv->icon_name);
         stream->priv->icon_name = g_strdup (icon_name);
         g_object_notify (G_OBJECT (stream), "icon-name");
+
+        return TRUE;
+}
+
+gboolean
+gvc_mixer_stream_set_form_factor (GvcMixerStream *stream,
+                                  const char     *form_factor)
+{
+        g_return_val_if_fail (GVC_IS_MIXER_STREAM (stream), FALSE);
+
+        g_free (stream->priv->form_factor);
+        stream->priv->form_factor = g_strdup (form_factor);
+        g_object_notify (G_OBJECT (stream), "form-factor");
 
         return TRUE;
 }
@@ -565,7 +609,7 @@ gvc_mixer_stream_set_ports (GvcMixerStream *stream,
         return TRUE;
 }
 
-gint
+guint
 gvc_mixer_stream_get_card_index (GvcMixerStream *stream)
 {
         g_return_val_if_fail (GVC_IS_MIXER_STREAM (stream), PA_INVALID_INDEX);
@@ -574,7 +618,7 @@ gvc_mixer_stream_get_card_index (GvcMixerStream *stream)
 
 gboolean
 gvc_mixer_stream_set_card_index (GvcMixerStream *stream,
-                                 gint            card_index)
+                                 guint           card_index)
 {
         g_return_val_if_fail (GVC_IS_MIXER_STREAM (stream), FALSE);
 
@@ -616,6 +660,9 @@ gvc_mixer_stream_set_property (GObject       *object,
                 break;
         case PROP_ICON_NAME:
                 gvc_mixer_stream_set_icon_name (self, g_value_get_string (value));
+                break;
+        case PROP_FORM_FACTOR:
+                gvc_mixer_stream_set_form_factor (self, g_value_get_string (value));
                 break;
 	case PROP_SYSFS_PATH:
 		gvc_mixer_stream_set_sysfs_path (self, g_value_get_string (value));
@@ -682,6 +729,9 @@ gvc_mixer_stream_get_property (GObject     *object,
                 break;
         case PROP_ICON_NAME:
                 g_value_set_string (value, self->priv->icon_name);
+                break;
+        case PROP_FORM_FACTOR:
+                g_value_set_string (value, self->priv->form_factor);
                 break;
 	case PROP_SYSFS_PATH:
 		g_value_set_string (value, self->priv->sysfs_path);
@@ -888,6 +938,13 @@ gvc_mixer_stream_class_init (GvcMixerStreamClass *klass)
                                                               NULL,
                                                               G_PARAM_READWRITE|G_PARAM_CONSTRUCT));
         g_object_class_install_property (gobject_class,
+                                         PROP_FORM_FACTOR,
+                                         g_param_spec_string ("form-factor",
+                                                              "Form Factor",
+                                                              "Device form factor for this stream, as reported by PulseAudio",
+                                                              NULL,
+                                                              G_PARAM_READWRITE|G_PARAM_CONSTRUCT));
+        g_object_class_install_property (gobject_class,
                                          PROP_SYSFS_PATH,
                                          g_param_spec_string ("sysfs-path",
                                                               "Sysfs path",
@@ -946,14 +1003,6 @@ gvc_mixer_stream_init (GvcMixerStream *stream)
 }
 
 static void
-free_port (GvcMixerStreamPort *p)
-{
-        g_free (p->port);
-        g_free (p->human_port);
-        g_free (p);
-}
-
-static void
 gvc_mixer_stream_finalize (GObject *object)
 {
         GvcMixerStream *mixer_stream;
@@ -979,6 +1028,9 @@ gvc_mixer_stream_finalize (GObject *object)
 
         g_free (mixer_stream->priv->icon_name);
         mixer_stream->priv->icon_name = NULL;
+
+        g_free (mixer_stream->priv->form_factor);
+        mixer_stream->priv->form_factor = NULL;
 
         g_free (mixer_stream->priv->sysfs_path);
         mixer_stream->priv->sysfs_path = NULL;

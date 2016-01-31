@@ -20,6 +20,7 @@
 #define _GVC_MIXER_UI_DEVICE_H_
 
 #include <glib-object.h>
+#include <gio/gio.h>
 
 G_BEGIN_DECLS
 
@@ -30,7 +31,7 @@ G_BEGIN_DECLS
 #define GVC_IS_MIXER_UI_DEVICE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), GVC_TYPE_MIXER_UI_DEVICE))
 #define GVC_MIXER_UI_DEVICE_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), GVC_TYPE_MIXER_UI_DEVICE, GvcMixerUIDeviceClass))
 
-#define GVC_MIXER_UI_DEVICE_INVALID          -1
+#define GVC_MIXER_UI_DEVICE_INVALID          0
 
 typedef struct GvcMixerUIDevicePrivate GvcMixerUIDevicePrivate;
 
@@ -53,29 +54,31 @@ typedef enum
 
 GType gvc_mixer_ui_device_get_type (void) G_GNUC_CONST;
 
-guint          gvc_mixer_ui_device_get_id                      (GvcMixerUIDevice *dev);
-gint           gvc_mixer_ui_device_get_stream_id               (GvcMixerUIDevice *dev);
-const gchar *  gvc_mixer_ui_device_get_description             (GvcMixerUIDevice *dev);
-const gchar *  gvc_mixer_ui_device_get_origin                  (GvcMixerUIDevice *dev);
-const gchar *  gvc_mixer_ui_device_get_port                    (GvcMixerUIDevice *dev);
-const gchar *  gvc_mixer_ui_device_get_best_profile            (GvcMixerUIDevice *dev,
+guint          gvc_mixer_ui_device_get_id                      (GvcMixerUIDevice *device);
+guint          gvc_mixer_ui_device_get_stream_id               (GvcMixerUIDevice *device);
+const gchar *  gvc_mixer_ui_device_get_description             (GvcMixerUIDevice *device);
+const gchar *  gvc_mixer_ui_device_get_icon_name               (GvcMixerUIDevice *device);
+GIcon *        gvc_mixer_ui_device_get_gicon                   (GvcMixerUIDevice *device);
+const gchar *  gvc_mixer_ui_device_get_origin                  (GvcMixerUIDevice *device);
+const gchar *  gvc_mixer_ui_device_get_port                    (GvcMixerUIDevice *device);
+const gchar *  gvc_mixer_ui_device_get_best_profile            (GvcMixerUIDevice *device,
                                                                 const gchar      *selected,
                                                                 const gchar      *current);
 const gchar *  gvc_mixer_ui_device_get_active_profile          (GvcMixerUIDevice* device);
-const gchar *  gvc_mixer_ui_device_get_matching_profile        (GvcMixerUIDevice *dev,
+const gchar *  gvc_mixer_ui_device_get_matching_profile        (GvcMixerUIDevice *device,
                                                                 const gchar      *profile);
-const gchar *  gvc_mixer_ui_device_get_user_preferred_profile  (GvcMixerUIDevice *dev);
-const gchar *  gvc_mixer_ui_device_get_top_priority_profile    (GvcMixerUIDevice *dev);
-GList *        gvc_mixer_ui_device_get_profiles                (GvcMixerUIDevice *dev);
+const gchar *  gvc_mixer_ui_device_get_user_preferred_profile  (GvcMixerUIDevice *device);
+const gchar *  gvc_mixer_ui_device_get_top_priority_profile    (GvcMixerUIDevice *device);
+GList *        gvc_mixer_ui_device_get_profiles                (GvcMixerUIDevice *device);
 GList *        gvc_mixer_ui_device_get_supported_profiles      (GvcMixerUIDevice *device);
 gboolean       gvc_mixer_ui_device_should_profiles_be_hidden   (GvcMixerUIDevice *device);
 void           gvc_mixer_ui_device_set_profiles                (GvcMixerUIDevice *device,
-                                                                const GList      *profiles);
+                                                                const GList      *in_profiles);
 void           gvc_mixer_ui_device_set_user_preferred_profile  (GvcMixerUIDevice *device,
                                                                 const gchar      *profile);
-void           gvc_mixer_ui_device_invalidate_stream           (GvcMixerUIDevice *dev);
-gboolean       gvc_mixer_ui_device_has_ports                   (GvcMixerUIDevice *dev);
-gboolean       gvc_mixer_ui_device_is_output                   (GvcMixerUIDevice *dev);
+void           gvc_mixer_ui_device_invalidate_stream           (GvcMixerUIDevice *device);
+gboolean       gvc_mixer_ui_device_has_ports                   (GvcMixerUIDevice *device);
+gboolean       gvc_mixer_ui_device_is_output                   (GvcMixerUIDevice *device);
 
 G_END_DECLS
 

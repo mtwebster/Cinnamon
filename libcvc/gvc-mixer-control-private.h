@@ -14,21 +14,22 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street - Suite 500, Boston, MA 02110-1335, USA.
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  */
 
-#ifndef __GVC_PULSEAUDIO_FAKE_H
-#define __GVC_PULSEAUDIO_FAKE_H
+#ifndef __GVC_MIXER_CONTROL_PRIVATE_H
+#define __GVC_MIXER_CONTROL_PRIVATE_H
 
-#ifdef WITH_INTROSPECTION
+#include <glib-object.h>
+#include <pulse/pulseaudio.h>
+#include "gvc-mixer-stream.h"
+#include "gvc-mixer-card.h"
 
-#ifndef PA_API_VERSION
-#define pa_channel_position_t int
-#define pa_volume_t guint32
-#define pa_context gpointer
-#endif /* PA_API_VERSION */
+G_BEGIN_DECLS
 
-#endif /* WITH_INTROSPECTION */
+pa_context *        gvc_mixer_control_get_pa_context      (GvcMixerControl *control);
 
-#endif /* __GVC_PULSEAUDIO_FAKE_H */
+G_END_DECLS
+
+#endif /* __GVC_MIXER_CONTROL_PRIVATE_H */

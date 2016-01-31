@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street - Suite 500, Boston, MA 02110-1335, USA.
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  */
 
@@ -40,8 +40,6 @@ struct GvcMixerSinkInputPrivate
         gpointer dummy;
 };
 
-static void     gvc_mixer_sink_input_class_init (GvcMixerSinkInputClass *klass);
-static void     gvc_mixer_sink_input_init       (GvcMixerSinkInput      *mixer_sink_input);
 static void     gvc_mixer_sink_input_finalize   (GObject                *object);
 
 G_DEFINE_TYPE (GvcMixerSinkInput, gvc_mixer_sink_input, GVC_TYPE_MIXER_STREAM)

@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street - Suite 500, Boston, MA 02110-1335, USA.
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  */
 
@@ -33,6 +33,10 @@
 #include <pulse/pulseaudio.h>
 #include <pulse/glib-mainloop.h>
 #include <pulse/ext-stream-restore.h>
+
+#ifdef HAVE_ALSA
+#include <alsa/asoundlib.h>
+#endif /* HAVE_ALSA */
 
 #include "gvc-mixer-control.h"
 #include "gvc-mixer-sink.h"
@@ -97,6 +101,13 @@ struct GvcMixerControlPrivate
          * device the user wishes to use. */
         guint            profile_swapping_device_id;
 
+#ifdef HAVE_ALSA
+        int      headset_card;
+        gboolean has_headsetmic;
+        gboolean has_headphonemic;
+        gboolean headset_plugged_in;
+#endif /* HAVE_ALSA */
+
         GvcMixerControlState state;
 };
 
@@ -104,6 +115,7 @@ enum {
         STATE_CHANGED,
         STREAM_ADDED,
         STREAM_REMOVED,
+        STREAM_CHANGED,
         CARD_ADDED,
         CARD_REMOVED,
         DEFAULT_SINK_CHANGED,
@@ -114,13 +126,12 @@ enum {
         INPUT_ADDED,
         OUTPUT_REMOVED,
         INPUT_REMOVED,
+        AUDIO_DEVICE_SELECTION_NEEDED,
         LAST_SIGNAL
 };
 
 static guint signals [LAST_SIGNAL] = { 0, };
 
-static void     gvc_mixer_control_class_init (GvcMixerControlClass *klass);
-static void     gvc_mixer_control_init       (GvcMixerControl      *mixer_control);
 static void     gvc_mixer_control_finalize   (GObject              *object);
 
 G_DEFINE_TYPE (GvcMixerControl, gvc_mixer_control, G_TYPE_OBJECT)
@@ -214,6 +225,7 @@ gvc_mixer_control_stream_restore_source_cb (pa_context *c,
  * gvc_mixer_control_lookup_device_from_stream:
  * @control:
  * @stream:
+ *
  * Returns: (transfer none): a #GvcUIDevice or %NULL
  */
 GvcMixerUIDevice *
@@ -236,7 +248,7 @@ gvc_mixer_control_lookup_device_from_stream (GvcMixerControl *control,
 
         for (d = devices; d != NULL; d = d->next) {
                 GvcMixerUIDevice *device = d->data;
-                gint stream_id = G_MAXINT;
+                guint stream_id = G_MAXUINT;
 
                 g_object_get (G_OBJECT (device),
                              "stream-id", &stream_id,
@@ -451,6 +463,7 @@ gvc_mixer_control_lookup_card_id (GvcMixerControl *control,
  * gvc_mixer_control_lookup_output_id:
  * @control:
  * @id:
+ *
  * Returns: (transfer none):
  */
 GvcMixerUIDevice *
@@ -466,6 +479,7 @@ gvc_mixer_control_lookup_output_id (GvcMixerControl *control,
  * gvc_mixer_control_lookup_input_id:
  * @control:
  * @id:
+ *
  * Returns: (transfer none):
  */
 GvcMixerUIDevice *
@@ -481,6 +495,7 @@ gvc_mixer_control_lookup_input_id (GvcMixerControl *control,
  * gvc_mixer_control_get_stream_from_device:
  * @control:
  * @device:
+ *
  * Returns: (transfer none):
  */
 GvcMixerStream *
@@ -506,6 +521,7 @@ gvc_mixer_control_get_stream_from_device (GvcMixerControl *control,
  * @control:
  * @device:
  * @profile: Can be null if any profile present on this port is okay
+ *
  * Returns: This method will attempt to swap the profile on the card of
  * the device with given profile name.  If successfull it will set the
  * preferred profile on that device so as we know the next time the user
@@ -615,23 +631,23 @@ gvc_mixer_control_change_output (GvcMixerControl *control,
 
         /* Finally if we are not on the correct stream, swap over. */
         if (stream != default_stream) {
-                GvcMixerUIDevice* output;
+                GvcMixerUIDevice* device;
 
                 g_debug ("Attempting to swap over to stream %s ",
                          gvc_mixer_stream_get_description (stream));
                 if (gvc_mixer_control_set_default_sink (control, stream)) {
-                        output = gvc_mixer_control_lookup_device_from_stream (control, stream);
+                        device = gvc_mixer_control_lookup_device_from_stream (control, stream);
                         g_signal_emit (G_OBJECT (control),
                                        signals[ACTIVE_OUTPUT_UPDATE],
                                        0,
-                                       gvc_mixer_ui_device_get_id (output));
+                                       gvc_mixer_ui_device_get_id (device));
                 } else {
                         /* If the move failed for some reason reset the UI. */
-                        output = gvc_mixer_control_lookup_device_from_stream (control, default_stream);
+                        device = gvc_mixer_control_lookup_device_from_stream (control, default_stream);
                         g_signal_emit (G_OBJECT (control),
                                        signals[ACTIVE_OUTPUT_UPDATE],
                                        0,
-                                       gvc_mixer_ui_device_get_id (output));
+                                       gvc_mixer_ui_device_get_id (device));
                 }
         }
 }
@@ -1207,7 +1223,7 @@ match_stream_with_devices (GvcMixerControl    *control,
                 gchar            *origin;
                 gchar            *description;
                 GvcMixerCard     *card;
-                gint              card_id;
+                guint             card_id;
 
                 device = d->data;
                 g_object_get (G_OBJECT (device),
@@ -1297,7 +1313,7 @@ sync_devices (GvcMixerControl *control,
 
                         for (d = devices; d != NULL; d = d->next) {
                                 GvcMixerCard *card;
-                                gint card_id;
+                                guint card_id;
 
                                 device = d->data;
 
@@ -1465,7 +1481,7 @@ update_sink (GvcMixerControl    *control,
                 for (i = 0; i < info->n_ports; i++) {
                         GvcMixerStreamPort *port;
 
-                        port = g_new0 (GvcMixerStreamPort, 1);
+                        port = g_slice_new0 (GvcMixerStreamPort);
                         port->port = g_strdup (info->ports[i]->name);
                         port->human_port = g_strdup (info->ports[i]->description);
                         port->priority = info->ports[i]->priority;
@@ -1489,6 +1505,7 @@ update_sink (GvcMixerControl    *control,
         gvc_mixer_stream_set_card_index (stream, info->card);
         gvc_mixer_stream_set_description (stream, info->description);
         set_icon_name_from_proplist (stream, info->proplist, "audio-card");
+        gvc_mixer_stream_set_form_factor (stream, pa_proplist_gets (info->proplist, PA_PROP_DEVICE_FORM_FACTOR));
         gvc_mixer_stream_set_sysfs_path (stream, pa_proplist_gets (info->proplist, "sysfs.path"));
         gvc_mixer_stream_set_volume (stream, (guint)max_volume);
         gvc_mixer_stream_set_is_muted (stream, info->mute);
@@ -1522,6 +1539,11 @@ update_sink (GvcMixerControl    *control,
                 /* Always sink on a new stream to able to assign the right stream id
                  * to the appropriate outputs (multiple potential outputs per stream). */
                 sync_devices (control, stream);
+        } else {
+                g_signal_emit (G_OBJECT (control),
+                               signals[STREAM_CHANGED],
+                               0,
+                               gvc_mixer_stream_get_id (stream));
         }
 
         /*
@@ -1593,7 +1615,7 @@ update_source (GvcMixerControl      *control,
                 for (i = 0; i < info->n_ports; i++) {
                         GvcMixerStreamPort *port;
 
-                        port = g_new0 (GvcMixerStreamPort, 1);
+                        port = g_slice_new0 (GvcMixerStreamPort);
                         port->port = g_strdup (info->ports[i]->name);
                         port->human_port = g_strdup (info->ports[i]->description);
                         port->priority = info->ports[i]->priority;
@@ -1615,6 +1637,7 @@ update_source (GvcMixerControl      *control,
         gvc_mixer_stream_set_card_index (stream, info->card);
         gvc_mixer_stream_set_description (stream, info->description);
         set_icon_name_from_proplist (stream, info->proplist, "audio-input-microphone");
+        gvc_mixer_stream_set_form_factor (stream, pa_proplist_gets (info->proplist, PA_PROP_DEVICE_FORM_FACTOR));
         gvc_mixer_stream_set_volume (stream, (guint)max_volume);
         gvc_mixer_stream_set_is_muted (stream, info->mute);
         gvc_mixer_stream_set_can_decibel (stream, !!(info->flags & PA_SOURCE_DECIBEL_VOLUME));
@@ -1641,6 +1664,11 @@ update_source (GvcMixerControl      *control,
                                      g_object_ref (stream));
                 add_stream (control, stream);
                 sync_devices (control, stream);
+        } else {
+                g_signal_emit (G_OBJECT (control),
+                               signals[STREAM_CHANGED],
+                               0,
+                               gvc_mixer_stream_get_id (stream));
         }
 
         if (control->priv->profile_swapping_device_id != GVC_MIXER_UI_DEVICE_INVALID) {
@@ -1746,6 +1774,11 @@ update_sink_input (GvcMixerControl          *control,
                                      GUINT_TO_POINTER (info->index),
                                      g_object_ref (stream));
                 add_stream (control, stream);
+        } else {
+                g_signal_emit (G_OBJECT (control),
+                               signals[STREAM_CHANGED],
+                               0,
+                               gvc_mixer_stream_get_id (stream));
         }
 }
 
@@ -1755,6 +1788,7 @@ update_source_output (GvcMixerControl             *control,
 {
         GvcMixerStream *stream;
         gboolean        is_new;
+        pa_volume_t     max_volume;
         const char     *name;
 
 #if 1
@@ -1781,10 +1815,14 @@ update_source_output (GvcMixerControl             *control,
         name = (const char *)g_hash_table_lookup (control->priv->clients,
                                                   GUINT_TO_POINTER (info->client));
 
+        max_volume = pa_cvolume_max (&info->volume);
+
         gvc_mixer_stream_set_name (stream, name);
         gvc_mixer_stream_set_description (stream, info->name);
         set_application_id_from_proplist (stream, info->proplist);
         set_is_event_stream_from_proplist (stream, info->proplist);
+        gvc_mixer_stream_set_volume (stream, (guint)max_volume);
+        gvc_mixer_stream_set_is_muted (stream, info->mute);
         set_icon_name_from_proplist (stream, info->proplist, "audio-input-microphone");
 
         if (is_new) {
@@ -1792,6 +1830,11 @@ update_source_output (GvcMixerControl             *control,
                                      GUINT_TO_POINTER (info->index),
                                      g_object_ref (stream));
                 add_stream (control, stream);
+        } else {
+                g_signal_emit (G_OBJECT (control),
+                               signals[STREAM_CHANGED],
+                               0,
+                               gvc_mixer_stream_get_id (stream));
         }
 }
 
@@ -1852,12 +1895,14 @@ card_num_streams_to_status (guint sinks,
         return ret;
 }
 
-// A utility method to gather which card profiles are relevant to the port .
+/*
+ * A utility method to gather which card profiles are relevant to the port .
+ */
 static GList *
 determine_profiles_for_port (pa_card_port_info *port,
                              GList* card_profiles)
 {
-        gint i;
+        guint i;
         GList *supported_profiles = NULL;
         GList *p;
         for (i = 0; i < port->n_profiles; i++) {
@@ -1896,12 +1941,13 @@ create_ui_device_from_port (GvcMixerControl* control,
         direction = (is_card_port_an_output (port) == TRUE) ? UIDeviceOutput : UIDeviceInput;
 
         object = g_object_new (GVC_TYPE_MIXER_UI_DEVICE,
-                               "type", (uint)direction,
+                               "type", (guint)direction,
                                "card", card,
                                "port-name", port->port,
                                "description", port->human_port,
                                "origin", gvc_mixer_card_get_name (card),
                                "port-available", available,
+                               "icon-name", port->icon_name,
                                NULL);
 
         uidevice = GVC_MIXER_UI_DEVICE (object);
@@ -2019,6 +2065,332 @@ create_ui_device_from_card (GvcMixerControl *control,
                              g_object_ref (out));
 }
 
+#ifdef HAVE_ALSA
+typedef struct {
+        char *port_name_to_set;
+        int headset_card;
+} PortStatusData;
+
+static void
+port_status_data_free (PortStatusData *data)
+{
+        if (data == NULL)
+                return;
+        g_free (data->port_name_to_set);
+        g_free (data);
+}
+
+/*
+ We need to re-enumerate sources and sinks every time the user makes a choice,
+ because they can change due to use interaction in other software (or policy
+ changes inside PulseAudio). Enumeration means PulseAudio will do a series of
+ callbacks, one for every source/sink.
+ Set the port when we find the correct source/sink.
+ */
+
+static void
+sink_info_cb (pa_context         *c,
+              const pa_sink_info *i,
+              int                 eol,
+              void               *userdata)
+{
+        PortStatusData *data = userdata;
+        pa_operation *o;
+        int j;
+        const char *s;
+
+        if (eol) {
+                port_status_data_free (data);
+                return;
+        }
+
+        if (i->card != data->headset_card)
+                return;
+
+        if (i->active_port &&
+            strcmp (i->active_port->name, s) == 0)
+                return;
+
+        s = data->port_name_to_set;
+
+        for (j = 0; j < i->n_ports; j++)
+                if (strcmp (i->ports[j]->name, s) == 0)
+                        break;
+
+        if (j >= i->n_ports)
+                return;
+
+        o = pa_context_set_sink_port_by_index (c, i->index, s, NULL, NULL);
+        g_clear_pointer (&o, pa_operation_unref);
+        port_status_data_free (data);
+}
+
+static void
+source_info_cb (pa_context           *c,
+                const pa_source_info *i,
+                int                   eol,
+                void                 *userdata)
+{
+        PortStatusData *data = userdata;
+        pa_operation *o;
+        int j;
+        const char *s;
+
+        if (eol) {
+                port_status_data_free (data);
+                return;
+        }
+
+        if (i->card != data->headset_card)
+                return;
+
+        if (i->active_port && strcmp (i->active_port->name, s) == 0)
+                return;
+
+        s = data->port_name_to_set;
+
+        for (j = 0; j < i->n_ports; j++)
+                if (strcmp (i->ports[j]->name, s) == 0)
+                        break;
+
+        if (j >= i->n_ports)
+                return;
+
+        o = pa_context_set_source_port_by_index(c, i->index, s, NULL, NULL);
+        g_clear_pointer (&o, pa_operation_unref);
+        port_status_data_free (data);
+}
+
+static void
+gvc_mixer_control_set_port_status_for_headset (GvcMixerControl *control,
+                                               guint            id,
+                                               const char      *port_name,
+                                               gboolean         is_output)
+{
+        pa_operation *o;
+        PortStatusData *data;
+
+        data = g_new0 (PortStatusData, 1);
+        data->port_name_to_set = g_strdup (port_name);
+        data->headset_card = id;
+
+        if (is_output)
+                o = pa_context_get_sink_info_list (control->priv->pa_context, sink_info_cb, data);
+        else
+                o = pa_context_get_source_info_list (control->priv->pa_context, source_info_cb, data);
+
+        g_clear_pointer (&o, pa_operation_unref);
+}
+#endif /* HAVE_ALSA */
+
+void
+gvc_mixer_control_set_headset_port (GvcMixerControl      *control,
+                                    guint                 id,
+                                    GvcHeadsetPortChoice  choice)
+{
+#ifdef HAVE_ALSA
+        switch (choice) {
+        case GVC_HEADSET_PORT_CHOICE_HEADPHONES:
+                gvc_mixer_control_set_port_status_for_headset (control, id, "analog-output-headphones", TRUE);
+                gvc_mixer_control_set_port_status_for_headset (control, id, "analog-input-internal-mic", FALSE);
+                break;
+        case GVC_HEADSET_PORT_CHOICE_HEADSET:
+                gvc_mixer_control_set_port_status_for_headset (control, id, "analog-output-headphones", TRUE);
+                gvc_mixer_control_set_port_status_for_headset (control, id, "analog-input-headset-mic", FALSE);
+                break;
+        case GVC_HEADSET_PORT_CHOICE_MIC:
+                gvc_mixer_control_set_port_status_for_headset (control, id, "analog-output-speaker", TRUE);
+                gvc_mixer_control_set_port_status_for_headset (control, id, "analog-input-headphone-mic", FALSE);
+                break;
+        default:
+                g_assert_not_reached ();
+        }
+#else
+        g_warning ("BUG: libgnome-volume-control compiled without ALSA support");
+#endif /* HAVE_ALSA */
+}
+
+#ifdef HAVE_ALSA
+typedef struct {
+        const pa_card_port_info *headphones;
+        const pa_card_port_info *headsetmic;
+        const pa_card_port_info *headphonemic;
+} headset_ports;
+
+/*
+   TODO: Check if we still need this with the changed PA port names
+
+   In PulseAudio ports will show up with the following names:
+   Headphones - analog-output-headphones
+   Headset mic - analog-input-headset-mic (was: analog-input-microphone-headset)
+   Jack in mic-in mode - analog-input-headphone-mic (was: analog-input-microphone)
+
+   However, since regular mics also show up as analog-input-microphone,
+   we need to check for certain controls on alsa mixer level too, to know
+   if we deal with a separate mic jack, or a multi-function jack with a
+   mic-in mode (also called "headphone mic").
+   We check for the following names:
+
+   Headphone Mic Jack - indicates headphone and mic-in mode share the same jack,
+     i e, not two separate jacks. Hardware cannot distinguish between a
+     headphone and a mic.
+   Headset Mic Phantom Jack - indicates headset jack where hardware can not
+     distinguish between headphones and headsets
+   Headset Mic Jack - indicates headset jack where hardware can distinguish
+     between headphones and headsets. There is no use popping up a dialog in
+     this case, unless we already need to do this for the mic-in mode.
+*/
+
+static headset_ports *
+get_headset_ports (const pa_card_info *c)
+{
+        headset_ports *h;
+        guint i;
+
+        h = g_new0 (headset_ports, 1);
+
+        for (i = 0; i < c->n_ports; i++) {
+                pa_card_port_info *p = c->ports[i];
+
+                if (strcmp (p->name, "analog-output-headphones") == 0)
+                        h->headphones = p;
+                else if (strcmp (p->name, "analog-input-headset-mic") == 0)
+                        h->headsetmic = p;
+                else if (strcmp(p->name, "analog-input-headphone-mic") == 0)
+                        h->headphonemic = p;
+        }
+        return h;
+}
+
+static gboolean
+verify_alsa_card (int       cardindex,
+                  gboolean *headsetmic,
+                  gboolean *headphonemic)
+{
+        char *ctlstr;
+        snd_hctl_t *hctl;
+        snd_ctl_elem_id_t *id;
+        int err;
+
+        *headsetmic = FALSE;
+        *headphonemic = FALSE;
+
+        ctlstr = g_strdup_printf ("hw:%i", cardindex);
+        if ((err = snd_hctl_open (&hctl, ctlstr, 0)) < 0) {
+                g_warning ("snd_hctl_open failed: %s", snd_strerror(err));
+                g_free (ctlstr);
+                return FALSE;
+        }
+        g_free (ctlstr);
+
+        if ((err = snd_hctl_load (hctl)) < 0) {
+                g_warning ("snd_hctl_load failed: %s", snd_strerror(err));
+                snd_hctl_close (hctl);
+                return FALSE;
+        }
+
+        snd_ctl_elem_id_alloca (&id);
+
+        snd_ctl_elem_id_clear (id);
+        snd_ctl_elem_id_set_interface (id, SND_CTL_ELEM_IFACE_CARD);
+        snd_ctl_elem_id_set_name (id, "Headphone Mic Jack");
+        if (snd_hctl_find_elem (hctl, id))
+                *headphonemic = TRUE;
+
+        snd_ctl_elem_id_clear (id);
+        snd_ctl_elem_id_set_interface (id, SND_CTL_ELEM_IFACE_CARD);
+        snd_ctl_elem_id_set_name (id, "Headset Mic Phantom Jack");
+        if (snd_hctl_find_elem (hctl, id))
+                *headsetmic = TRUE;
+
+        if (*headphonemic) {
+                snd_ctl_elem_id_clear (id);
+                snd_ctl_elem_id_set_interface (id, SND_CTL_ELEM_IFACE_CARD);
+                snd_ctl_elem_id_set_name (id, "Headset Mic Jack");
+                if (snd_hctl_find_elem (hctl, id))
+                        *headsetmic = TRUE;
+        }
+
+        snd_hctl_close (hctl);
+        return *headsetmic || *headphonemic;
+}
+
+static void
+check_audio_device_selection_needed (GvcMixerControl    *control,
+                                     const pa_card_info *info)
+{
+        headset_ports *h;
+        gboolean start_dialog, stop_dialog;
+
+        start_dialog = FALSE;
+        stop_dialog = FALSE;
+        h = get_headset_ports (info);
+
+        if (!h->headphones ||
+            (!h->headsetmic && !h->headphonemic)) {
+                /* Not a headset jack */
+                goto out;
+        }
+
+        if (control->priv->headset_card != (int) info->index) {
+                int cardindex;
+                gboolean hsmic, hpmic;
+                const char *s;
+
+                s = pa_proplist_gets (info->proplist, "alsa.card");
+                if (!s)
+                        goto out;
+
+                cardindex = strtol (s, NULL, 10);
+                if (cardindex == 0 && strcmp(s, "0") != 0)
+                        goto out;
+
+                if (!verify_alsa_card(cardindex, &hsmic, &hpmic))
+                        goto out;
+
+                control->priv->headset_card = info->index;
+                control->priv->has_headsetmic = hsmic && h->headsetmic;
+                control->priv->has_headphonemic = hpmic && h->headphonemic;
+        } else {
+                start_dialog = (h->headphones->available != PA_PORT_AVAILABLE_NO) && !control->priv->headset_plugged_in;
+                stop_dialog = (h->headphones->available == PA_PORT_AVAILABLE_NO) && control->priv->headset_plugged_in;
+        }
+
+        control->priv->headset_plugged_in = h->headphones->available != PA_PORT_AVAILABLE_NO;
+
+        if (!start_dialog &&
+            !stop_dialog)
+                goto out;
+
+        if (stop_dialog) {
+                g_signal_emit (G_OBJECT (control),
+                               signals[AUDIO_DEVICE_SELECTION_NEEDED],
+                               0,
+                               info->index,
+                               FALSE,
+                               GVC_HEADSET_PORT_CHOICE_NONE);
+        } else {
+                GvcHeadsetPortChoice choices;
+
+                choices = GVC_HEADSET_PORT_CHOICE_HEADPHONES;
+                if (control->priv->has_headsetmic)
+                        choices |= GVC_HEADSET_PORT_CHOICE_HEADSET;
+                if (control->priv->has_headphonemic)
+                        choices |= GVC_HEADSET_PORT_CHOICE_MIC;
+
+                g_signal_emit (G_OBJECT (control),
+                               signals[AUDIO_DEVICE_SELECTION_NEEDED],
+                               0,
+                               info->index,
+                               TRUE,
+                               choices);
+        }
+
+out:
+        g_free (h);
+}
+#endif /* HAVE_ALSA */
+
 /*
  * At this point we can determine all devices available to us (besides network 'ports')
  * This is done by the following:
@@ -2093,6 +2465,7 @@ update_card (GvcMixerControl      *control,
                         port->priority = info->ports[i]->priority;
                         port->available = info->ports[i]->available;
                         port->direction = info->ports[i]->direction;
+                        port->icon_name = g_strdup (pa_proplist_gets (info->ports[i]->proplist, "device.icon_name"));
                         port->profiles = determine_profiles_for_port (info->ports[i], profile_list);
                         port_list = g_list_prepend (port_list, port);
                 }
@@ -2125,7 +2498,7 @@ update_card (GvcMixerControl      *control,
                 else {
                         for (i = 0; i < info->n_ports; i++) {
                                 if (g_strcmp0 (card_port->port, info->ports[i]->name) == 0) {
-                                        if ((card_port->available == PA_PORT_AVAILABLE_NO) !=  (info->ports[i]->available == PA_PORT_AVAILABLE_NO)) {
+                                        if ((card_port->available == PA_PORT_AVAILABLE_NO) != (info->ports[i]->available == PA_PORT_AVAILABLE_NO)) {
                                                 card_port->available = info->ports[i]->available;
                                                 g_debug ("sync port availability on card %i, card port name '%s', new available value %i",
                                                           gvc_mixer_card_get_index (card),
@@ -2140,6 +2513,11 @@ update_card (GvcMixerControl      *control,
                         }
                 }
         }
+
+#ifdef HAVE_ALSA
+        check_audio_device_selection_needed (control, info);
+#endif /* HAVE_ALSA */
+
         g_signal_emit (G_OBJECT (control),
                        signals[CARD_ADDED],
                        0,
@@ -2360,7 +2738,7 @@ update_event_role_stream (GvcMixerControl                  *control,
         max_volume = pa_cvolume_max (&info->volume);
 
         gvc_mixer_stream_set_name (stream, _("System Sounds"));
-        gvc_mixer_stream_set_icon_name (stream, "cin-multimedia-volume-control");
+        gvc_mixer_stream_set_icon_name (stream, "multimedia-volume-control");
         gvc_mixer_stream_set_volume (stream, (guint)max_volume);
         gvc_mixer_stream_set_is_muted (stream, info->mute);
 
@@ -2657,7 +3035,7 @@ remove_sink (GvcMixerControl *control,
                         devices = g_hash_table_get_values (control->priv->ui_outputs);
 
                         for (d = devices; d != NULL; d = d->next) {
-                                gint stream_id = GVC_MIXER_UI_DEVICE_INVALID;
+                                guint stream_id = GVC_MIXER_UI_DEVICE_INVALID;
                                 device = d->data;
                                 g_object_get (G_OBJECT (device),
                                              "stream-id", &stream_id,
@@ -2705,7 +3083,7 @@ remove_source (GvcMixerControl *control,
                         devices = g_hash_table_get_values (control->priv->ui_inputs);
 
                         for (d = devices; d != NULL; d = d->next) {
-                                gint stream_id = GVC_MIXER_UI_DEVICE_INVALID;
+                                guint stream_id = GVC_MIXER_UI_DEVICE_INVALID;
                                 device = d->data;
                                 g_object_get (G_OBJECT (device),
                                              "stream-id", &stream_id,
@@ -2822,6 +3200,8 @@ _pa_context_subscribe_cb (pa_context                  *context,
                         req_update_card (control, index);
                 }
                 break;
+        default:
+                break;
         }
 }
 
@@ -2905,7 +3285,7 @@ gvc_mixer_new_pa_context (GvcMixerControl *self)
                           "org.gnome.VolumeControl");
         pa_proplist_sets (proplist,
                           PA_PROP_APPLICATION_ICON_NAME,
-                          "cin-multimedia-volume-control");
+                          "multimedia-volume-control");
         pa_proplist_sets (proplist,
                           PA_PROP_APPLICATION_VERSION,
                           PACKAGE_VERSION);
@@ -3197,6 +3577,22 @@ gvc_mixer_control_class_init (GvcMixerControlClass *klass)
                               NULL, NULL,
                               g_cclosure_marshal_VOID__UINT,
                               G_TYPE_NONE, 1, G_TYPE_UINT);
+        signals [STREAM_CHANGED] =
+                g_signal_new ("stream-changed",
+                              G_TYPE_FROM_CLASS (klass),
+                              G_SIGNAL_RUN_LAST,
+                              G_STRUCT_OFFSET (GvcMixerControlClass, stream_changed),
+                              NULL, NULL,
+                              g_cclosure_marshal_VOID__UINT,
+                              G_TYPE_NONE, 1, G_TYPE_UINT);
+        signals [AUDIO_DEVICE_SELECTION_NEEDED] =
+                g_signal_new ("audio-device-selection-needed",
+                              G_TYPE_FROM_CLASS (klass),
+                              G_SIGNAL_RUN_LAST,
+                              0,
+                              NULL, NULL,
+                              g_cclosure_marshal_generic,
+                              G_TYPE_NONE, 3, G_TYPE_UINT, G_TYPE_BOOLEAN, G_TYPE_UINT);
         signals [CARD_ADDED] =
                 g_signal_new ("card-added",
                               G_TYPE_FROM_CLASS (klass),
@@ -3302,6 +3698,10 @@ gvc_mixer_control_init (GvcMixerControl *control)
         control->priv->ui_inputs = g_hash_table_new_full (NULL, NULL, NULL, (GDestroyNotify)g_object_unref);
 
         control->priv->clients = g_hash_table_new_full (NULL, NULL, NULL, (GDestroyNotify)g_free);
+
+#ifdef HAVE_ALSA
+        control->priv->headset_card = -1;
+#endif /* HAVE_ALSA */
 
         control->priv->state = GVC_STATE_CLOSED;
 }

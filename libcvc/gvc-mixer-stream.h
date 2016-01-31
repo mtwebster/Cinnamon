@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street - Suite 500, Boston, MA 02110-1335, USA.
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  */
 
@@ -64,7 +64,8 @@ typedef struct
         gboolean available;
 } GvcMixerStreamPort;
 
-GType               gvc_mixer_stream_get_type        (void);
+GType               gvc_mixer_stream_port_get_type   (void) G_GNUC_CONST;
+GType               gvc_mixer_stream_get_type        (void) G_GNUC_CONST;
 
 guint               gvc_mixer_stream_get_index       (GvcMixerStream *stream);
 guint               gvc_mixer_stream_get_id          (GvcMixerStream *stream);
@@ -86,13 +87,14 @@ gboolean            gvc_mixer_stream_change_is_muted (GvcMixerStream *stream,
 gboolean            gvc_mixer_stream_is_running      (GvcMixerStream *stream);
 const char *        gvc_mixer_stream_get_name        (GvcMixerStream *stream);
 const char *        gvc_mixer_stream_get_icon_name   (GvcMixerStream *stream);
+const char *        gvc_mixer_stream_get_form_factor (GvcMixerStream *stream);
 const char *        gvc_mixer_stream_get_sysfs_path  (GvcMixerStream *stream);
 GIcon *             gvc_mixer_stream_get_gicon       (GvcMixerStream *stream);
 const char *        gvc_mixer_stream_get_description (GvcMixerStream *stream);
 const char *        gvc_mixer_stream_get_application_id (GvcMixerStream *stream);
 gboolean            gvc_mixer_stream_is_event_stream (GvcMixerStream *stream);
 gboolean            gvc_mixer_stream_is_virtual      (GvcMixerStream *stream);
-gint                gvc_mixer_stream_get_card_index  (GvcMixerStream *stream);
+guint               gvc_mixer_stream_get_card_index  (GvcMixerStream *stream);
 
 /* private */
 gboolean            gvc_mixer_stream_set_volume      (GvcMixerStream *stream,
@@ -109,6 +111,8 @@ gboolean            gvc_mixer_stream_set_description (GvcMixerStream *stream,
                                                       const char     *description);
 gboolean            gvc_mixer_stream_set_icon_name   (GvcMixerStream *stream,
                                                       const char     *name);
+gboolean            gvc_mixer_stream_set_form_factor (GvcMixerStream *stream,
+                                                      const char     *form_factor);
 gboolean            gvc_mixer_stream_set_sysfs_path  (GvcMixerStream *stream,
                                                       const char     *sysfs_path);
 gboolean            gvc_mixer_stream_set_is_event_stream (GvcMixerStream *stream,
@@ -124,7 +128,7 @@ gboolean            gvc_mixer_stream_set_port        (GvcMixerStream *stream,
 gboolean            gvc_mixer_stream_set_ports       (GvcMixerStream *stream,
                                                       GList          *ports);
 gboolean            gvc_mixer_stream_set_card_index  (GvcMixerStream *stream,
-                                                      gint            card_index);
+                                                      guint           card_index);
 
 G_END_DECLS
 

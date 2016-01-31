@@ -16,7 +16,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street - Suite 500, Boston, MA 02110-1335, USA.
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  */
 
@@ -65,8 +65,6 @@ enum
         PROP_HUMAN_PROFILE,
 };
 
-static void     gvc_mixer_card_class_init (GvcMixerCardClass *klass);
-static void     gvc_mixer_card_init       (GvcMixerCard      *mixer_card);
 static void     gvc_mixer_card_finalize   (GObject            *object);
 
 G_DEFINE_TYPE (GvcMixerCard, gvc_mixer_card, G_TYPE_OBJECT)
@@ -276,7 +274,6 @@ gvc_mixer_card_get_profiles (GvcMixerCard *card)
         return card->priv->profiles;
 }
 
-
 /**
  * gvc_mixer_card_get_ports:
  *
@@ -326,7 +323,7 @@ gvc_mixer_card_set_profiles (GvcMixerCard *card,
  * gvc_mixer_card_get_gicon:
  * @card:
  *
- * Return value: (transfer full) (element-type GIcon):
+ * Return value: (transfer full):
  */
 GIcon *
 gvc_mixer_card_get_gicon (GvcMixerCard *card)
@@ -339,17 +336,29 @@ gvc_mixer_card_get_gicon (GvcMixerCard *card)
         return g_themed_icon_new_with_default_fallbacks (card->priv->icon_name);
 }
 
+static void
+free_port (GvcMixerCardPort *port)
+{
+        g_free (port->port);
+        g_free (port->human_port);
+        g_free (port->icon_name);
+        g_list_free (port->profiles);
+
+        g_free (port);
+}
+
 /**
  * gvc_mixer_card_set_ports:
- * @profiles: (transfer full) (element-type GvcMixerCardPort):
+ * @ports: (transfer full) (element-type GvcMixerCardPort):
  */
 gboolean
 gvc_mixer_card_set_ports (GvcMixerCard *card,
-                          GList          *ports)
+                          GList        *ports)
 {
         g_return_val_if_fail (GVC_IS_MIXER_CARD (card), FALSE);
         g_return_val_if_fail (card->priv->ports == NULL, FALSE);
 
+        g_list_free_full (card->priv->ports, (GDestroyNotify) free_port);
         card->priv->ports = ports;
 
         return TRUE;
@@ -562,6 +571,9 @@ gvc_mixer_card_finalize (GObject *object)
         g_list_foreach (mixer_card->priv->profiles, (GFunc) free_profile, NULL);
         g_list_free (mixer_card->priv->profiles);
         mixer_card->priv->profiles = NULL;
+
+        g_list_free_full (mixer_card->priv->ports, (GDestroyNotify) free_port);
+        mixer_card->priv->ports = NULL;
 
         G_OBJECT_CLASS (gvc_mixer_card_parent_class)->finalize (object);
 }

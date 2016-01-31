@@ -2,6 +2,7 @@
 /usr/share/cinnamon
 /usr/share/desktop-directories
 /usr/share/glib-2.0
+/usr/share/gir-1.0
 /usr/share/cinnamon-session
 /usr/share/xsessions
 /usr/share/icons

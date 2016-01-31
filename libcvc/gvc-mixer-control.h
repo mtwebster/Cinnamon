@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street - Suite 500, Boston, MA 02110-1335, USA.
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  */
 
@@ -35,6 +35,14 @@ typedef enum
         GVC_STATE_CONNECTING,
         GVC_STATE_FAILED
 } GvcMixerControlState;
+
+typedef enum
+{
+        GVC_HEADSET_PORT_CHOICE_NONE        = 0,
+        GVC_HEADSET_PORT_CHOICE_HEADPHONES  = 1 << 0,
+        GVC_HEADSET_PORT_CHOICE_HEADSET     = 1 << 1,
+        GVC_HEADSET_PORT_CHOICE_MIC         = 1 << 2
+} GvcHeadsetPortChoice;
 
 #define GVC_TYPE_MIXER_CONTROL         (gvc_mixer_control_get_type ())
 #define GVC_MIXER_CONTROL(o)           (G_TYPE_CHECK_INSTANCE_CAST ((o), GVC_TYPE_MIXER_CONTROL, GvcMixerControl))
@@ -59,6 +67,8 @@ typedef struct
                                         GvcMixerControlState  new_state);
         void (*stream_added)           (GvcMixerControl *control,
                                         guint            id);
+        void (*stream_changed)         (GvcMixerControl *control,
+                                        guint            id);
         void (*stream_removed)         (GvcMixerControl *control,
                                         guint            id);
         void (*card_added)             (GvcMixerControl *control,
@@ -81,6 +91,11 @@ typedef struct
                                         guint            id);
         void (*input_removed)          (GvcMixerControl *control,
                                         guint            id);
+        void (*audio_device_selection_needed)
+                                       (GvcMixerControl      *control,
+                                        guint                 id,
+                                        gboolean              show_dialog,
+                                        GvcHeadsetPortChoice  choices);
 } GvcMixerControlClass;
 
 GType               gvc_mixer_control_get_type            (void);
@@ -128,6 +143,10 @@ GvcMixerStream*         gvc_mixer_control_get_stream_from_device            (Gvc
 gboolean                gvc_mixer_control_change_profile_on_selected_device (GvcMixerControl *control,
                                                                              GvcMixerUIDevice *device,
                                                                              const gchar* profile);
+
+void                    gvc_mixer_control_set_headset_port                  (GvcMixerControl      *control,
+                                                                             guint                 id,
+                                                                             GvcHeadsetPortChoice  choices);
 
 GvcMixerControlState gvc_mixer_control_get_state            (GvcMixerControl *control);
 

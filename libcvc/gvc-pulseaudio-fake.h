@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2008-2009 Red Hat, Inc.
+ * Copyright (C) 2008 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,22 +14,21 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street - Suite 500, Boston, MA 02110-1335, USA.
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  */
 
-#ifndef __GVC_MIXER_CARD_PRIVATE_H
-#define __GVC_MIXER_CARD_PRIVATE_H
+#ifndef __GVC_PULSEAUDIO_FAKE_H
+#define __GVC_PULSEAUDIO_FAKE_H
 
-#include <pulse/pulseaudio.h>
-#include "gvc-mixer-card.h"
+#ifdef WITH_INTROSPECTION
 
-G_BEGIN_DECLS
+#ifndef PA_API_VERSION
+#define pa_channel_position_t int
+#define pa_volume_t guint32
+#define pa_context gpointer
+#endif /* PA_API_VERSION */
 
-GvcMixerCard *        gvc_mixer_card_new               (pa_context   *context,
-                                                        guint         index);
-pa_context *          gvc_mixer_card_get_pa_context    (GvcMixerCard *card);
+#endif /* WITH_INTROSPECTION */
 
-G_END_DECLS
-
-#endif /* __GVC_MIXER_CARD_PRIVATE_H */
+#endif /* __GVC_PULSEAUDIO_FAKE_H */
