@@ -5,7 +5,7 @@
 import gi
 gi.require_version('Gkbd', '3.0')
 gi.require_version('AccountsService', '1.0')
-from gi.repository import Gtk, Gdk, Gkbd, AccountsService
+from gi.repository import Gtk, Gdk, Gkbd, AccountsService, GLib
 
 import authenticator
 import utils
@@ -76,6 +76,7 @@ class LockDialog(BaseWindow):
         hbox_pass.pack_start(self.auth_prompt_entry, True, True, 0)
         self.auth_prompt_entry.set_can_default(True)
         self.auth_prompt_entry.connect("changed", self.on_auth_prompt_entry_text_changed)
+        self.auth_prompt_entry.connect("button-press-event", self.on_auth_prompt_entry_button_press)
 
         self.auth_prompt_label.set_mnemonic_widget(self.auth_prompt_entry)
         self.auth_prompt_entry.connect("activate", self.on_auth_enter_key)
@@ -145,13 +146,45 @@ class LockDialog(BaseWindow):
 
         self.keymap.connect("state-changed", self.keymap_handler)
 
-        self.connect_after("show", self.on_shown)
+        self.show_id = self.connect_after("show", self.on_shown)
+
         self.show_all()
+
+    def do_destroy(self):
+        if self.show_id > 0:
+            self.disconnect(self.show_id)
+            self.show_id = 0
 
     def on_shown(self, widget):
         self.setup_kbd_layout_button()
         self.keymap_handler(self.keymap)
         self.auth_prompt_entry.grab_focus()
+
+    def forward_key_events(self, forwarded_events):
+        while len(forwarded_events) > 0:
+            event = forwarded_events.pop()
+
+            # python/gi forgets event is a Gdk.EventKey, and
+            # propagate_key_event() fails.
+
+            kev = Gdk.EventKey()
+
+            kev.group = event.group
+            kev.hardware_keycode = event.hardware_keycode
+            kev.is_modifier = event.is_modifier
+            kev.keyval = event.keyval
+            kev.length = event.length
+            kev.send_event = event.send_event
+            kev.state = event.state
+            kev.string = event.string
+            kev.time = event.time
+            kev.type = event.type
+            kev.window = event.window
+
+            self.get_toplevel().propagate_key_event(kev)
+            event.free()
+
+        forwarded_events = None
 
     def keymap_handler(self, keymap):
         if keymap.get_caps_lock_state():
@@ -172,7 +205,7 @@ class LockDialog(BaseWindow):
 
         global accountsService
 
-        for path in [os.path.join(accountsService.get_home_dir(), ".face"),
+        for path in [os.path.join(GLib.get_home_dir(), ".face"),
                      service.get_icon_file(),
                      "/usr/share/cinnamon/faces/user-generic.png"]:
             if os.path.exists(path):
@@ -181,6 +214,12 @@ class LockDialog(BaseWindow):
 
     def on_auth_prompt_entry_text_changed(self, editable):
         self.auth_unlock_button.set_sensitive(editable.get_text() != "")
+
+    def on_auth_prompt_entry_button_press(self, widget, event):
+        if event.button == 3 and event.type == Gdk.EventType.BUTTON_PRESS:
+            return Gdk.EVENT_STOP
+
+        return Gdk.EVENT_PROPAGATE
 
     def on_unlock_clicked(self, button=None):
         self.authenticate()

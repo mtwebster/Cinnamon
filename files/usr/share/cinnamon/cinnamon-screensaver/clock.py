@@ -119,21 +119,19 @@ class ClockWidget(BaseWindow):
 
         self.positioning_id = GObject.timeout_add_seconds(CLOCK_POSITIONING_TIMEOUT, self.positioning_callback)
 
-    def stop_positioning(self, to_unlock_position=False):
+    def stop_positioning(self):
         if self.positioning_id > 0:
             GObject.source_remove(self.positioning_id)
             self.positioning_id = 0
 
-        self.positioning_callback(to_unlock_position)
-
-    def positioning_callback(self, to_unlock_position=False):
+    def positioning_callback(self):
         self.unreveal()
         self.queue_draw()
-        GObject.timeout_add(self.REVEALER_DURATION + 10, self.align_clock, to_unlock_position)
+        GObject.timeout_add(self.REVEALER_DURATION + 10, self.align_clock)
 
         return True
 
-    def align_clock(self, to_unlock_position=False):
+    def align_clock(self):
         current_halign = int(self.get_halign())
         horizontal = current_halign
 
@@ -145,12 +143,8 @@ class ClockWidget(BaseWindow):
         while vertical == current_valign:
             vertical = ALIGNMENTS[random.randint(0, 2)]
 
-        if to_unlock_position:
-            self.set_halign(Gtk.Align.START)
-            self.set_valign(Gtk.Align.CENTER)
-        else:
-            self.set_halign(Gtk.Align(horizontal))
-            self.set_valign(Gtk.Align(vertical))
+        self.set_halign(Gtk.Align(horizontal))
+        self.set_valign(Gtk.Align(vertical))
 
         self.queue_draw()
 

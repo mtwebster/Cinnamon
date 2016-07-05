@@ -19,7 +19,7 @@ class ScreensaverWindow(BaseWindow):
         self.bg_image.set_valign(Gtk.Align.FILL)
 
         self.add(self.bg_image)
-        self.connect_after("draw", self.on_image_draw)
+        self.bg_image.connect_after("draw", self.on_image_draw)
 
         self.show_all()
 

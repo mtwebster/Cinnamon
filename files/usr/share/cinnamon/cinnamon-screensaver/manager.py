@@ -11,7 +11,7 @@ from lock import LockDialog
 from clock import ClockWidget
 import timers
 
-UNLOCK_TIMEOUT = 30
+UNLOCK_TIMEOUT = 5
 
 class ScreensaverManager:
     def __init__(self):
@@ -26,6 +26,8 @@ class ScreensaverManager:
         self.windows = []
 
         self.screen = Gdk.Screen.get_default()
+
+        self.saved_key_events = []
 
         self.overlay = None
         self.clock_widget = None
@@ -67,6 +69,8 @@ class ScreensaverManager:
             self.overlay.add_child(window)
             self.overlay.put_on_bottom(window)
 
+            window.queue_draw()
+
     def on_window_bg_image_realized(self, widget, window):
         self.bg.create_and_set_gtk_image (widget, window.rect.width, window.rect.height)
         widget.queue_draw()
@@ -84,8 +88,8 @@ class ScreensaverManager:
 
     def setup_events(self):
         self.bp_id = self.overlay.connect("button-press-event", self.on_wake_event)
-        self.br_id = self.overlay.connect("button-release-event", Gtk.main_quit)
-        self.kp_id = self.overlay.connect("key-press-event", self.on_wake_event)
+        self.br_id = self.overlay.connect("button-release-event", self.on_wake_event)
+        self.kp_id = self.overlay.connect("key-press-event", self.on_key_press)
         self.kr_id = self.overlay.connect("key-release-event", self.on_wake_event)
 
     def disconnect_events(self):
@@ -108,19 +112,28 @@ class ScreensaverManager:
 # Event Handling #
 
     def on_wake_event(self, widget, event):
+        cont = Gdk.EVENT_PROPAGATE
+
         self.focus_monitor = self.get_monitor_at_pointer_position()
 
         if not self.lock_added:
             self.raise_lock_widget()
-            self.disconnect_events()
+            cont = Gdk.EVENT_STOP
 
         if self.lock_added:
             self.overlay.put_on_top(self.clock_widget)
             self.overlay.put_on_top(self.lock_dialog)
+            # cont = self.handle_event_with_lock(event)
 
         timers.get().start("wake-timeout", UNLOCK_TIMEOUT * 1000, self.on_wake_timeout)
 
-        return True
+        return cont
+
+    def on_key_press(self, widget, event):
+        if not self.lock_added and event.string != "":
+            self.saved_key_events.append(event.copy())
+
+        return self.on_wake_event(widget, event)
 
     def on_wake_timeout(self):
         timers.get().cancel("wake-timeout")
@@ -129,10 +142,11 @@ class ScreensaverManager:
         return False
 
     def raise_lock_widget(self):
-        self.disconnect_events()
         self.clock_widget.stop_positioning()
 
         self.lock_dialog = LockDialog()
+        self.lock_realize_id = self.lock_dialog.auth_prompt_entry.connect_after("realize", self.on_auth_entry_realize)
+
         self.overlay.add_child(self.lock_dialog)
 
         self.overlay.set_default(self.lock_dialog.auth_unlock_button)
@@ -141,16 +155,21 @@ class ScreensaverManager:
         self.lock_added = True
 
         self.lock_dialog.reveal()
+        self.clock_widget.reveal()
+
+    def on_auth_entry_realize(self, widget):
+        self.lock_dialog.forward_key_events(self.saved_key_events)
+        self.saved_key_events = []
+        self.lock_dialog.auth_prompt_entry.disconnect(self.lock_realize_id)
+        self.lock_realize_id = 0
 
     def cancel_lock_widget(self):
         self.clock_widget.start_positioning()
 
-        self.lock_dialog.destroy()
+        self.lock_dialog.destroy_window()
         self.lock_dialog = None
 
         self.lock_added = False
-
-        self.setup_events()
 
 # GnomeBG stuff #
 
