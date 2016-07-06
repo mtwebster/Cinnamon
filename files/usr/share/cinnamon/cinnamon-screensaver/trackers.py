@@ -93,7 +93,7 @@ class ConnectionTracker:
         callback_instance = None
         try:
             callback_instance = callback.__self__
-            if callback_instance:
+            if callback_instance and isinstance(callback_instance, GObject.GObject):
                 callback_instance.weak_ref(self._cleanup_disposed, name, "callback_instance")
                 debug_sigs("_connect_to_dispose (callback_instance)", name)
         except:
