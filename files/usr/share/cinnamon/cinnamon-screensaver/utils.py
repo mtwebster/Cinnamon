@@ -72,6 +72,8 @@ def override_user_time(window):
 
     window.set_user_time(ev_time)
 
+def debug_allocation(alloc):
+    print("x:%d, y:%d, width:%d, height:%d" % (alloc.x, alloc.y, alloc.width, alloc.height))
 
 def do_quit():
     Gtk.main_quit()

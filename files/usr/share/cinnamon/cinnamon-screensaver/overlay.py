@@ -2,6 +2,7 @@
 
 from gi.repository import Gtk, Gdk
 import utils
+import trackers
 
 class ScreensaverOverlayWindow(Gtk.Window):
     def __init__(self, screen):
@@ -12,8 +13,7 @@ class ScreensaverOverlayWindow(Gtk.Window):
 
         self.screen = screen
 
-        c = self.get_style_context()
-        c.remove_class("background")
+        self.get_style_context().remove_class("background")
 
         self.set_events(self.get_events() |
                         Gdk.EventMask.POINTER_MOTION_MASK |
@@ -33,9 +33,21 @@ class ScreensaverOverlayWindow(Gtk.Window):
         self.fullscreen()
 
         self.overlay = Gtk.Overlay()
-        self.overlay.connect("realize", self.on_realized)
+
+        trackers.con_tracker_get().connect(self.overlay,
+                                           "realize",
+                                           self.on_realized)
+
         self.overlay.show_all()
         self.add(self.overlay)
+
+    def on_realized(self, widget):
+        window = self.get_window()
+        window.set_fullscreen_mode(Gdk.FullscreenMode.ALL_MONITORS)
+        window.move_resize(self.rect.x, self.rect.y, self.rect.width, self.rect.height)
+
+        utils.override_user_time(self.get_window())
+        self.present()
 
     def add_child(self, widget):
         self.overlay.add_overlay(widget)
@@ -61,14 +73,6 @@ class ScreensaverOverlayWindow(Gtk.Window):
             return self.rect.width, self.rect.width
         else:
             return 0, 0
-
-    def on_realized(self, widget):
-        window = self.get_window()
-        window.set_fullscreen_mode(Gdk.FullscreenMode.ALL_MONITORS)
-        window.move_resize(self.rect.x, self.rect.y, self.rect.width, self.rect.height)
-
-        utils.override_user_time(self.get_window())
-        self.present()
 
     def update_geometry(self):
         self.rect = Gdk.Rectangle()

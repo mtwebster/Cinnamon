@@ -4,9 +4,9 @@ from gi.repository import CinnamonDesktop, GLib, Gtk, Gio, GObject
 import utils
 import random
 from baseWindow import BaseWindow
+import trackers
 
 CLOCK_POSITIONING_TIMEOUT = 5
-
 ALIGNMENTS = [int(Gtk.Align.START), int(Gtk.Align.END), int(Gtk.Align.CENTER)]
 
 class ClockWidget(BaseWindow):
@@ -22,7 +22,6 @@ class ClockWidget(BaseWindow):
         self.set_margin_bottom(100)
 
         self.current_monitor = initial_monitor
-        self.positioning_id = 0
 
         self.away_message = away_message
 
@@ -31,20 +30,28 @@ class ClockWidget(BaseWindow):
         self.add(self.label)
 
         self.clock_tracker = CinnamonDesktop.WallClock()
-        self.clock_tracker.connect("notify::clock", self.on_clock_changed)
-
         self.ss_settings = Gio.Settings("org.cinnamon.desktop.screensaver")
-        self.ss_settings.connect("changed", self.on_settings_changed)
         self.iface_settings = Gio.Settings("org.cinnamon.desktop.interface")
-        self.iface_settings.connect("changed", self.on_settings_changed)
+
+        trackers.con_tracker_get().connect(self.clock_tracker,
+                                           "notify::clock",
+                                           self.on_clock_changed)
+        trackers.con_tracker_get().connect(self.ss_settings,
+                                           "changed",
+                                           self.on_settings_changed)
+        trackers.con_tracker_get().connect(self.iface_settings,
+                                           "changed",
+                                           self.on_settings_changed)
 
         tz = Gio.File.new_for_path(path="/etc/localtime")
         self.tz_monitor = tz.monitor_file(0, None)
-        self.tz_monitor.connect("changed", self.on_tz_changed)
+
+        trackers.con_tracker_get().connect(self.tz_monitor,
+                                           "changed",
+                                           self.on_tz_changed)
 
         self.settings = utils.Settings()
         self.fetch_settings()
-
         self.update_clock()
 
     def on_clock_changed(self, clock, pspec):
@@ -113,21 +120,21 @@ class ClockWidget(BaseWindow):
         self.settings.use_24h = self.iface_settings.get_boolean("clock-use-24h")
 
     def start_positioning(self):
-        if self.positioning_id > 0:
-            GObject.source_remove(self.positioning_id)
-            self.positioning_id = 0
-
-        self.positioning_id = GObject.timeout_add_seconds(CLOCK_POSITIONING_TIMEOUT, self.positioning_callback)
+        trackers.timer_tracker_get().cancel("clock-positioning")
+        trackers.timer_tracker_get().start_seconds("clock-positioning",
+                                                   CLOCK_POSITIONING_TIMEOUT,
+                                                   self.positioning_callback)
 
     def stop_positioning(self):
-        if self.positioning_id > 0:
-            GObject.source_remove(self.positioning_id)
-            self.positioning_id = 0
+        trackers.timer_tracker_get().cancel("clock-positioning")
 
     def positioning_callback(self):
         self.unreveal()
         self.queue_draw()
-        GObject.timeout_add(self.REVEALER_DURATION + 10, self.align_clock)
+
+        trackers.timer_tracker_get().start("align-clock-timeout",
+                                           self.REVEALER_DURATION + 10,
+                                           self.align_clock)
 
         return True
 
@@ -149,6 +156,8 @@ class ClockWidget(BaseWindow):
         self.queue_draw()
 
         self.reveal()
+
+        trackers.timer_tracker_get().cancel("align-clock-timeout")
 
         return False
 

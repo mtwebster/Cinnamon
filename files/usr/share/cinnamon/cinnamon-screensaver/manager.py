@@ -9,17 +9,24 @@ from overlay import ScreensaverOverlayWindow
 from window import ScreensaverWindow
 from lock import LockDialog
 from clock import ClockWidget
-import timers
+import trackers
+import utils
 
 UNLOCK_TIMEOUT = 5
 
 class ScreensaverManager:
     def __init__(self):
         self.bg = CinnamonDesktop.BG()
-        self.bg.connect("changed", self.on_bg_changed)
+
+        trackers.con_tracker_get().connect(self.bg,
+                                           "changed", 
+                                           self.on_bg_changed)
 
         self.bg_settings = Gio.Settings(schema_id="org.cinnamon.desktop.background")
-        self.bg_settings.connect("change-event", self.on_bg_settings_changed)
+
+        trackers.con_tracker_get().connect(self.bg_settings,
+                                           "change-event",
+                                           self.on_bg_settings_changed)
 
         self.bg.load_from_preferences(self.bg_settings)
 
@@ -43,15 +50,21 @@ class ScreensaverManager:
 
     def setup_overlay(self):
         self.overlay = ScreensaverOverlayWindow(self.screen)
-        self.overlay.overlay.connect("get-child-position", self.position_overlay_child)
-        self.overlay.connect("realize", self.on_overlay_realized)
+
+        trackers.con_tracker_get().connect(self.overlay.overlay,
+                                           "get-child-position",
+                                           self.position_overlay_child)
+
+        trackers.con_tracker_get().connect(self.overlay,
+                                           "realize",
+                                           self.on_overlay_realized)
+
         self.overlay.show_all()
 
     def on_overlay_realized(self, widget):
         self.setup_windows()
         self.setup_clock()
         self.setup_events()
-        self.mn_id = self.overlay.connect("motion-notify-event", self.on_wake_event)
 
     def setup_windows(self):
         n = self.screen.get_n_monitors()
@@ -60,7 +73,11 @@ class ScreensaverManager:
             primary = self.screen.get_primary_monitor() == index
 
             window = ScreensaverWindow(self.screen, index, primary)
-            window.bg_image.connect("realize", self.on_window_bg_image_realized, window)
+
+            trackers.con_tracker_get().connect(window.bg_image,
+                                               "realize",
+                                               self.on_window_bg_image_realized,
+                                               window)
 
             self.windows.append(window)
 
@@ -72,6 +89,9 @@ class ScreensaverManager:
             window.queue_draw()
 
     def on_window_bg_image_realized(self, widget, window):
+        trackers.con_tracker_get().disconnect(window.bg_image,
+                                              "realize",
+                                              self.on_window_bg_image_realized)
         self.bg.create_and_set_gtk_image (widget, window.rect.width, window.rect.height)
         widget.queue_draw()
 
@@ -87,31 +107,25 @@ class ScreensaverManager:
         self.clock_widget.start_positioning()
 
     def setup_events(self):
-        self.bp_id = self.overlay.connect("button-press-event", self.on_wake_event)
-        self.br_id = self.overlay.connect("button-release-event", self.on_wake_event)
-        self.kp_id = self.overlay.connect("key-press-event", self.on_key_press)
-        self.kr_id = self.overlay.connect("key-release-event", self.on_wake_event)
-
-    def disconnect_events(self):
-        if self.bp_id > 0:
-            self.overlay.disconnect(self.bp_id)
-            self.bp_id = 0
-
-        if self.br_id > 0:
-            self.overlay.disconnect(self.br_id)
-            self.br_id = 0
-
-        if self.kp_id > 0:
-            self.overlay.disconnect(self.kp_id)
-            self.kp_id = 0
-
-        if self.kr_id > 0:
-            self.overlay.disconnect(self.kr_id)
-            self.kr_id = 0
+        trackers.con_tracker_get().connect(self.overlay,
+                                           "button-press-event",
+                                           self.on_event)
+        trackers.con_tracker_get().connect(self.overlay,
+                                           "button-release-event",
+                                           self.on_event)
+        trackers.con_tracker_get().connect(self.overlay,
+                                           "key-press-event",
+                                           self.on_key_press)
+        trackers.con_tracker_get().connect(self.overlay,
+                                           "key-release-event",
+                                           self.on_event)
+        trackers.con_tracker_get().connect(self.overlay,
+                                           "motion-notify-event",
+                                           self.on_event)
 
 # Event Handling #
 
-    def on_wake_event(self, widget, event):
+    def on_event(self, widget, event):
         cont = Gdk.EVENT_PROPAGATE
 
         self.focus_monitor = self.get_monitor_at_pointer_position()
@@ -125,7 +139,7 @@ class ScreensaverManager:
             self.overlay.put_on_top(self.lock_dialog)
             # cont = self.handle_event_with_lock(event)
 
-        timers.get().start("wake-timeout", UNLOCK_TIMEOUT * 1000, self.on_wake_timeout)
+        trackers.timer_tracker_get().start("wake-timeout", UNLOCK_TIMEOUT * 1000, self.on_wake_timeout)
 
         return cont
 
@@ -133,10 +147,10 @@ class ScreensaverManager:
         if not self.lock_added and event.string != "":
             self.saved_key_events.append(event.copy())
 
-        return self.on_wake_event(widget, event)
+        return self.on_event(widget, event)
 
     def on_wake_timeout(self):
-        timers.get().cancel("wake-timeout")
+        trackers.timer_tracker_get().cancel("wake-timeout")
         self.cancel_lock_widget()
 
         return False
@@ -145,7 +159,10 @@ class ScreensaverManager:
         self.clock_widget.stop_positioning()
 
         self.lock_dialog = LockDialog()
-        self.lock_realize_id = self.lock_dialog.auth_prompt_entry.connect_after("realize", self.on_auth_entry_realize)
+
+        trackers.con_tracker_get().connect_after(self.lock_dialog.auth_prompt_entry,
+                                                 "realize",
+                                                 self.on_auth_entry_realize)
 
         self.overlay.add_child(self.lock_dialog)
 
@@ -160,8 +177,10 @@ class ScreensaverManager:
     def on_auth_entry_realize(self, widget):
         self.lock_dialog.forward_key_events(self.saved_key_events)
         self.saved_key_events = []
-        self.lock_dialog.auth_prompt_entry.disconnect(self.lock_realize_id)
-        self.lock_realize_id = 0
+
+        trackers.con_tracker_get().disconnect(self.lock_dialog.auth_prompt_entry,
+                                              "realize",
+                                              self.on_auth_entry_realize)
 
     def cancel_lock_widget(self):
         self.clock_widget.start_positioning()
@@ -238,9 +257,9 @@ class ScreensaverManager:
 
                 if valign == Gtk.Align.START:
                     allocation.y = monitor_rect.y
-                elif halign == Gtk.Align.CENTER:
+                elif valign == Gtk.Align.CENTER:
                     allocation.y = monitor_rect.y + (monitor_rect.height / 2) - (nat_rect.height / 2)
-                elif halign == Gtk.Align.END:
+                elif valign == Gtk.Align.END:
                     allocation.y = monitor_rect.y + monitor_rect.height - nat_rect.height
 
                 if self.screen.get_n_monitors() > 1:
@@ -248,6 +267,8 @@ class ScreensaverManager:
                     while new_monitor == current_monitor:
                         new_monitor = random.randint(0, self.screen.get_n_monitors() - 1)
                     child.current_monitor = new_monitor
+
+                # utils.debug_allocation(allocation)
 
                 return True
 

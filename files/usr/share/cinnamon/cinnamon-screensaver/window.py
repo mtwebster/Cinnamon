@@ -2,6 +2,7 @@
 
 from gi.repository import Gtk
 from baseWindow import BaseWindow
+import trackers
 
 class ScreensaverWindow(BaseWindow):
     def __init__(self, screen, index, primary):
@@ -19,7 +20,10 @@ class ScreensaverWindow(BaseWindow):
         self.bg_image.set_valign(Gtk.Align.FILL)
 
         self.add(self.bg_image)
-        self.bg_image.connect_after("draw", self.on_image_draw)
+
+        trackers.con_tracker_get().connect_after(self.bg_image,
+                                                 "draw",
+                                                 self.on_image_draw)
 
         self.show_all()
 

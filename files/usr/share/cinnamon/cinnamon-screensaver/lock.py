@@ -10,6 +10,7 @@ from gi.repository import Gtk, Gdk, Gkbd, AccountsService, GLib
 import authenticator
 import utils
 import os
+import trackers
 
 from baseWindow import BaseWindow
 
@@ -26,8 +27,7 @@ class LockDialog(BaseWindow):
 
         self.frame = Gtk.Frame()
 
-        c = self.frame.get_style_context()
-        c.add_class("button")
+        self.frame.get_style_context().add_class("button")
 
         self.real_name = None
         self.user_name = None
@@ -75,11 +75,19 @@ class LockDialog(BaseWindow):
         self.auth_prompt_entry.set_visibility(False)
         hbox_pass.pack_start(self.auth_prompt_entry, True, True, 0)
         self.auth_prompt_entry.set_can_default(True)
-        self.auth_prompt_entry.connect("changed", self.on_auth_prompt_entry_text_changed)
-        self.auth_prompt_entry.connect("button-press-event", self.on_auth_prompt_entry_button_press)
-
         self.auth_prompt_label.set_mnemonic_widget(self.auth_prompt_entry)
-        self.auth_prompt_entry.connect("activate", self.on_auth_enter_key)
+
+        trackers.con_tracker_get().connect(self.auth_prompt_entry,
+                                           "changed",
+                                           self.on_auth_prompt_entry_text_changed)
+
+        trackers.con_tracker_get().connect(self.auth_prompt_entry,
+                                           "button-press-event",
+                                           self.on_auth_prompt_entry_button_press)
+
+        trackers.con_tracker_get().connect(self.auth_prompt_entry,
+                                           "activate",
+                                           self.on_auth_enter_key)
 
         # Keyboard layout button
 
@@ -115,17 +123,26 @@ class LockDialog(BaseWindow):
         self.auth_switch_button = self.add_button(_("S_witch User…"))
         self.auth_switch_button.set_focus_on_click(False)
         self.auth_switch_button.set_no_show_all(True)
-        self.auth_switch_button.connect("clicked", self.on_switch_user_clicked)
+
+        trackers.con_tracker_get().connect(self.auth_switch_button,
+                                           "clicked",
+                                           self.on_switch_user_clicked)
 
         self.auth_logout_button = self.add_button(_("Log _Out"))
         self.auth_logout_button.set_focus_on_click(False)
         self.auth_logout_button.set_no_show_all(True)
-        self.auth_logout_button.connect("clicked", self.on_logout_clicked)
+
+        trackers.con_tracker_get().connect(self.auth_logout_button,
+                                           "clicked",
+                                           self.on_logout_clicked)
 
         self.auth_unlock_button = self.add_button(_("_Unlock"))
         self.auth_unlock_button.set_focus_on_click(False)
         self.auth_unlock_button.set_sensitive(False)
-        self.auth_unlock_button.connect("clicked", self.on_unlock_clicked)
+
+        trackers.con_tracker_get().connect(self.auth_unlock_button,
+                                           "clicked",
+                                           self.on_unlock_clicked)
 
         self.real_name = utils.get_user_display_name()
         self.user_name = utils.get_user_name()
@@ -137,23 +154,24 @@ class LockDialog(BaseWindow):
         if accountsService == None:
             accountsService = AccountsService.UserManager.get_default().get_user(self.user_name)
 
-        accountsService.connect('notify::is-loaded', self.on_accounts_service_loaded)
+        trackers.con_tracker_get().connect(accountsService,
+                                           "notify::is-loaded",
+                                           self.on_accounts_service_loaded)
 
         if accountsService.get_property("is-loaded"):
             self.on_accounts_service_loaded(accountsService, None)
 
         self.keymap = Gdk.Keymap.get_default()
 
-        self.keymap.connect("state-changed", self.keymap_handler)
+        trackers.con_tracker_get().connect(self.keymap,
+                                           "state-changed",
+                                           self.keymap_handler)
 
-        self.show_id = self.connect_after("show", self.on_shown)
+        trackers.con_tracker_get().connect(self,
+                                           "show",
+                                           self.on_shown)
 
         self.show_all()
-
-    def do_destroy(self):
-        if self.show_id > 0:
-            self.disconnect(self.show_id)
-            self.show_id = 0
 
     def on_shown(self, widget):
         self.setup_kbd_layout_button()
