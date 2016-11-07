@@ -333,6 +333,10 @@ class ScreensaverBox(Gtk.Box):
         path = row.path
         ss_type = row.ss_type
 
+        self.list_box.foreach(lambda r: r.config_button.set_visible(False))
+
+        row.config_button.set_visible(ss_type == "xscreensaver")
+
         if uuid == '':
             self.settings.set_string('screensaver-name', '')
         elif ss_type == 'webkit':
@@ -378,7 +382,7 @@ class ScreensaverBox(Gtk.Box):
             line = self.proc.stdout.readline()
 
     def on_mapped(self, widget):
-        self.on_row_activated(None, None)
+        self.on_row_activated(self.list_box, self.list_box.get_selected_row())
         GLib.idle_add(self.idle_scroll_to_selection)
 
     def idle_scroll_to_selection(self):
@@ -433,10 +437,26 @@ class ScreensaverRow(Gtk.ListBoxRow):
 
         grid.attach(self.desc_box, 0, 0, 1, 1)
 
+        config_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.config_button = Gtk.Button.new_from_icon_name("system-run", Gtk.IconSize.BUTTON)
+        self.config_button.set_no_show_all(True)
+        self.config_button.set_relief(Gtk.ReliefStyle.NONE)
+        self.config_button.set_tooltip_text(_("Configure this plugin"))
+        self.config_button.connect("clicked", self.on_config_clicked)
+        config_box.pack_start(self.config_button, True, True, 0)
+
+        grid.attach_next_to(config_box, self.desc_box, Gtk.PositionType.RIGHT, 1, 1)
+
         type_box = Gtk.Box()
         type_label = Gtk.Label()
         type_label.set_markup("<small><i>%s</i></small>" % self.ss_type)
         type_box.pack_start(type_label, True, True, 0)
-        grid.attach_next_to(type_box, self.desc_box, Gtk.PositionType.RIGHT, 1, 1)
+        grid.attach_next_to(type_box, config_box, Gtk.PositionType.RIGHT, 1, 1)
 
         self.add(widget)
+
+    def on_config_clicked(self, widget):
+        path = GLib.find_program_in_path("cinnamon-screensaver-plugin-configure")
+
+        if path:
+            GLib.spawn_async((path,))
