@@ -1854,7 +1854,7 @@ MessageTray.prototype = {
 
         if (this._notificationBin.y < expandedY)
             this._notificationBin.y = expandedY;
-        else if (this._notification.y != expandedY)
+        else if (this._notification.actor.y != expandedY)
             this._tween(this._notificationBin, '_notificationState', State.SHOWN,
                         { y: newY,
                           time: ANIMATION_TIME,

@@ -367,10 +367,11 @@ Magnifier.prototype = {
      * @color:  The color as a string, e.g. '#ff0000ff' or 'red'.
      */
     setCrosshairsColor: function(color) {
+        return;
         if (this._crossHairs) {
-            let clutterColor = new Clutter.Color();
-            clutterColor.from_string(color);
-            this._crossHairs.setColor(clutterColor);
+            // let clutterColor = new Clutter.Color();
+            // clutterColor.from_string(color);
+            // this._crossHairs.setColor(clutterColor);
         }
     },
 
