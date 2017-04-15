@@ -119,14 +119,13 @@ const Settings = imports.ui.settings;
 const Systray = imports.ui.systray;
 const Accessibility = imports.ui.accessibility;
 
-// const DEFAULT_BACKGROUND_COLOR = new Clutter.Color();
-// DEFAULT_BACKGROUND_COLOR.from_pixel(0x2266bbff);
-
 const LAYOUT_TRADITIONAL = "traditional";
 const LAYOUT_FLIPPED = "flipped";
 const LAYOUT_CLASSIC = "classic";
 
 const CIN_LOG_FOLDER = GLib.get_home_dir() + '/.cinnamon/';
+
+let DEFAULT_BACKGROUND_COLOR = Clutter.Color.from_pixel(0x2266bbff);
 
 let panel = null;
 let soundManager = null;
@@ -313,7 +312,7 @@ function start() {
     // The stage is always covered so Clutter doesn't need to clear it; however
     // the color is used as the default contents for the Muffin root background
     // actor so set it anyways.
-    // global.stage.color = DEFAULT_BACKGROUND_COLOR;
+    global.stage.color = DEFAULT_BACKGROUND_COLOR;
     global.stage.no_clear_hint = true;
     
     Gtk.IconTheme.get_default().append_search_path("/usr/share/cinnamon/icons/");
@@ -367,6 +366,8 @@ function start() {
     stage_bg.add_actor(uiGroup);
 
     global.reparentActor(global.top_window_group, global.stage);
+
+    global.menuStackLength = 0;
 
     layoutManager = new Layout.LayoutManager();
 
