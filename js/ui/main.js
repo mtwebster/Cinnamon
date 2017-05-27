@@ -118,6 +118,7 @@ const Keybindings = imports.ui.keybindings;
 const Settings = imports.ui.settings;
 const Systray = imports.ui.systray;
 const Accessibility = imports.ui.accessibility;
+const Housekeeping = imports.misc.housekeeping;
 
 const LAYOUT_TRADITIONAL = "traditional";
 const LAYOUT_FLIPPED = "flipped";
@@ -165,6 +166,7 @@ let tracker = null;
 let settingsManager = null;
 let systrayManager = null;
 let wmSettings = null;
+let housekeeping = null;
 
 let workspace_names = [];
 
@@ -496,6 +498,8 @@ function start() {
     }
 
     global.connect('shutdown', do_shutdown_sequence);
+
+    housekeeping = new Housekeeping.Housekeeping();
 
     global.log('Cinnamon took %d ms to start'.format(new Date().getTime() - cinnamonStartTime));
 }

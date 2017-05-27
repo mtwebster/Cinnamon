@@ -68,6 +68,9 @@ GType st_texture_cache_get_type (void) G_GNUC_CONST;
 
 StTextureCache* st_texture_cache_get_default (void);
 
+void st_texture_cache_evict_textures (StTextureCache *cache, gboolean icons_only);
+void st_texture_cache_session_idle_cleanup_check (StTextureCache *cache);
+
 ClutterActor *
 st_texture_cache_load_sliced_image (StTextureCache *cache,
                                     const gchar    *path,

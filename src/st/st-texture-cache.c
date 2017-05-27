@@ -113,37 +113,52 @@ st_texture_cache_class_init (StTextureCacheClass *klass)
                   G_TYPE_NONE, 1, G_TYPE_STRING);
 }
 
-/* Evicts all cached textures for named icons */
-static void
-st_texture_cache_evict_icons (StTextureCache *cache)
+#define EVICTION_THRESHOLD 500
+
+void
+st_texture_cache_evict_textures (StTextureCache *cache, gboolean icons_only)
 {
   GHashTableIter iter;
   gpointer key;
   gpointer value;
 
-  g_debug ("%s: Pre-evict count: %d\n", G_STRFUNC, g_hash_table_size (cache->priv->keyed_cache));
+  g_debug ("%s: Pre-evict count: %d Icons only: %s",
+           G_STRFUNC,
+           g_hash_table_size (cache->priv->keyed_cache),
+           icons_only ? "TRUE" : "FALSE");
 
   g_hash_table_iter_init (&iter, cache->priv->keyed_cache);
   while (g_hash_table_iter_next (&iter, &key, &value))
     {
       const char *cache_key = key;
 
-      /* This is too conservative - it takes out all cached textures
-       * for GIcons even when they aren't named icons, but it's not
-       * worth the complexity of parsing the key and calling
-       * g_icon_new_for_string(); icon theme changes aren't normal */
-      if (g_str_has_prefix (cache_key, CACHE_PREFIX_ICON))
+      if (!icons_only || g_str_has_prefix (cache_key, CACHE_PREFIX_ICON))
         g_hash_table_iter_remove (&iter);
     }
 
-  g_debug ("%s: Post-evict count: %d\n", G_STRFUNC, g_hash_table_size (cache->priv->keyed_cache));
+  g_debug ("%s: Post-evict count: %d",
+           G_STRFUNC,
+           g_hash_table_size (cache->priv->keyed_cache));
+}
+
+void
+st_texture_cache_session_idle_cleanup_check (StTextureCache *cache)
+{
+  g_debug ("%s: check count: %d (threshold is %d)",
+           G_STRFUNC, g_hash_table_size (cache->priv->keyed_cache),
+           EVICTION_THRESHOLD);
+
+  if (g_hash_table_size (cache->priv->keyed_cache) > EVICTION_THRESHOLD)
+    {
+      st_texture_cache_evict_textures (cache, TRUE);
+    }
 }
 
 static void
 on_icon_theme_changed (GtkIconTheme   *icon_theme,
                        StTextureCache *cache)
 {
-  st_texture_cache_evict_icons (cache);
+  st_texture_cache_evict_textures (cache, TRUE);
   g_signal_emit (cache, signals[ICON_THEME_CHANGED], 0);
 }
 

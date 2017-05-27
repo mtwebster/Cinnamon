@@ -310,6 +310,13 @@ st_theme_context_set_theme (StThemeContext          *context,
       if (context->theme)
         g_object_ref (context->theme);
 
+      /* Completely clear the texture cache on a theme set - normal eviction
+       * calls (during idle or an icon theme change) will only get rid of named
+       * icons.  Cinnamon theme textures are cached also, though, and normally
+       * kept forever, so we need to get rid of them when the theme changes.
+       */
+      st_texture_cache_evict_textures (st_texture_cache_get_default (), FALSE);
+
       st_theme_context_changed (context);
     }
 }

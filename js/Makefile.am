@@ -9,6 +9,7 @@ nobase_dist_js_DATA = \
 	misc/gnomeSession.js	\
 	misc/gridNavigator.js	\
 	misc/history.js		\
+    misc/housekeeping.js \
 	misc/interfaces.js \
 	misc/modemManager.js	\
 	misc/params.js		\
