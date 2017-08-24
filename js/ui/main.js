@@ -180,6 +180,14 @@ let popup_rendering_actor = null;
 
 let xlet_startup_error = false;
 
+const RunState = {
+    INIT : 0,
+    STARTUP : 1,
+    RUNNING : 2
+}
+
+let runState = RunState.INIT;
+
 // Override Gettext localization
 const Gettext = imports.gettext;
 Gettext.bindtextdomain('cinnamon', '/usr/share/locale');
@@ -269,6 +277,8 @@ function _reparentActor(actor, newParent) {
  * Starts cinnamon. Should not be called in JavaScript code
  */
 function start() {
+    runState = RunState.STARTUP;
+
     global.reparentActor = _reparentActor;
 
     // Monkey patch utility functions into the global proxy;
@@ -314,6 +324,7 @@ function start() {
     Gio.DesktopAppInfo.set_desktop_env('X-Cinnamon');
 
     cinnamonDBusService = new CinnamonDBus.CinnamonDBus();
+    cinnamonDBusService.EmitRunStateChanged();
 
     // Ensure CinnamonWindowTracker and CinnamonAppUsage are initialized; this will
     // also initialize CinnamonAppSystem first.  CinnamonAppSystem

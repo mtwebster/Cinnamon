@@ -108,6 +108,16 @@ const CinnamonIface =
                 <arg type="s" direction="in" name="uuid" /> \
                 <arg type="s" direction="in" name="type" /> \
             </method> \
+            <method name="GetMonitors"> \
+                <arg type="ai" direction="out" name="monitors" /> \
+            </method> \
+            <method name="GetMonitorWorkarea"> \
+                <arg type="i" direction="in" name="monitor" /> \
+                <arg type="ai" direction="out" name="rect" /> \
+            </method> \
+            <signal name="MonitorsChanged"\> \
+            <property name="RunState" type="i" access="read" /> \
+            <signal name="RunStateChanged"\> \
         </interface> \
     </node>';
 
@@ -389,6 +399,14 @@ CinnamonDBus.prototype = {
     OpenSpicesAbout: function(uuid, type) {
         let metadata = Extension.getMetadata(uuid, Extension.Type[type.toUpperCase()]);
         new ModalDialog.SpicesAboutDialog(metadata, type+"s");
+    },
+
+    get RunState() {
+        return Main.runState;
+    },
+
+    EmitRunStateChanged: function() {
+        this._dbusImpl.emit_signal('RunStateChanged');
     },
 
     CinnamonVersion: Config.PACKAGE_VERSION

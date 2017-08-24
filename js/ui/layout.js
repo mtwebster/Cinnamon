@@ -251,6 +251,9 @@ LayoutManager.prototype = {
 
         global.window_group.remove_clip();
         this._chrome.thawUpdateRegions();
+
+        Main.runState = Main.RunState.RUNNING;
+        Main.cinnamonDBusService.EmitRunStateChanged();
     },
 
     showKeyboard: function () {
