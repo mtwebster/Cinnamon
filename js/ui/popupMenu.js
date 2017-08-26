@@ -2263,13 +2263,9 @@ PopupMenu.prototype = {
         if (animate && global.settings.get_boolean("desktop-effects-on-menus")) {
             this.animating = true;
 
-            // the actor is going to be painted before we set the right position for animation so we set the opacity
-            // to 0 in order to prevent flashing in the wrong position
-            this.actor.opacity = 0;
-            this.actor.show();
+            let animate_callback = ()=> {
+                this._signals.disconnect(this.actor, "notify::mapped");
 
-            // we need to give the actors a chance to allocate before animating so we get the correct values
-            Mainloop.idle_add(Lang.bind(this, function() {
                 let tweenParams = {
                     transition: "easeOutQuad",
                     time: .15,
@@ -2322,9 +2318,20 @@ PopupMenu.prototype = {
                 }
                 this.actor.opacity = 0;
                 Tweener.addTween(this.actor, tweenParams);
-            }));
-        }
-        else {
+            }
+
+            this.actor.opacity = 0;
+
+            if (!this.actor.mapped) {
+                log("what");
+                this._signals.connect(this.actor, "notify::mapped", animate_callback);
+                this.actor.show();
+            } else {
+                log("oh");
+                this.actor.show();
+                animate_callback();
+            }
+        } else {
             this.animating = false;
             this.actor.show();
         }
