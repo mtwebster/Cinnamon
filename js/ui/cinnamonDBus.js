@@ -116,7 +116,9 @@ const CinnamonIface =
                 <arg type="ai" direction="out" name="rect" /> \
             </method> \
             <signal name="MonitorsChanged"/> \
-            <property name="RunState" type="i" access="read" /> \
+            <method name="GetRunState"> \
+               <arg type="i" direction="out" name="state" /> \
+            </method> \
             <signal name="RunStateChanged"/> \
         </interface> \
     </node>';
@@ -129,6 +131,8 @@ CinnamonDBus.prototype = {
     _init: function() {
         this._dbusImpl = Gio.DBusExportedObject.wrapJSObject(CinnamonIface, this);
         this._dbusImpl.export(Gio.DBus.session, '/org/Cinnamon');
+
+        global.screen.connect("workareas-changed", ()=> this.EmitMonitorsChanged);
     },
 
     /**
@@ -411,12 +415,16 @@ CinnamonDBus.prototype = {
         return [rect.x, rect.y, rect.width, rect.height];
     },
 
-    get RunState() {
+    GetRunState: function() {
         return Main.runState;
     },
 
     EmitRunStateChanged: function() {
         this._dbusImpl.emit_signal('RunStateChanged', null);
+    },
+
+    EmitMonitorsChanged: function() {
+        this._dbusImpl.emit_signal('MonitorsChanged', null);
     },
 
     CinnamonVersion: Config.PACKAGE_VERSION
