@@ -194,6 +194,15 @@ Gettext.bindtextdomain('cinnamon', '/usr/share/locale');
 Gettext.textdomain('cinnamon');
 const _ = Gettext.gettext;
 
+function setRunState(state) {
+    let oldState = runState;
+
+    if (state != oldState) {
+        runState = state;
+        cinnamonDBusService.EmitRunStateChanged();
+    }
+}
+
 function _initRecorder() {
     let recorderSettings = new Gio.Settings({ schema_id: 'org.cinnamon.recorder' });
 
@@ -277,8 +286,6 @@ function _reparentActor(actor, newParent) {
  * Starts cinnamon. Should not be called in JavaScript code
  */
 function start() {
-    runState = RunState.STARTUP;
-
     global.reparentActor = _reparentActor;
 
     // Monkey patch utility functions into the global proxy;
@@ -324,7 +331,7 @@ function start() {
     Gio.DesktopAppInfo.set_desktop_env('X-Cinnamon');
 
     cinnamonDBusService = new CinnamonDBus.CinnamonDBus();
-    cinnamonDBusService.EmitRunStateChanged();
+    setRunState(RunState.STARTUP);
 
     // Ensure CinnamonWindowTracker and CinnamonAppUsage are initialized; this will
     // also initialize CinnamonAppSystem first.  CinnamonAppSystem
@@ -518,6 +525,8 @@ function start() {
         }));
     } else {
         global.background_actor.show();
+        setRunState(Main.RunState.RUNNING);
+
         if (do_login_sound)
             soundManager.play_once_per_session('login');
     }
