@@ -846,8 +846,6 @@ Chrome.prototype = {
             let workspace = screen.get_workspace_by_index(w);
             workspace.set_builtin_struts(struts);
         }
-        log("monitors changed?");
-        // Main.cinnamonDBusService.EmitMonitorsChanged();
 
         return false;
     }

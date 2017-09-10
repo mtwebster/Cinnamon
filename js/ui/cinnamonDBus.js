@@ -132,7 +132,11 @@ CinnamonDBus.prototype = {
         this._dbusImpl = Gio.DBusExportedObject.wrapJSObject(CinnamonIface, this);
         this._dbusImpl.export(Gio.DBus.session, '/org/Cinnamon');
 
-        global.screen.connect("workareas-changed", ()=> this.EmitMonitorsChanged);
+        /* Although this signal comes from muffin, it is actually initiated by the
+         * layoutManager.Chrome.updateRegions method.  Workspace code in muffin filters
+         * out chrome updates that don't actually change the workarea before emitting this
+         * signal, which is desirable. */
+        global.screen.connect("workareas-changed", ()=> this.EmitMonitorsChanged());
     },
 
     /**
