@@ -4,7 +4,7 @@ import sys
 from ExtensionCore import ManageSpicesPage, DownloadSpicesPage
 from SettingsWidgets import SidePage, SettingsStack
 from Spices import Spice_Harvester
-from gi.repository import GLib, Gtk, Gdk
+from gi.repository import GLib, Gtk, Gdk, GObject
 
 class Module:
     name = "applets"
@@ -18,6 +18,7 @@ class Module:
     def on_module_selected(self):
         if not self.loaded:
             print("Loading Applets module")
+            # GObject.idle_add(self.sidePage.load, self.window)
             self.sidePage.load(self.window)
 
     def _setParentRef(self, window):

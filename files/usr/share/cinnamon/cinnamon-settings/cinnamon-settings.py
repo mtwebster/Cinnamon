@@ -16,7 +16,7 @@ import config
 import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('XApp', '1.0')
-from gi.repository import Gio, Gtk, Pango, Gdk, XApp
+from gi.repository import Gio, Gtk, Pango, Gdk, XApp, GObject
 
 sys.path.append(config.currentPath + "/modules")
 sys.path.append(config.currentPath + "/bin")
@@ -129,41 +129,49 @@ class MainWindow:
         if not sidePage.is_standalone:
             self.window.set_title(sidePage.name)
             self.window.set_icon_name(sidePage.icon)
-            sidePage.build()
-            if sidePage.stack:
-                current_page = sidePage.stack.get_visible_child_name()
-                self.stack_switcher.set_stack(sidePage.stack)
-                l = sidePage.stack.get_children()
-                if len(l) > 0:
-                    sidePage.stack.set_visible_child(l[0])
-                    if sidePage.stack.get_visible():
-                        self.stack_switcher.set_opacity(1)
-                    else:
-                        self.stack_switcher.set_opacity(0)
-                    if hasattr(sidePage, "connect_proxy"):
-                        sidePage.connect_proxy("hide_stack", self._on_sidepage_hide_stack)
-                        sidePage.connect_proxy("show_stack", self._on_sidepage_show_stack)
-                else:
-                    self.stack_switcher.set_opacity(0)
-            else:
-                self.stack_switcher.set_opacity(0)
+            self.stack_switcher.set_opacity(0)
             if animate:
                 self.main_stack.set_visible_child_name("content_box_page")
                 self.header_stack.set_visible_child_name("content_box")
-
+                GObject.timeout_add(150, self.build_sidepage_on_idle, sidePage)
             else:
+                sidePage.build()
                 self.main_stack.set_visible_child_full("content_box_page", Gtk.StackTransitionType.NONE)
                 self.header_stack.set_visible_child_full("content_box", Gtk.StackTransitionType.NONE)
+                self.sync_stacks(sidePage)
+                self.maybe_resize(sidePage)
 
             self.current_sidepage = sidePage
-            width = 0
-            for widget in self.top_bar:
-                m, n = widget.get_preferred_width()
-                width += n
-            self.top_bar.set_size_request(width + 20, -1)
-            self.maybe_resize(sidePage)
         else:
             sidePage.build()
+
+    def build_sidepage_on_idle(self, sidePage):
+        sidePage.build()
+        self.sync_stacks(sidePage)
+        self.maybe_resize(sidePage)
+
+    def sync_stacks(self, sidePage):
+        if sidePage.stack:
+            current_page = sidePage.stack.get_visible_child_name()
+            self.stack_switcher.set_stack(sidePage.stack)
+            l = sidePage.stack.get_children()
+            if len(l) > 0:
+                sidePage.stack.set_visible_child(l[0])
+                if sidePage.stack.get_visible():
+                    self.stack_switcher.set_opacity(1)
+                else:
+                    self.stack_switcher.set_opacity(0)
+                if hasattr(sidePage, "connect_proxy"):
+                    sidePage.connect_proxy("hide_stack", self._on_sidepage_hide_stack)
+                    sidePage.connect_proxy("show_stack", self._on_sidepage_show_stack)
+            else:
+                self.stack_switcher.set_opacity(0)
+
+        width = 0
+        for widget in self.top_bar:
+            m, n = widget.get_preferred_width()
+            width += n
+        self.top_bar.set_size_request(width + 20, -1)
 
     def maybe_resize(self, sidePage):
         m, n = self.content_box.get_preferred_size()
