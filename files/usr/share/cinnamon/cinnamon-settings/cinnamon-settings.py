@@ -133,7 +133,10 @@ class MainWindow:
             if animate:
                 self.main_stack.set_visible_child_name("content_box_page")
                 self.header_stack.set_visible_child_name("content_box")
-                GObject.timeout_add(150, self.build_sidepage_on_idle, sidePage)
+                if sidePage.module.loaded:
+                    self.build_sidepage_on_idle(sidePage)
+                else:
+                    GObject.timeout_add(160, self.build_sidepage_on_idle, sidePage)
             else:
                 sidePage.build()
                 self.main_stack.set_visible_child_full("content_box_page", Gtk.StackTransitionType.NONE)
@@ -149,6 +152,8 @@ class MainWindow:
         sidePage.build()
         self.sync_stacks(sidePage)
         self.maybe_resize(sidePage)
+
+        return False
 
     def sync_stacks(self, sidePage):
         if sidePage.stack:
