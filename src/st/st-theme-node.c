@@ -500,6 +500,13 @@ typedef enum {
 } GetFromTermResult;
 
 static gboolean
+term_is_symbolic (CRTerm *term)
+{
+    return (term->type == TERM_IDENT &&
+            strcmp (term->content.str->stryng->str, "symbolic") == 0);
+}
+
+static gboolean
 term_is_inherit (CRTerm *term)
 {
   return (term->type == TERM_IDENT &&
@@ -626,6 +633,12 @@ get_color_from_term (StThemeNode  *node,
   if (term_is_transparent (term))
     {
       *color = TRANSPARENT_COLOR;
+      return VALUE_FOUND;
+    }
+
+  if (term_is_symbolic (term))
+    {
+      *color = st_theme_node_get_icon_colors (node)->foreground;
       return VALUE_FOUND;
     }
   /* rgba () colors - a CSS3 addition, are not supported by libcroco,
