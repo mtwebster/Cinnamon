@@ -1354,7 +1354,9 @@ function pushModal(actor, timestamp, options) {
         });
     }
     modalActorFocusStack.push(record);
-
+    log("PUSH "+modalCount);
+    _LogTraceFormatted(new Error().stack);
+    
     global.stage.set_key_focus(actor);
 
     layoutManager.updateChrome(true);
@@ -1410,6 +1412,8 @@ function popModal(actor, timestamp) {
         }
     }
     modalActorFocusStack.splice(focusIndex, 1);
+    log("POP "+modalCount);
+    _LogTraceFormatted(new Error().stack);
 
     if (modalCount > 0)
         return;

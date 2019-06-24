@@ -314,7 +314,8 @@ ModalDialog.prototype = {
     close: function(timestamp) {
         if (this.state == State.CLOSED || this.state == State.CLOSING)
             return;
-
+        log("close!");
+        Main._LogTraceFormatted(new Error().stack);
         this.state = State.CLOSING;
         this.popModal(timestamp);
         this._savedKeyFocus = null;

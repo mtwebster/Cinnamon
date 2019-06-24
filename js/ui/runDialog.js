@@ -194,42 +194,39 @@ __proto__: ModalDialog.ModalDialog.prototype,
                                                      entry: this._entryText,
                                                      deduplicate: true });
         this._entryText.connect('key-press-event', Lang.bind(this, this._onKeyPress));
-        this._entryText.connect('key-focus-out', () => this.cancelAsyncCommand());
 
         this._updateCompletionTimer = 0;
-    },
-
-    get asyncCommandInProgress() {
-        return this.subprocess && !this.subprocess.get_if_exited()
+        this._focusOutHandlerId = 0;
     },
 
     cancelAsyncCommand: function() {
         // If a process opens a new window and causes loss of focus (e.g. pkexec), we want
         // to make sure our async callback is cancelled, and close the run dialog.
-        setTimeout(() => {
-            if (this.asyncCommandInProgress) {
-                this.subprocess.cancellable.cancel();
-                this.subprocess = null;
-            }
-            this.close();
-        }, 0);
+        if (this.subprocess) {
+            log("cancelling");
+            this.subprocess.cancellable.cancel();
+            this.subprocess = null;
+        }
     },
 
     _onKeyPress: function (o, e) {
-        if (this.asyncCommandInProgress) return;
-
         let symbol = e.get_key_symbol();
         if (symbol == Clutter.Return || symbol == Clutter.KP_Enter) {
-            this.popModal();
             let inTerminal = Cinnamon.get_event_state(e) & Clutter.ModifierType.CONTROL_MASK;
-            this._run(o.get_text(), inTerminal, (success) => {
+            let release = this._run(o.get_text(), inTerminal, (success) => {
+                log("_run result success: "+ success);
                 if (this.state == ModalDialog.State.CLOSED || this.state == ModalDialog.State.CLOSING) return;
                 if (success) return this.close();
                 if (!this.pushModal()) this.close();
             });
+
+            if (release) {
+                this.popModal();
+            }
             return true;
         }
         if (symbol == Clutter.Escape || symbol == Clutter.Super_L || symbol == Clutter.Super_R) {
+            this.cancelAsyncCommand();
             this.close();
             return true;
         }
@@ -356,12 +353,15 @@ __proto__: ModalDialog.ModalDialog.prototype,
         this._entryText.set_selection(-1, orig.length);
     },
 
+    /* Returns whether or not to release focus after the _run is completed.
+       Returns false if it's an async command so our cancellation code, etc..
+       can still run. */
     _run: function(input, inTerminal, callback) {
         input = input.trim();
         this._history.addItem(input);
         if (this._enableInternalCommands && input in DEVEL_COMMANDS) {
             DEVEL_COMMANDS[input.trim()]();
-            return;
+            return true;
         }
 
         // Aliases is a list of strings of the form a:b, where an instance of
@@ -400,7 +400,7 @@ __proto__: ModalDialog.ModalDialog.prototype,
                     this._showError(message);
                 });
                 this.close();
-                return;
+                return true;
             }
         }
 
@@ -409,15 +409,37 @@ __proto__: ModalDialog.ModalDialog.prototype,
             let exec_arg = this._terminalSettings.get_string(EXEC_ARG_KEY);
             command = exec + ' ' + exec_arg + ' ' + input;
         }
+
+        this._cancelFocusHandler();
+        this._focusOutHandlerId = this._entryText.connect('key-focus-out', (actor) => {
+            log("focus out");
+
+            this._cancelFocusHandler();
+            this.cancelAsyncCommand();
+            this.close();
+        });
+
         this.subprocess = Util.spawnCommandLineAsync(command, (stdout, stderr, code) => {
             this.subprocess = null;
+            this._cancelFocusHandler();
+
             if (stderr) {
                 this._showError(stderr);
                 callback(false);
                 return;
             }
+            log("Calling Callback");
             callback(true);
         });
+
+        return false;
+    },
+
+    _cancelFocusHandler: function() {
+        if (this._focusOutHandlerId > 0) {
+            this._entryText.disconnect(this._focusOutHandlerId);
+            this._focusOutHandlerId = 0;
+        }
     },
 
     _showError : function(message) {
