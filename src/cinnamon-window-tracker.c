@@ -237,6 +237,36 @@ get_app_from_window_wmclass (MetaWindow  *window)
   return NULL;
 }
 
+/*
+ * get_app_from_id:
+ * @window: a #MetaWindow
+ *
+ * Looks only at the given window, and attempts to determine
+ * an application based on %id.  If one can't be determined,
+ * return %NULL.
+ *
+ * Return value: (transfer full): A newly-referenced #CinnamonApp, or %NULL
+ */
+static CinnamonApp *
+get_app_from_id (const char *id)
+{
+  CinnamonApp *app;
+  CinnamonAppSystem *appsys;
+  char *desktop_file;
+
+  g_return_val_if_fail (id != NULL, NULL);
+
+  appsys = cinnamon_app_system_get_default ();
+
+  desktop_file = g_strconcat (id, ".desktop", NULL);
+  app = cinnamon_app_system_lookup_app (appsys, desktop_file);
+  if (app)
+    g_object_ref (app);
+
+  g_free (desktop_file);
+  return app;
+}
+
 /**
  * get_app_from_gapplication_id:
  * @monitor: a #CinnamonWindowTracker
@@ -251,24 +281,13 @@ get_app_from_window_wmclass (MetaWindow  *window)
 static CinnamonApp *
 get_app_from_gapplication_id (MetaWindow  *window)
 {
-  CinnamonApp *app;
-  CinnamonAppSystem *appsys;
   const char *id;
-  char *desktop_file;
-
-  appsys = cinnamon_app_system_get_default ();
 
   id = meta_window_get_gtk_application_id (window);
   if (!id)
     return NULL;
 
-  desktop_file = g_strconcat (id, ".desktop", NULL);
-  app = cinnamon_app_system_lookup_app (appsys, desktop_file);
-  if (app)
-    g_object_ref (app);
-
-  g_free (desktop_file);
-  return app;
+  return get_app_from_id (id);
 }
 
 /**
@@ -351,6 +370,48 @@ get_app_from_window_pid (CinnamonWindowTracker  *tracker,
   return result;
 }
 
+static gchar *
+get_flatpak_id (int pid)
+{
+  GKeyFile *key_file;
+  gchar *info_filename;
+  gchar *result = NULL;
+
+  g_return_val_if_fail (pid != 0, NULL);
+
+  key_file = g_key_file_new ();
+  info_filename = g_strdup_printf ("/proc/%u/root/.flatpak-info", pid);
+
+  if (!g_key_file_load_from_file (key_file, info_filename, G_KEY_FILE_NONE, NULL))
+    return NULL;
+
+  result = g_key_file_get_string (key_file, "Application", "name", NULL);
+
+  g_free (info_filename);
+
+  return result;
+}
+
+static CinnamonApp *
+get_app_from_sandboxed_app_id (MetaWindow *window)
+{
+  char *id = NULL;
+  int pid = meta_window_get_client_pid (window);
+  CinnamonApp *result = NULL;
+
+  if (pid == 0)
+    return NULL;
+
+  id = get_flatpak_id (pid);
+  if (!id) {
+    return NULL;
+  }
+
+  result = get_app_from_id (id);
+  g_free (id);
+  return result;
+}
+
 /**
  * get_app_for_window:
  *
@@ -383,6 +444,11 @@ get_app_for_window (CinnamonWindowTracker    *tracker,
 
   if (meta_window_is_remote (window))
     return _cinnamon_app_new_for_window (window);
+
+  /* Check if the window was launched from a sandboxed app, e.g. Flatpak */
+  result = get_app_from_sandboxed_app_id (window);
+  if (result != NULL)
+    return result;
 
   /* Check if the window has a GApplication ID attached; this is
    * canonical if it does
