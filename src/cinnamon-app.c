@@ -65,6 +65,7 @@ struct _CinnamonApp
 
   char *keywords;
   char *unique_name;
+  char *flatpak_id;
 
   gboolean hidden_as_duplicate;
 };
@@ -805,6 +806,7 @@ _cinnamon_app_set_entry (CinnamonApp       *app,
                       GMenuTreeEntry *entry)
 {
   g_clear_pointer (&app->entry, gmenu_tree_item_unref);
+  g_clear_pointer (&app->flatpak_id, g_free);
   g_clear_object (&app->info);
 
   /* If our entry has changed, our name may have as well, so clear
@@ -817,6 +819,11 @@ _cinnamon_app_set_entry (CinnamonApp       *app,
   if (entry != NULL)
     {
       app->info = g_object_ref (gmenu_tree_entry_get_app_info (entry));
+
+      if (g_desktop_app_info_has_key (app->info, "X-Flatpak"))
+        {
+          app->flatpak_id = g_desktop_app_info_get_string (app->info, "X-Flatpak");
+        }
     }
 }
 
@@ -1009,6 +1016,12 @@ _cinnamon_app_get_desktop_path (CinnamonApp *app)
     }
 
   return NULL;
+}
+
+const char *
+_cinnamon_app_get_flatpak_id (CinnamonApp *app)
+{
+    return app->flatpak_id;
 }
 
 void
@@ -1220,6 +1233,7 @@ cinnamon_app_dispose (GObject *object)
 
   g_clear_pointer (&app->keywords, g_free);
   g_clear_pointer (&app->unique_name, g_free);
+  g_clear_pointer (&app->flatpak_id, g_free);
 
   G_OBJECT_CLASS(cinnamon_app_parent_class)->dispose (object);
 }

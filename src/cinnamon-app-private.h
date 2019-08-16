@@ -32,6 +32,7 @@ const char * _cinnamon_app_get_unique_name (CinnamonApp *app);
 const char * _cinnamon_app_get_executable (CinnamonApp *app);
 const char * _cinnamon_app_get_desktop_path (CinnamonApp *app);
 void         _cinnamon_app_set_hidden_as_duplicate (CinnamonApp *app, gboolean hide);
+const char * _cinnamon_app_get_flatpak_id (CinnamonApp *app);
 G_END_DECLS
 
 #endif /* __CINNAMON_APP_PRIVATE_H__ */

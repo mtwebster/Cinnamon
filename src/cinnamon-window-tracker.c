@@ -212,6 +212,8 @@ get_app_from_window_wmclass (MetaWindow  *window)
      class are the same except for case and there is no StartupWMClass at all.
   */
 
+  app = NULL;
+
   /* first try a match from WM_CLASS (instance part) to StartupWMClass */
   wm_instance = meta_window_get_wm_class_instance (window);
   app = cinnamon_app_system_lookup_startup_wmclass (appsys, wm_instance);
@@ -445,10 +447,10 @@ get_app_for_window (CinnamonWindowTracker    *tracker,
   if (meta_window_is_remote (window))
     return _cinnamon_app_new_for_window (window);
 
-  /* Check if the window was launched from a sandboxed app, e.g. Flatpak */
-  result = get_app_from_sandboxed_app_id (window);
-  if (result != NULL)
-    return result;
+  // /* Check if the window was launched from a sandboxed app, e.g. Flatpak */
+  // result = get_app_from_sandboxed_app_id (window);
+  // if (result != NULL)
+  //   return result;
 
   /* Check if the window has a GApplication ID attached; this is
    * canonical if it does

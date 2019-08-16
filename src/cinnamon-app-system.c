@@ -582,6 +582,7 @@ on_apps_tree_changed_cb (GMenuTree *tree,
       GMenuTreeEntry *entry = value;
       GMenuTreeEntry *old_entry;
       char *prefix;
+      gboolean old_flatpak;
       CinnamonApp *app;
 
       GDesktopAppInfo *info;
@@ -607,6 +608,8 @@ on_apps_tree_changed_cb (GMenuTree *tree,
            */
           old_entry = cinnamon_app_get_tree_entry (app);
           gmenu_tree_item_ref (old_entry);
+
+          old_flatpak = _cinnamon_app_get_flatpak_id (app) != NULL;
 
 #if DEBUG_APPSYS_RENAMING
           if (g_strcmp0 (_cinnamon_app_get_desktop_path (app),
@@ -653,21 +656,35 @@ on_apps_tree_changed_cb (GMenuTree *tree,
         {
           GDesktopAppInfo *old_info;
           const gchar *old_startup_wm_class;
+          gchar *old_startup_wm_class_prefixed = NULL;
 
           old_info = gmenu_tree_entry_get_app_info (old_entry);
           old_startup_wm_class = g_desktop_app_info_get_startup_wm_class (old_info);
 
           if (old_startup_wm_class)
+            old_startup_wm_class_prefixed = g_strdup_printf (old_flatpak ? "flatpak:%s" : "%s", old_startup_wm_class);
+
+          if (old_startup_wm_class_prefixed)
             g_hash_table_remove (self->priv->startup_wm_class_to_app, old_startup_wm_class);
+
+          g_free (old_startup_wm_class_prefixed);
         }
 
       info = cinnamon_app_get_app_info (app);
       if (info)
         {
+          gchar *startup_wm_class_prefixed = NULL;
+          gboolean is_flatpak = _cinnamon_app_get_flatpak_id (app) != NULL;
+
           startup_wm_class = g_desktop_app_info_get_startup_wm_class (info);
           if (startup_wm_class)
+            startup_wm_class_prefixed = g_strdup_printf (is_flatpak ? "flatpak:%s" : "%s", startup_wm_class);
+
+          if (startup_wm_class_prefixed)
             g_hash_table_replace (self->priv->startup_wm_class_to_app,
-                                  (char*)startup_wm_class, g_object_ref (app));
+                                  (char*)startup_wm_class_prefixed, g_object_ref (app));
+
+          g_free (startup_wm_class_prefixed);
         }
 
       if (old_entry)
