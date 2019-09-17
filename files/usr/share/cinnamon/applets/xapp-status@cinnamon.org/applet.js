@@ -2,55 +2,56 @@ const Cinnamon = imports.gi.Cinnamon;
 const Lang = imports.lang;
 const St = imports.gi.St;
 const Gio = imports.gi.Gio;
+const GLib = imports.gi.GLib;
 const Clutter = imports.gi.Clutter;
 const Interfaces = imports.misc.interfaces;
 const Applet = imports.ui.applet;
 const Main = imports.ui.main;
 const SignalManager = imports.misc.signalManager;
 const Gtk = imports.gi.Gtk;
-const XApp = imports.gi.XApp
+const XApp = imports.gi.XApp;
+const GObject = imports.gi.GObject;
 
-class XAppStatusIcon {
+var StatusIconActor = GObject.registerClass(
+class StatusIconActor extends St.BoxLayout {
+    _init(applet, proxy) {
+        super._init({ style_class: 'applet-box',
+                    reactive: true,
+                    track_hover: true,
+                    // The systray use a layout manager, we need to fill the space of the actor
+                    // or otherwise the menu will be displayed inside the panel.
+                    x_expand: true,
+                    y_expand: true });
 
-    constructor(applet, proxy) {
         this.name = proxy.get_name();
+
         this.applet = applet;
         this.proxy = proxy;
 
         this.iconName = null;
         this.tooltipText = "";
 
-        this.actor = new St.BoxLayout({
-            style_class: 'applet-box',
-            reactive: true,
-            track_hover: true,
-            // The systray use a layout manager, we need to fill the space of the actor
-            // or otherwise the menu will be displayed inside the panel.
-            x_expand: true,
-            y_expand: true
-        });
-
         if (applet.orientation == St.Side.LEFT || applet.orientation == St.Side.RIGHT) {
-            this.actor.set_x_align(Clutter.ActorAlign.FILL);
-            this.actor.set_y_align(Clutter.ActorAlign.END);
-            this.actor.set_vertical(true);
+            this.set_x_align(Clutter.ActorAlign.FILL);
+            this.set_y_align(Clutter.ActorAlign.END);
+            this.set_vertical(true);
         }
 
         this.icon = new St.Icon();
         this.label = new St.Label({'y-align': St.Align.END });
 
-        this.actor.add_actor(this.icon);
-        this.actor.add_actor(this.label);
+        this.add_actor(this.icon);
+        this.add_actor(this.label);
 
         this.show_label = this.applet.orientation == St.Side.TOP || this.applet.orientation == St.Side.BOTTOM;
         this.label.visible = this.show_label;
 
-        this.actor.connect('button-press-event', Lang.bind(this, this.onButtonPressEvent));
-        this.actor.connect('button-release-event', Lang.bind(this, this.onButtonReleaseEvent));
-        this.actor.connect('enter-event', Lang.bind(this, this.onEnterEvent));
-        this.actor.connect('leave-event', Lang.bind(this, this.onLeaveEvent));
+        this.connect('button-press-event', Lang.bind(this, this.onButtonPressEvent));
+        this.connect('button-release-event', Lang.bind(this, this.onButtonReleaseEvent));
+        this.connect('enter-event', Lang.bind(this, this.onEnterEvent));
+        this.connect('leave-event', Lang.bind(this, this.onLeaveEvent));
 
-        this._proxy_prop_change_id = this.proxy.connect('g-properties-changed', Lang.bind(this, this.on_properties_changed))
+        this._proxy_prop_change_id = this.proxy.connect('g-properties-changed', Lang.bind(this, this.on_properties_changed));
 
         this.setIconName(proxy.icon_name);
         this.setTooltipText(proxy.tooltip_text);
@@ -58,7 +59,7 @@ class XAppStatusIcon {
         this.setVisible(proxy.visible);
     }
 
-    on_properties_changed(proxy, changed_props, invalidated_props) {
+        on_properties_changed(proxy, changed_props, invalidated_props) {
         let prop_names = changed_props.deep_unpack();
 
         if ('IconName' in prop_names) {
@@ -138,10 +139,10 @@ class XAppStatusIcon {
 
     setVisible(visible) {
         if (visible) {
-            this.actor.show();
+            this.show();
         }
         else {
-            this.actor.hide();
+            this.hide();
         }
     }
 
@@ -204,7 +205,7 @@ class XAppStatusIcon {
         this.proxy.disconnect(this._proxy_prop_change_id);
         this._proxy_prop_change_id = 0;
     }
-}
+});
 
 class CinnamonXAppStatusApplet extends Applet.Applet {
     constructor(orientation, panel_height, instance_id) {
@@ -231,11 +232,9 @@ class CinnamonXAppStatusApplet extends Applet.Applet {
         this.actor.add_actor (this.manager_container);
         this.manager_container.show();
 
-        this.statusIcons = {};
+        this.container_model = Gio.ListStore.new(Gio.DBusProxy);
 
-        /* This doesn't really work 100% because applets get reloaded and we end up losing this
-         * list. Not that big a deal in practice*/
-        this.ignoredProxies = {};
+        this.manager_container.bind_model(this.container_model, proxy => this.createActorForModel(proxy));
 
         this.signalManager = new SignalManager.SignalManager(null);
 
@@ -246,7 +245,42 @@ class CinnamonXAppStatusApplet extends Applet.Applet {
         this.signalManager.connect(Gtk.IconTheme.get_default(), 'changed', this.on_icon_theme_changed, this);
         this.signalManager.connect(global.settings, 'changed::panel-edit-mode', this.on_panel_edit_mode_changed, this);
 
-        this.signalManager.connect(Main.systrayManager, "changed", this.onSystrayRolesChanged, this);
+        // this.signalManager.connect(Main.systrayManager, "changed", this.onSystrayRolesChanged, this);
+    }
+
+    createActorForModel(icon_proxy) {
+        let statusIcon = new StatusIconActor(this, icon_proxy);
+
+        return statusIcon;
+    }
+
+    proxyIsInChildModel(icon_proxy) {
+        let iter = 0;
+        let item = this.container_model.get_item(iter);
+
+        while (item) {
+            if (item === icon_proxy) {
+                return true;
+            }
+
+            item = this.container_model.get_item(++iter);
+        }
+
+        return false;
+    }
+
+    removeProxyFromChildModel(icon_proxy) {
+        let iter = 0;
+        let item = this.container_model.get_item(iter);
+
+        while (item) {
+            if (item === icon_proxy) {
+                this.container_model.remove(iter);
+                return;
+            }
+
+            item = this.container_model.get_item(++iter);
+        }
     }
 
     onSystrayRolesChanged() {
@@ -279,7 +313,7 @@ class CinnamonXAppStatusApplet extends Applet.Applet {
     addStatusIcon(monitor, icon_proxy) {
         let proxy_name = icon_proxy.get_name();
 
-        if (this.statusIcons[proxy_name]) {
+        if (this.proxyIsInChildModel(icon_proxy)) {
             return;
         }
 
@@ -294,16 +328,28 @@ class CinnamonXAppStatusApplet extends Applet.Applet {
 
         global.log(`Adding XAppStatusIcon: ${icon_proxy.name} (${proxy_name})`);
 
-        let statusIcon = new XAppStatusIcon(this, icon_proxy);
+        this.container_model.insert(0, icon_proxy);
 
-        this.manager_container.insert_child_at_index(statusIcon.actor, 0);
-        this.statusIcons[proxy_name] = statusIcon;
+        this.container_model.sort(this.proxySortFunction.bind(this));
+    }
+
+    proxySortFunction(one, two) {
+        log(one, two);
+        if (!two) {
+            return -1;
+        }
+
+        if (!one) {
+            return 1;
+        }
+        log("COLLATE");
+        return GLib.utf8_collate(one.name, two.name);
     }
 
     removeStatusIcon(monitor, icon_proxy) {
         let proxy_name = icon_proxy.get_name();
 
-        if (!this.statusIcons[proxy_name]) {
+        if (!this.proxyIsInChildModel(icon_proxy)) {
             if (this.ignoredProxies[proxy_name]) {
                 delete this.ignoredProxies[proxy_name];
             }
@@ -313,9 +359,7 @@ class CinnamonXAppStatusApplet extends Applet.Applet {
 
         global.log(`Removing XAppStatusIcon: ${icon_proxy.name} (${proxy_name})`);
 
-        this.manager_container.remove_child(this.statusIcons[proxy_name].actor);
-        this.statusIcons[proxy_name].destroy();
-        delete this.statusIcons[proxy_name];
+        this.removeProxyFromChildModel(icon_proxy);
     }
 
     refreshIcons() {
@@ -339,11 +383,11 @@ class CinnamonXAppStatusApplet extends Applet.Applet {
         for (let key in this.statusIcons) {
             this.statusIcons[key].destroy();
             delete this.statusIcons[key];
-        };
+        }
 
         for (let key in this.ignoredProxies) {
             delete this.ignoredProxies[key];
-        };
+        }
 
         this.monitor = null;
     }
