@@ -21,7 +21,7 @@ const HotCorner = imports.ui.hotCorner;
 const DeskletManager = imports.ui.deskletManager;
 const Panel = imports.ui.panel;
 
-const STARTUP_ANIMATION_TIME = 0.5;
+const STARTUP_ANIMATION_TIME = 1.0;
 
 function isPopupMetaWindow(actor) {
     switch(actor.meta_window.get_window_type()) {
@@ -192,24 +192,46 @@ LayoutManager.prototype = {
         let monitor = this.primaryMonitor;
         let x = monitor.x + monitor.width / 2.0;
         let y = monitor.y + monitor.height / 2.0;
-
-        Main.uiGroup.set_pivot_point(x / global.screen_width,
-                                     y / global.screen_height);
-        Main.uiGroup.scale_x = Main.uiGroup.scale_y = 0.75;
-        Main.uiGroup.opacity = 0;
+        global.stage.hide_cursor();
+        // Main.uiGroup.set_pivot_point(x / global.screen_width,
+        //                              y / global.screen_height);
+        // Main.uiGroup.scale_x = Main.uiGroup.scale_y = 0;
+        // Main.uiGroup.opacity = 255;
+        // Main.uiGroup.rotation_angle_z = 360 * 20;
         global.background_actor.show();
-        global.window_group.set_clip(monitor.x, monitor.y, monitor.width, monitor.height);
+        // global.window_group.set_clip(monitor.x, monitor.y, monitor.width, monitor.height);
+
+        this.aperture = new Clutter.Actor({ width: global.screen_width,
+                                             height: global.screen_height,
+                                            reactive: false,
+                                            background_color: new Clutter.Color( { red: 0, green: 0, blue: 0, alpha: 255}) });
+        this.addChrome(this.aperture);
+
+        let icon = new Gio.ThemedIcon({name: 'linuxmint-logo'});
+        let icon_size = 128
+        this.logo = St.TextureCache.get_default().load_gicon(null, icon, icon_size);
+
+        this.addChrome(this.logo);
+        this.logo.x = x - (icon_size / 2);
+        this.logo.y = y - (icon_size / 2);
+
+
+        this._chrome.updateRegions();
+
     },
 
     _startupAnimation: function() {
         // Don't animate the strut
         this._chrome.freezeUpdateRegions();
-        Tweener.addTween(Main.uiGroup,
-                         { scale_x: 1,
-                           scale_y: 1,
-                           opacity: 255,
-                           time: STARTUP_ANIMATION_TIME,
-                           transition: 'easeOutQuad',
+        this.aperture._opacity = 255;
+        Tweener.addTween(this.aperture,
+                         { time: STARTUP_ANIMATION_TIME,
+                           transition: 'easeOutSine',
+                           _opacity: 0,
+                           onUpdate: dest => {
+                               this.aperture.opacity = this.aperture._opacity;
+                               this.logo.opacity = this.aperture._opacity;
+                           },
                            onComplete: this._startupAnimationComplete,
                            onCompleteScope: this });
     },
@@ -218,7 +240,11 @@ LayoutManager.prototype = {
         global.stage.no_clear_hint = true;
         this._coverPane.destroy();
         this._coverPane = null;
-
+        this.aperture.destroy();
+        this.aperture = null;
+        this.logo.destroy();
+        this.logo = null;
+        global.stage.show_cursor();
         global.window_group.remove_clip();
         this._chrome.thawUpdateRegions();
 
