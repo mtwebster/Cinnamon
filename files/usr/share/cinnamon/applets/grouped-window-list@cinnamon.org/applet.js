@@ -271,11 +271,34 @@ class GroupedWindowListApplet extends Applet.Applet {
             openAbout: () => this.openAbout(),
             configureApplet: () => this.configureApplet(),
             removeApplet: (event) => this.confirmRemoveApplet(event),
-            cancelErodeTimer: () => {
-                // log("cancelErodeTimer");
-                clearTimeout(this.state.thumbnailErodeTimer);
+            cancelErodeTimer: (clear=true) => {
+                if (this.state.thumbnailErodeTimer > 0) {
+                    clearTimeout(this.state.thumbnailErodeTimer);
+                }
+
                 this.state.thumbnailErodeTimer = 0;
-                this.state.erodingGroupState = null;
+
+                if (clear) {
+                    this.state.erodingGroupState = null;
+                }
+            },
+            startErodeTimer: (groupState) => {
+                this.state.trigger("cancelErodeTimer", false);
+
+                if (groupState) {
+                    this.state.erodingGroupState = groupState;
+                }
+
+                this.state.thumbnailErodeTimer = setTimeout(() => {
+                    this.state.erodingGroupState = null;
+                    this.state.thumbnailErodeTimer = 0;
+
+                    let currentAppList = this.getCurrentAppList();
+
+                    each(currentAppList, () => {
+                        currentAppList.listState.trigger("closeAllHoverMenus");
+                    });
+                }, 300);
             }
         });
 
