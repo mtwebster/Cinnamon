@@ -17,10 +17,8 @@ data/cinnamon.desktop
 data/gschemas.compiled
 data/icons/Makefile
 data/org.cinnamon.gschema.valid
-data/org.cinnamon.gschema.xml
 data/theme/gdm.css
 docs/Makefile
-docs/reference/*/*-docs.sgml
 docs/reference/*/*.args
 docs/reference/*/*.hierarchy
 docs/reference/*/*.interfaces
@@ -134,3 +132,4 @@ tests/run-test.sh
 /debian/files
 /debian/debhelper-build-stamp
 /debian/tmp/
+/debian/build/
