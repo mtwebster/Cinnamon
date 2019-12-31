@@ -11,6 +11,7 @@ const PopupMenu = imports.ui.popupMenu;
 const MessageTray = imports.ui.messageTray;
 const ModemManager = imports.misc.modemManager;
 const Util = imports.misc.util;
+const Spinner = imports.ui.spinner;
 
 const DEFAULT_PERIODIC_UPDATE_FREQUENCY_SECONDS = 10;
 const FAST_PERIODIC_UPDATE_FREQUENCY_SECONDS = 2;
@@ -1697,7 +1698,8 @@ CinnamonNetworkApplet.prototype = {
             this._devices.wired = {
                 section: new PopupMenu.PopupMenuSection(),
                 devices: [ ],
-                item: new NMWiredSectionTitleMenuItem(_("Wired"))
+                item: new NMWiredSectionTitleMenuItem(_("Wired")),
+                refresh_item: null
             };
 
             this._devices.wired.section.addMenuItem(this._devices.wired.item);
@@ -1705,20 +1707,27 @@ CinnamonNetworkApplet.prototype = {
             this.menu.addMenuItem(this._devices.wired.section);
             this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
+            let refresh_notifier = 
+
             this._devices.wireless = {
                 section: new PopupMenu.PopupMenuSection(),
                 devices: [ ],
-                item: this._makeToggleItem('wireless', _("Wireless"))
+                item: this._makeToggleItem('wireless', _("Wireless")),
+                refresh_item: new Spinner.SpinnerMenuItem()
             };
             this._devices.wireless.section.addMenuItem(this._devices.wireless.item);
+            this._devices.wireless.section.addMenuItem(this._devices.wireless.refresh_item);
+
             this._devices.wireless.section.actor.hide();
+
             this.menu.addMenuItem(this._devices.wireless.section);
             this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
             this._devices.wwan = {
                 section: new PopupMenu.PopupMenuSection(),
                 devices: [ ],
-                item: this._makeToggleItem('wwan', _("Mobile broadband"))
+                item: this._makeToggleItem('wwan', _("Mobile broadband")),
+                refresh_item: null
             };
             this._devices.wwan.section.addMenuItem(this._devices.wwan.item);
             this._devices.wwan.section.actor.hide();
@@ -1728,7 +1737,8 @@ CinnamonNetworkApplet.prototype = {
             this._devices.vpn = {
                 section: new PopupMenu.PopupMenuSection(),
                 device: new NMDeviceVPN(this._client),
-                item: new NMWiredSectionTitleMenuItem(_("VPN Connections"))
+                item: new NMWiredSectionTitleMenuItem(_("VPN Connections")),
+                refresh_item: null
             };
             this._devices.vpn.device.connect('active-connection-changed', Lang.bind(this, function() {
                 this._devices.vpn.item.updateForDevice(this._devices.vpn.device);
@@ -1825,6 +1835,10 @@ CinnamonNetworkApplet.prototype = {
                 dev.setEnabled(enabled);
             });
             this._syncSectionTitle(type);
+
+            if (enabled) {
+                this._rescanAccessPoints();
+            }
         }));
         return item;
     },
@@ -2072,6 +2086,7 @@ CinnamonNetworkApplet.prototype = {
     },
 
     _readConnections: function() {
+        log("read");
         let connections = this._client.get_connections();
         for (let i = 0; i < connections.length; i++) {
             let connection = connections[i];
@@ -2122,6 +2137,7 @@ CinnamonNetworkApplet.prototype = {
     },
 
     _updateConnection: function(connection) {
+        log("update");
         let connectionSettings = connection.get_setting_by_name(NM.SETTING_CONNECTION_SETTING_NAME);
         connection._type = connectionSettings.type;
 

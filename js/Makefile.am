@@ -71,6 +71,7 @@ nobase_dist_js_DATA = \
 	ui/separator.js 	\
 	ui/slider.js 		\
 	ui/soundManager.js  \
+	ui/spinner.js       \
 	ui/search.js		\
 	ui/settings.js		\
 	ui/slideshowManager.js  \
