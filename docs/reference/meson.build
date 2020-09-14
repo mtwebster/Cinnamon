@@ -7,7 +7,7 @@ configure_file(
     configuration: version_conf,
 )
 
-subdir('cinnamon')
+# subdir('cinnamon')
 subdir('cinnamon-js')
 subdir('cinnamon-tutorials')
-subdir('st')
+# subdir('st')

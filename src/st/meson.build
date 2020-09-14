@@ -1,3 +1,76 @@
+libcroco_headers = [
+    'croco/cr-additional-sel.h',
+    'croco/cr-attr-sel.h',
+    'croco/cr-cascade.h',
+    'croco/cr-declaration.h',
+    'croco/cr-doc-handler.h',
+    'croco/cr-enc-handler.h',
+    'croco/cr-fonts.h',
+    'croco/cr-input.h',
+    'croco/cr-num.h',
+    'croco/cr-om-parser.h',
+    'croco/cr-parser.h',
+    'croco/cr-parsing-location.h',
+    'croco/cr-prop-list.h',
+    'croco/cr-pseudo.h',
+    'croco/cr-rgb.h',
+    'croco/cr-selector.h',
+    'croco/cr-simple-sel.h',
+    'croco/cr-statement.h',
+    'croco/cr-string.h',
+    'croco/cr-stylesheet.h',
+    'croco/cr-term.h',
+    'croco/cr-tknzr.h',
+    'croco/cr-token.h',
+    'croco/cr-utils.h',
+    'croco/libcroco-config.h',
+    'croco/libcroco.h'
+]
+
+libcroco_sources = [
+    'croco/cr-additional-sel.c',
+    'croco/cr-attr-sel.c',
+    'croco/cr-cascade.c',
+    'croco/cr-declaration.c',
+    'croco/cr-doc-handler.c',
+    'croco/cr-enc-handler.c',
+    'croco/cr-fonts.c',
+    'croco/cr-input.c',
+    'croco/cr-num.c',
+    'croco/cr-om-parser.c',
+    'croco/cr-parser.c',
+    'croco/cr-parsing-location.c',
+    'croco/cr-prop-list.c',
+    'croco/cr-pseudo.c',
+    'croco/cr-rgb.c',
+    'croco/cr-selector.c',
+    'croco/cr-simple-sel.c',
+    'croco/cr-statement.c',
+    'croco/cr-string.c',
+    'croco/cr-stylesheet.c',
+    'croco/cr-term.c',
+    'croco/cr-tknzr.c',
+    'croco/cr-token.c',
+    'croco/cr-utils.c'
+]
+
+libcroco_deps = [xml, glib]
+
+libcroco = static_library(
+    'croco',
+    libcroco_sources,
+    include_directories: include_root,
+    dependencies: libcroco_deps,
+
+)
+
+croco_dep = declare_dependency(
+    include_directories: include_directories('./croco'),
+    dependencies: libcroco_deps,
+    link_with : libcroco,
+    link_args: ['-Wl,-Bsymbolic', '-Wl,-z,relro', '-Wl,-z,now']
+)
+
 st_headers = [
     'st-adjustment.h',
     'st-background-effect.h',
@@ -39,64 +112,11 @@ st_non_gir = [
 ]
 
 st_private_headers = [
-    'st/croco/cr-additional-sel.h',
-    'st/croco/cr-attr-sel.h',
-    'st/croco/cr-cascade.h',
-    'st/croco/cr-declaration.h',
-    'st/croco/cr-doc-handler.h',
-    'st/croco/cr-enc-handler.h',
-    'st/croco/cr-fonts.h',
-    'st/croco/cr-input.h',
-    'st/croco/cr-num.h',
-    'st/croco/cr-om-parser.h',
-    'st/croco/cr-parser.h',
-    'st/croco/cr-parsing-location.h',
-    'st/croco/cr-prop-list.h',
-    'st/croco/cr-pseudo.h',
-    'st/croco/cr-rgb.h',
-    'st/croco/cr-selector.h',
-    'st/croco/cr-simple-sel.h',
-    'st/croco/cr-statement.h',
-    'st/croco/cr-string.h',
-    'st/croco/cr-stylesheet.h',
-    'st/croco/cr-term.h',
-    'st/croco/cr-tknzr.h',
-    'st/croco/cr-token.h',
-    'st/croco/cr-utils.h',
-    'st/croco/libcroco-config.h',
-    'st/croco/libcroco.h',
     'st-private.h',
     'st-table-private.h',
     'st-theme-private.h',
     'st-theme-node-private.h',
     'st-theme-node-transition.h',
-]
-
-croco_sources = [
-    'croco/cr-additional-sel.c',
-    'croco/cr-attr-sel.c',
-    'croco/cr-cascade.c',
-    'croco/cr-declaration.c',
-    'croco/cr-doc-handler.c',
-    'croco/cr-enc-handler.c',
-    'croco/cr-fonts.c',
-    'croco/cr-input.c',
-    'croco/cr-num.c',
-    'croco/cr-om-parser.c',
-    'croco/cr-parser.c',
-    'croco/cr-parsing-location.c',
-    'croco/cr-prop-list.c',
-    'croco/cr-pseudo.c',
-    'croco/cr-rgb.c',
-    'croco/cr-selector.c',
-    'croco/cr-simple-sel.c',
-    'croco/cr-statement.c',
-    'croco/cr-string.c',
-    'croco/cr-stylesheet.c',
-    'croco/cr-term.c',
-    'croco/cr-tknzr.c',
-    'croco/cr-token.c',
-    'croco/cr-utils.c'
 ]
 
 st_gir_sources = [
@@ -145,8 +165,7 @@ st_sources = [
     'st-scroll-view-fade.c',
     'st-scroll-view-fade.h',
     st_gir_sources,
-    st_non_gir,
-    croco_sources
+    st_non_gir
 ]
 
 st_include_list = []
@@ -168,7 +187,7 @@ libst_deps = [
     cogl,
     cogl_path,
     config_h,
-    croco,
+    croco_dep,
     gio,
     glib,
     gtk,
@@ -185,7 +204,7 @@ libst = library(
     include_directories: include_root,
     dependencies: libst_deps,
     install: true,
-    install_dir: pkglibdir,
+    install_dir: pkglibdir
 )
 
 st_dep = declare_dependency(

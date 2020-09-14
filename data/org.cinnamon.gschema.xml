@@ -616,7 +616,7 @@
 
     <key name="enable-indicators" type="b">
       <default>false</default>
-      <_summary>not used</_summary>
+      <summary>not used</summary>
     </key>
 
     <key type="as" name="demands-attention-ignored-wm-classes">
