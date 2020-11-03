@@ -16,6 +16,8 @@ const ModalDialog = imports.ui.modalDialog;
 const Signals = imports.signals;
 const Gettext = imports.gettext;
 const Cinnamon = imports.gi.Cinnamon;
+const SignalManager = imports.misc.signalManager;
+
 
 var AllowedLayout = {  // the panel layout that an applet is suitable for
     VERTICAL: 'vertical',
@@ -58,6 +60,239 @@ var AppletContextMenu = class AppletContextMenu extends PopupMenu.PopupMenu {
     }
 }
 
+
+const ZONE_SIZE = 6;
+
+const LEFT_EDGE_DRAGGABLE = 1 << 0;
+const RIGHT_EDGE_DRAGGABLE = 1 << 1;
+const TOP_EDGE_DRAGGABLE = 1 << 2;
+const BOTTOM_EDGE_DRAGGABLE = 1 << 3;
+
+const RESIZING_NONE = 0;
+const RESIZING_LEFT = 1;
+const RESIZING_RIGHT = 2;
+const RESIZING_TOP = 3;
+const RESIZING_BOTTOM = 4;
+
+const X = 0;
+const Y = 1;
+const W = 0;
+const H = 1;
+
+var PopupResizeHandler = class PopupResizeHandler {
+    constructor() {
+        return this._init.apply(this, arguments);
+    }
+
+    _init(applet, actor, resizedCallback) {
+        log("HANDLER");
+        this.applet = applet;
+        this.actor = actor;
+        this.callback = resizedCallback;
+
+        this._signals = new SignalManager.SignalManager(null);
+
+        this._signals.connect(this.actor, "motion-event", Lang.bind(this, this._motionEvent));
+        this._signals.connect(this.actor, "leave-event", Lang.bind(this, this._leaveEvent));
+        this._signals.connect(this.actor, "button-press-event", Lang.bind(this, this._buttonPressEvent));
+
+        this.mouse = Clutter.DeviceManager.get_default().get_core_device(Clutter.InputDeviceType.POINTER_DEVICE);
+        this._current_resize_direction = RESIZING_NONE;
+
+        this.drag_start_pos = null;
+        this.drag_start_size = null;
+
+        this.poll_timer_id = 0;
+    }
+
+    _motionEvent(box, event) {
+        if (this.poll_timer_id > 0) {
+            return Clutter.EVENT_PROPAGATE;
+        }
+
+        let x, y;
+        [x, y] = event.get_coords();
+        // log(`motion! ${x}, ${y} ---- actor: ${this.actor.x}, ${this.actor.y}, ${this.actor.width}x${this.actor.height}`);
+        if (this.in_top_resize_zone (x, y)) {
+            global.set_cursor(Cinnamon.Cursor.RESIZE_TOP);
+            this._current_resize_direction = RESIZING_TOP;
+            log("TOP RESIZE");
+        } else
+        if (this.in_bottom_resize_zone (x, y)) {
+            global.set_cursor(Cinnamon.Cursor.RESIZE_BOTTOM);
+            this._current_resize_direction = RESIZING_BOTTOM;
+            log("BOTTOM RESIZE");
+        } else
+        if (this.in_left_resize_zone (x, y)) {
+            global.set_cursor(Cinnamon.Cursor.RESIZE_LEFT);
+            this._current_resize_direction = RESIZING_LEFT;
+            log("LEFT RESIZE");
+        } else
+        if (this.in_right_resize_zone (x, y)) {
+            global.set_cursor(Cinnamon.Cursor.RESIZE_RIGHT);
+            this._current_resize_direction = RESIZING_RIGHT;
+            log("RIGHT RESIZE");
+        } else {
+            global.unset_cursor();
+        }
+
+        return Clutter.EVENT_PROPAGATE;
+    }
+
+    _poll_timeout() {
+        let [s, p] = this.mouse.get_coords(null);
+        let x = p.x;
+        let y = p.y;
+        log(`timeout: ${x}, ${y}`);
+        if (this._current_resize_direction == RESIZING_LEFT) {
+            let start_x = this.drag_start_position[X];
+            let start_w = this.drag_start_size[W];
+
+            let diff = start_x - x;
+            if (diff > 0) {
+                this.actor.x = start_x - diff;
+                this.actor.width = start_w + diff;
+            } else
+            if (diff < 0) {
+                this.actor.x = start_x + (diff * -1);
+                this.actor.width = start_w - (diff * -1);
+            }
+        }
+        else
+        if (this._current_resize_direction == RESIZING_RIGHT) {
+            let start_x = this.drag_start_position[X];
+            let start_w = this.drag_start_size[W];
+
+            let diff = start_x - x;
+            if (diff > 0) {
+                this.actor.width = start_w - diff;
+                // this.actor.width = start_w + diff;
+            } else
+            if (diff < 0) {
+                this.actor.width = start_w + (diff * -1);
+                // this.actor.width = start_w - (diff * -1);
+            }
+        }
+        else
+        if (this._current_resize_direction == RESIZING_TOP) {
+            let start_y = this.drag_start_position[Y];
+            let start_h = this.drag_start_size[H];
+
+            let diff = start_y - y;
+            if (diff > 0) {
+                this.actor.y = start_y - diff;
+                this.actor.height = start_h + diff;
+            } else
+            if (diff < 0) {
+                this.actor.y = start_y + (diff * -1);
+                this.actor.height = start_h - (diff * -1);
+            }
+        }
+        else
+        if (this._current_resize_direction == RESIZING_BOTTOM) {
+            let start_y = this.drag_start_position[Y];
+            let start_h= this.drag_start_size[H];
+
+            let diff = start_y - y;
+            if (diff > 0) {
+                this.actor.height = start_h - diff;
+                this.actor.width = start_w + diff;
+            } else
+            if (diff < 0) {
+                this.actor.height = start_h + (diff * -1);
+                this.actor.width = start_w - (diff * -1);
+            }
+        }
+        this.actor.queue_relayout();
+
+        return true; //source continue
+    }
+
+    _leaveEvent(box, event) {
+        if (this.poll_timer_id == 0) {
+            global.unset_cursor()
+        }
+        return Clutter.EVENT_PROPAGATE;
+    }
+
+    _buttonPressEvent(box, event) {
+        if (this._current_resize_direction != RESIZING_NONE) {
+
+            this.start_drag(event)
+            log("GRABBINGN ON");
+            return Clutter.EVENT_STOP;
+        }
+
+        return Clutter.EVENT_PROPAGATE;
+    }
+
+    start_drag(event) {
+        this.stop_drag();
+        this.drag_start_position = event.get_coords();
+        this.drag_start_size = [this.actor.width, this.actor.height];
+        this.poll_timer_id = Mainloop.timeout_add(15, Lang.bind(this, this._poll_timeout));
+        this._signals.connect(global.stage,
+                              "button-release-event",
+                              Lang.bind(this, this._button_released_during_drag));
+    }
+
+    stop_drag() {
+        if (this.poll_timer_id > 0) {
+            Mainloop.source_remove(this.poll_timer_id);
+            this.poll_timer_id = 0;
+        }
+
+        this._signals.disconnect("button-release-event", global.stage, this._button_released_during_drag);
+
+        this.drag_start_position = null;
+        this.drag_start_size = null;
+    }
+
+    _button_released_during_drag(stage, event) {
+        this.stop_drag();
+        global.unset_cursor();
+
+        return Clutter.EVENT_STOP;
+    }
+
+    // These are generic, they don't care if the edge they're checking is actually *valid*.
+    in_top_resize_zone(x, y) {
+        if (x < this.actor.x || x > this.actor.x + this.actor.width) {
+            return false;
+        }
+
+        return y <= this.actor.y + ZONE_SIZE &&
+               y >= this.actor.y;
+    }
+
+    in_bottom_resize_zone(x, y) {
+        if (x < this.actor.x || x > this.actor.x + this.actor.width) {
+            return false;
+        }
+
+        return y >= this.actor.y + this.actor.height - ZONE_SIZE &&
+               y <= this.actor.y + this.actor.height;
+    }
+
+    in_left_resize_zone(x, y) {
+        if (y < this.actor.y || y > this.actor.y + this.actor.height) {
+            return false;
+        }
+
+        return x <= this.actor.x + ZONE_SIZE &&
+               x >= this.actor.x;
+    }
+
+    in_right_resize_zone(x, y) {
+        if (y < this.actor.y || y > this.actor.y + this.actor.height) {
+            return false;
+        }
+
+        return x >= this.actor.x + this.actor.width - ZONE_SIZE &&
+               x <= this.actor.x + this.actor.width;
+    }
+}
+
 /**
  * #AppletPopupMenu:
  * @short_description: Applet left-click menu
@@ -79,6 +314,9 @@ var AppletPopupMenu = class AppletPopupMenu extends PopupMenu.PopupMenu {
         super._init(launcher.actor, orientation);
         Main.uiGroup.add_actor(this.actor);
         this.actor.hide();
+
+        this._resizer = new PopupResizeHandler(this, this.actor, () => this._onBoxResized);
+
         this.launcher = launcher;
         if (launcher instanceof Applet) {
             this.connect("open-state-changed", Lang.bind(this, this._onOpenStateChanged, launcher));

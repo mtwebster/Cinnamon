@@ -1228,6 +1228,7 @@ class CinnamonMenuApplet extends Applet.TextIconApplet {
     }
 
     _recalc_height() {
+        return;
         let scrollBoxHeight = (this.leftBox.get_allocation_box().y2-this.leftBox.get_allocation_box().y1) -
                                (this.searchBox.get_allocation_box().y2-this.searchBox.get_allocation_box().y1);
 
@@ -2462,7 +2463,7 @@ class CinnamonMenuApplet extends Applet.TextIconApplet {
         this._session = new GnomeSession.SessionManager();
         this._screenSaverProxy = new ScreenSaver.ScreenSaverProxy();
 
-        this.leftPane.add(this.leftBox, { y_align: St.Align.END, y_fill: false });
+        this.leftPane.add(this.leftBox, { x_fill: true,  x_expand: true, x_align: St.Align.START, y_align: St.Align.END, y_fill: false });
         this._favboxtoggle();
 
         let rightPane = new St.BoxLayout({ vertical: true });
@@ -2554,8 +2555,8 @@ class CinnamonMenuApplet extends Applet.TextIconApplet {
         this.mainBox = new St.BoxLayout({ style_class: 'menu-applications-outer-box', vertical:false });
         this.mainBox.add_style_class_name('menu-applications-box'); //this is to support old themes
 
-        this.mainBox.add(this.leftPane, { span: 1 });
-        this.mainBox.add(rightPane, { span: 1 });
+        this.mainBox.add(this.leftPane, { x_expand: true, x_fill: true });
+        this.mainBox.add(rightPane, { x_expand: true, x_fill: true});
         this.mainBox._delegate = null;
 
         this.selectedAppBox = new St.BoxLayout({ style_class: 'menu-selected-app-box', vertical: true });
@@ -2565,7 +2566,7 @@ class CinnamonMenuApplet extends Applet.TextIconApplet {
         this.selectedAppBox.add_actor(this.selectedAppDescription);
         this.selectedAppBox._delegate = null;
 
-        section.actor.add(this.mainBox);
+        section.actor.add(this.mainBox, { x_expand: true, x_fill: true });
         section.actor.add_actor(this.selectedAppBox);
 
         this.appBoxIter = new VisibleChildIterator(this.applicationsBox);
@@ -2672,6 +2673,7 @@ class CinnamonMenuApplet extends Applet.TextIconApplet {
     }
 
     _resizeApplicationsBox() {
+        return;
         let width = -1;
         Util.each(this.applicationsBox.get_children(), c => {
             let [min, nat] = c.get_preferred_width(-1.0);
