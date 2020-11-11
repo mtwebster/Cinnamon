@@ -198,5 +198,18 @@
     "description" : "Open the menu editor",
     "callback" : "_launch_editor",
     "tooltip" : "Press this button to customize your menu entries."
+ },
+  "popup-width" : {
+    "type" : "generic",
+    "default" : 400,
+    "min" : 400,
+    "max" : 600
+ },
+  "popup-height" : {
+    "type" : "generic",
+    "default" : 800,
+    "min" : 600,
+    "max" : 1000
  }
+
 }

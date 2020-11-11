@@ -14,6 +14,7 @@ from functools import cmp_to_key
 import unicodedata
 import config
 from setproctitle import setproctitle
+import subprocess
 
 import gi
 gi.require_version('Gtk', '3.0')

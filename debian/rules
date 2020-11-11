@@ -16,7 +16,7 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 override_dh_auto_configure:
 	dh_auto_configure -- \
 		--libexecdir=/usr/libexec/cinnamon \
-		-D docs=true \
+		-D docs=false \
 		-D deprecated_warnings=false
 
 # workaround for fix lmde4 build

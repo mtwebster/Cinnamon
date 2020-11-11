@@ -16,6 +16,9 @@ const ModalDialog = imports.ui.modalDialog;
 const Signals = imports.signals;
 const Gettext = imports.gettext;
 const Cinnamon = imports.gi.Cinnamon;
+const SignalManager = imports.misc.signalManager;
+const Meta = imports.gi.Meta;
+
 
 var AllowedLayout = {  // the panel layout that an applet is suitable for
     VERTICAL: 'vertical',
@@ -55,6 +58,260 @@ var AppletContextMenu = class AppletContextMenu extends PopupMenu.PopupMenu {
 
     _onOpenStateChanged(menu, open, sourceActor) {
         sourceActor.change_style_pseudo_class("checked", open);
+    }
+}
+
+
+const ZONE_SIZE = 10;
+
+const LEFT_EDGE_DRAGGABLE = 1 << 0;
+const RIGHT_EDGE_DRAGGABLE = 1 << 1;
+const TOP_EDGE_DRAGGABLE = 1 << 2;
+const BOTTOM_EDGE_DRAGGABLE = 1 << 3;
+
+const RESIZING_NONE = 0;
+const RESIZING_LEFT = 1;
+const RESIZING_RIGHT = 2;
+const RESIZING_TOP = 3;
+const RESIZING_BOTTOM = 4;
+
+const X = 0;
+const Y = 1;
+const W = 0;
+const H = 1;
+
+var PopupResizeHandler = class PopupResizeHandler {
+    constructor() {
+        return this._init.apply(this, arguments);
+    }
+
+    _init(applet, actor, wmin, wmax, hmin, hmax, resizedCallback) {
+        log("HANDLER");
+        this.applet = applet;
+        this.actor = actor;
+        this.wmin = wmin;
+        this.wmax = wmax;
+        this.hmin = hmin;
+        this.hmax = hmax
+
+        // TODO: automatically handle storing the user size, maybe having it become part of the enabled-applets
+        // gsettings entries?
+        // this.settings = settings;
+        this.callback = resizedCallback;
+
+        this._draggable = DND.makeDraggable(this.actor);
+
+        this._grab_actor = new Clutter.Rectangle({ width: 1, height: 1, opacity: 0 });
+        global.stage.add_actor(this._grab_actor);
+        this._grab_actor.hide();
+        this._draggable.inhibit = true;
+
+        this._signals = new SignalManager.SignalManager(null);
+
+        this._signals.connect(this._draggable, 'drag-begin', Lang.bind(this, this._drag_begin));
+        this._signals.connect(this._draggable, 'drag-cancelled', Lang.bind(this, this._drag_cancel));
+        this._signals.connect(this._draggable, 'drag-end', Lang.bind(this, this._drag_end));
+
+        this._signals.connect(this.actor, "motion-event", Lang.bind(this, this._motionEvent));
+        this._signals.connect(this.actor, "leave-event", Lang.bind(this, this._leaveEvent));
+
+        this.mouse = Clutter.DeviceManager.get_default().get_core_device(Clutter.InputDeviceType.POINTER_DEVICE);
+        this._current_resize_direction = RESIZING_NONE;
+
+        this.drag_start_pos = null;
+        this.drag_start_size = null;
+
+        this.poll_timer_id = 0;
+        this.active = false;
+    }
+
+    _drag_begin(time) {
+        this.start_drag()
+        log("drag begin");
+    }
+
+    _drag_cancel(time) {
+        this.stop_drag();
+        log("drag cancel");
+    }
+
+    _drag_end(time) {
+        log("drag end");
+    }
+
+    _motionEvent(box, event) {
+        if (this.poll_timer_id > 0) {
+            return Clutter.EVENT_STOP;
+        }
+
+        let x, y;
+        [x, y] = event.get_coords();
+        // log(`motion! ${x}, ${y} ---- actor: ${this.actor.x}, ${this.actor.y}, ${this.actor.width}x${this.actor.height}`);
+        if (this.in_top_resize_zone (x, y)) {
+            this._draggable.inhibit = false;
+            global.set_cursor(Cinnamon.Cursor.RESIZE_TOP);
+            this._current_resize_direction = RESIZING_TOP;
+        } else
+        if (this.in_bottom_resize_zone (x, y)) {
+            this._draggable.inhibit = false;
+            global.set_cursor(Cinnamon.Cursor.RESIZE_BOTTOM);
+            this._current_resize_direction = RESIZING_BOTTOM;
+        } else
+        if (this.in_left_resize_zone (x, y)) {
+            this._draggable.inhibit = false;
+            global.set_cursor(Cinnamon.Cursor.RESIZE_LEFT);
+            this._current_resize_direction = RESIZING_LEFT;
+        } else
+        if (this.in_right_resize_zone (x, y)) {
+            this._draggable.inhibit = false;
+            global.set_cursor(Cinnamon.Cursor.RESIZE_RIGHT);
+            this._current_resize_direction = RESIZING_RIGHT;
+        } else {
+            this._current_resize_direction = RESIZING_NONE;
+            this._draggable.inhibit = true;
+            global.unset_cursor();
+        }
+
+        return Clutter.EVENT_PROPAGATE;
+    }
+
+    _poll_timeout() {
+        let [s, p] = this.mouse.get_coords(null);
+        let x = p.x;
+        let y = p.y;
+        // this.hmin = this.actor.get_preferred_height(-1)[0];
+        if (this._current_resize_direction == RESIZING_LEFT) {
+            let start_x = this.drag_start_position[X];
+            let start_w = this.drag_start_size[W];
+
+            let diff = start_x - x;
+            this.actor.x = start_x - diff;
+            this.actor.width = (start_w + diff).clamp(this.wmin, this.wmax);
+        }
+        else
+        if (this._current_resize_direction == RESIZING_RIGHT) {
+            let start_x = this.drag_start_position[X];
+            let start_w = this.drag_start_size[W];
+
+            let diff = x - start_x;
+            this.actor.width = (start_w + diff).clamp(this.wmin, this.wmax);
+        }
+        else
+        if (this._current_resize_direction == RESIZING_TOP) {
+            let start_y = this.drag_start_position[Y];
+            let start_h = this.drag_start_size[H];
+
+            let diff = start_y - y;
+            this.actor.y = start_y - diff;
+            this.actor.height = (start_h + diff).clamp(this.hmin, this.hmax);
+        }
+        else
+        if (this._current_resize_direction == RESIZING_BOTTOM) {
+            let start_y = this.drag_start_position[Y];
+            let start_h= this.drag_start_size[H];
+
+            let diff = y - start_y;
+            this.actor.height = (start_h + diff).clamp(this.hmin, this.hmax);
+        }
+
+        this.callback(this.actor.width, this.actor.height);
+        return true; //source continue
+    }
+
+    _leaveEvent(box, event) {
+        if (this.poll_timer_id == 0) {
+            global.unset_cursor()
+        }
+        return Clutter.EVENT_PROPAGATE;
+    }
+
+    _buttonPressEvent(box, event) {
+        if (this._current_resize_direction != RESIZING_NONE) {
+            this.start_drag(event)
+            log("GRABBINGN ON");
+            return Clutter.EVENT_PROPAGATE;
+        }
+
+        return Clutter.EVENT_PROPAGATE;
+    }
+
+    start_drag() {
+        this.active = true;
+        // this.stop_drag();
+        // Main.pushModal(this.actor, global.get_current_time(), Meta.ModalOptions.POINTER_ALREADY_GRABBED |
+                                                              // Meta.ModalOptions.KEYBOARD_ALREADY_GRABBED);
+        let [s, p] = this.mouse.get_coords(null);
+        this.drag_start_position = [p.x, p.y];
+
+        this.drag_start_size = [this.actor.width, this.actor.height];
+        this.poll_timer_id = Mainloop.timeout_add(15, Lang.bind(this, this._poll_timeout));
+
+    }
+
+    stop_drag() {
+        if (this.poll_timer_id > 0) {
+            Mainloop.source_remove(this.poll_timer_id);
+            this.poll_timer_id = 0;
+        }
+
+        // this._signals.disconnect("button-release-event", global.stage, this._button_released_during_drag);
+        // this._signals.disconnect("motion-event", global.stage, this._motion_during_drag);
+        this.callback(this.actor.width, this.actor.height);
+        this.actor.queue_relayout()
+
+        this.drag_start_position = null;
+        this.drag_start_size = null;
+        this.active = false;
+    }
+
+    _button_released_during_drag(stage, event) {
+        this.stop_drag();
+        Main.popModal(this.actor);
+
+        global.unset_cursor();
+        this.callback(this.actor.width, this.actor.height);
+        return Clutter.EVENT_STOP;
+    }
+
+    _motion_during_drag(stage, event) {
+        return Clutter.EVENT_STOP;
+    }
+
+    // These are generic, they don't care if the edge they're checking is actually *valid*.
+    in_top_resize_zone(x, y) {
+        if (x < this.actor.x || x > this.actor.x + this.actor.width) {
+            return false;
+        }
+
+        return y <= this.actor.y + ZONE_SIZE &&
+               y >= this.actor.y;
+    }
+
+    in_bottom_resize_zone(x, y) {
+        if (x < this.actor.x || x > this.actor.x + this.actor.width) {
+            return false;
+        }
+
+        return y >= this.actor.y + this.actor.height - ZONE_SIZE &&
+               y <= this.actor.y + this.actor.height;
+    }
+
+    in_left_resize_zone(x, y) {
+        if (y < this.actor.y || y > this.actor.y + this.actor.height) {
+            return false;
+        }
+
+        return x <= this.actor.x + ZONE_SIZE &&
+               x >= this.actor.x;
+    }
+
+    in_right_resize_zone(x, y) {
+        if (y < this.actor.y || y > this.actor.y + this.actor.height) {
+            return false;
+        }
+
+        return x >= this.actor.x + this.actor.width - ZONE_SIZE &&
+               x <= this.actor.x + this.actor.width;
     }
 }
 
