@@ -482,8 +482,8 @@ class Module:
             switch.content_widget.set_active(scale.content_widget.get_value() != 10)
             scale.revealer.set_reveal_child(scale.content_widget.get_value() != 10)
 
-            scale.content_widget.connect("change-value", self.round_to_fives)
-            scale.content_widget.connect("value-changed", self.real_margin_value_changed)
+            scale.content_widget.connect("change-value", self.round_value_to_fives)
+            scale.content_widget.connect("value-changed", self.margin_value_changed)
             switch.content_widget.connect("notify::active", self.margin_switch_changed, scale)
 
             # self.scrollbar_switch = switch.content_widget
@@ -491,7 +491,7 @@ class Module:
             # widget = CssRange(_("Scrollbar width"), "scrollbar slider", ["min-width", "min-height"], 2, 40, "px", None, switch)
             # settings.add_reveal_row(widget)
 
-    def round_to_fives(self, widget, scroll, value, data=None):
+    def round_value_to_fives(self, widget, scroll, value, data=None):
         if value % 5 != 0:
             widget.set_value(round(value / 5) * 5)
             return True

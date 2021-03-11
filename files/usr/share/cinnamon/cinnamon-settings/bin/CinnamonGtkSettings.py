@@ -93,7 +93,7 @@ class GtkCssEditor:
                                   "gtk-3.0",
                                   "gtk.css")
 
-        self.rule_separator = "/***** %s - cinnamon-settings-generated - do not edit *****/" % self.selector
+        self.rule_separator = "/***** cinnamon-settings-generated - do not edit *****/"
         rules = []
 
         file = Gio.File.new_for_path(self._path)
