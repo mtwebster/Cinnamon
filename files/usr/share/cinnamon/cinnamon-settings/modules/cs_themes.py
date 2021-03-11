@@ -2,10 +2,10 @@
 
 import os
 
-from gi.repository import Gtk
+from gi.repository import Gtk, GdkPixbuf
 
 from xapp.GSettingsWidgets import *
-from CinnamonGtkSettings import CssRange, CssOverrideSwitch, GtkSettingsSwitch, PreviewWidget, Gtk2ScrollbarSizeEditor
+from CinnamonGtkSettings import GtkSettingsSwitch
 from SettingsWidgets import LabelRow, SidePage, walk_directories
 from ChooserButtonWidgets import PictureChooserButton
 from ExtensionCore import DownloadSpicesPage
@@ -111,38 +111,15 @@ class Module:
             switch = GtkSettingsSwitch(_("Jump to position when clicking in a trough"), "gtk-primary-button-warps-slider")
             settings.add_row(switch)
 
-            widget = GSettingsSwitch(_("Use overlay scroll bars"), "org.cinnamon.desktop.interface", "gtk-overlay-scrollbars")
-            settings.add_row(widget)
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
 
-            self.gtk2_scrollbar_editor = Gtk2ScrollbarSizeEditor(widget.get_scale_factor())
+            settings.add_row(box)
+            widget = GSettingsSwitch(_("Use overlay scroll bars (takes effect on next login)"), "org.cinnamon.desktop.interface", "gtk-overlay-scrollbars")
+            box.pack_start(widget, False, False, 6)
 
-            switch = CssOverrideSwitch(_("Override the current theme's scrollbar width"))
-            settings.add_row(switch)
-            self.scrollbar_switch = switch.content_widget
-
-            widget = CssRange(_("Scrollbar width"), "scrollbar slider", ["min-width", "min-height"], 2, 40, "px", None, switch)
-            settings.add_reveal_row(widget)
-
-            try:
-                widget.sync_initial_switch_state()
-            except PermissionError as e:
-                print(e)
-                switch.set_sensitive(False)
-
-            self.scrollbar_css_range = widget.content_widget
-            self.scrollbar_css_range.get_adjustment().set_page_increment(2.0)
-
-            switch.content_widget.connect("notify::active", self.on_css_override_active_changed)
-            widget.content_widget.connect("value-changed", self.on_range_slider_value_changed)
-
-            self.on_css_override_active_changed(switch)
-
-            widget = PreviewWidget()
-            settings.add_row(widget)
-
-            label_widget = LabelRow(_(
-"""Changes will take effect the next time you log in and may not affect all applications."""))
-            settings.add_row(label_widget)
+            anim = GdkPixbuf.PixbufAnimation.new_from_file("/home/mtwebster/Videos/olsb.gif")
+            image = Gtk.Image.new_from_animation(anim)
+            box.pack_start(image, False, False, 6)
 
             self.builder = self.sidePage.builder
 
@@ -165,16 +142,6 @@ class Module:
                         print(e)
 
             self.refresh()
-
-    def on_css_override_active_changed(self, switch, pspec=None, data=None):
-        if self.scrollbar_switch.get_active():
-            self.gtk2_scrollbar_editor.set_size(self.scrollbar_css_range.get_value())
-        else:
-            self.gtk2_scrollbar_editor.set_size(0)
-
-    def on_range_slider_value_changed(self, widget, data=None):
-        if self.scrollbar_switch.get_active():
-            self.gtk2_scrollbar_editor.set_size(widget.get_value())
 
     def on_file_changed(self, file, other, event, data):
         if self.refreshing:

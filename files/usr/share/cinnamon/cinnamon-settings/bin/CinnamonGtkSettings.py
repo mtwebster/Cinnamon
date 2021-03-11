@@ -80,7 +80,7 @@ def get_css_editor(selector=None):
     global css_instance
 
     if css_instance is None:
-        css_instance = GtkCssEditor(selector)
+        css_instance = GtkCssEditor()
 
     return css_instance
 
@@ -88,12 +88,10 @@ class CSSSettingsException(Exception):
     pass
 
 class GtkCssEditor:
-    def __init__(self, selector):
+    def __init__(self):
         self._path = os.path.join(GLib.get_user_config_dir(),
                                   "gtk-3.0",
                                   "gtk.css")
-
-        self.selector = selector
 
         self.rule_separator = "/***** %s - cinnamon-settings-generated - do not edit *****/" % self.selector
         rules = []

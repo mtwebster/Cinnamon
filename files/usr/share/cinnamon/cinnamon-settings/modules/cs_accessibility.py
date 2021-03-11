@@ -4,7 +4,9 @@ import gi
 gi.require_version("Gtk", "3.0")
 
 from gi.repository import Gtk
-from SettingsWidgets import SidePage, GSettingsDependencySwitch, DependencyCheckInstallButton, GSettingsSoundFileChooser
+from SettingsWidgets import SidePage, GSettingsDependencySwitch, DependencyCheckInstallButton, GSettingsSoundFileChooser, LabelRow
+from CinnamonGtkSettings import CssRange, CssOverrideSwitch, PreviewWidget, Gtk2ScrollbarSizeEditor
+
 from xapp.GSettingsWidgets import *
 
 DPI_FACTOR_LARGE         = 1.25
@@ -427,6 +429,90 @@ class Module:
                                     1, 30, 1, show_value=False)
 
             settings.add_reveal_row(slider, "org.cinnamon.desktop.a11y.mouse", "dwell-click-enabled")
+
+
+
+            page = SettingsPage()
+            self.sidePage.stack.add_titled(page, "windows", _("Windows"))
+
+            settings = page.add_section(_("Scrolling"))
+
+            self.gtk2_scrollbar_editor = Gtk2ScrollbarSizeEditor(widget.get_scale_factor())
+
+            switch = CssOverrideSwitch(_("Override the current theme's scrollbar width"))
+            settings.add_row(switch)
+            self.scrollbar_switch = switch.content_widget
+
+            widget = CssRange(_("Scrollbar width"), "scrollbar slider", ["min-width", "min-height"], 2, 40, "px", None, switch)
+            settings.add_reveal_row(widget)
+
+            try:
+                widget.sync_initial_switch_state()
+            except PermissionError as e:
+                print(e)
+                switch.set_sensitive(False)
+
+            self.scrollbar_css_range = widget.content_widget
+            self.scrollbar_css_range.get_adjustment().set_page_increment(2.0)
+
+            switch.content_widget.connect("notify::active", self.on_css_override_active_changed)
+            widget.content_widget.connect("value-changed", self.on_range_slider_value_changed)
+
+            self.on_css_override_active_changed(switch)
+
+            widget = PreviewWidget()
+            settings.add_row(widget)
+            
+
+            label_widget = LabelRow(_(
+"""Changes will take effect the next time you log in and may not affect all applications."""))
+            settings.add_row(label_widget)
+
+            settings = page.add_section(_("Window resizing"))
+
+            switch = Switch(_("Override the margin for resizing windows"))
+            settings.add_row(switch)
+
+            scale = GSettingsRange(_("Margin size"),
+                                   "org.cinnamon.muffin", "draggable-border-width",
+                                   _("Smaller"), _("Larger"), 5, 30, step=5.0, show_value=True)
+            scale.add_mark(10, Gtk.PositionType.TOP, None)
+            settings.add_reveal_row(scale)
+
+            switch.content_widget.set_active(scale.content_widget.get_value() != 10)
+            scale.revealer.set_reveal_child(scale.content_widget.get_value() != 10)
+
+            scale.content_widget.connect("change-value", self.round_to_fives)
+            scale.content_widget.connect("value-changed", self.real_margin_value_changed)
+            switch.content_widget.connect("notify::active", self.margin_switch_changed, scale)
+
+            # self.scrollbar_switch = switch.content_widget
+
+            # widget = CssRange(_("Scrollbar width"), "scrollbar slider", ["min-width", "min-height"], 2, 40, "px", None, switch)
+            # settings.add_reveal_row(widget)
+
+    def round_to_fives(self, widget, scroll, value, data=None):
+        if value % 5 != 0:
+            widget.set_value(round(value / 5) * 5)
+            return True
+        return False
+
+    def margin_switch_changed(self, widget, pspec, scale):
+        if widget.get_active():
+            scale.revealer.set_reveal_child(True)
+        else:
+            scale.revealer.set_reveal_child(False)
+            scale.set_value(10)
+
+    def on_css_override_active_changed(self, switch, pspec=None, data=None):
+        if self.scrollbar_switch.get_active():
+            self.gtk2_scrollbar_editor.set_size(self.scrollbar_css_range.get_value())
+        else:
+            self.gtk2_scrollbar_editor.set_size(0)
+
+    def on_range_slider_value_changed(self, widget, data=None):
+        if self.scrollbar_switch.get_active():
+            self.gtk2_scrollbar_editor.set_size(widget.get_value())
 
     def on_dep_satisfied(self):
         self.ssc_section._revealer.set_reveal_child(True)
