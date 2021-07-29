@@ -220,7 +220,14 @@ class SimpleButton extends WorkspaceButton {
             this.actor.add_style_class_name('vertical');
         }
 
-        let label = new St.Label({ text: (index + 1).toString() });
+        let label;
+        if (applet.display_type === "buttons") {
+            label = new St.Label({ text: (index + 1).toString() });
+        } else {
+            label = new St.Label({ text: this.workspace_name });
+            this.actor.style_class = "workspace";
+        }
+
         label.clutter_text.set_ellipsize(Pango.EllipsizeMode.NONE);
         this.actor.set_child(label);
         this.update();
