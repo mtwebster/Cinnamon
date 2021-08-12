@@ -47,7 +47,7 @@ class CinnamonDBusCommand:
         self.arg_list = []
         list_methods = False
 
-        if len(sys.argv) < 2:
+        if len(sys.argv) < 2 or sys.argv[1] == "--help":
             list_methods = True
             print("\nProvide a method name and any parameters.  Available commands are:\n")
 
@@ -76,7 +76,12 @@ class CinnamonDBusCommand:
         if list_methods:
             print("\nNote: boolean arguments should be specified as 0 (false) and 1 (true)")
             print("\nAn example is:   cinnamon-dbus-command GetMonitorWorkRect 0\n")
+            print("\nIf you just want to monitor activity on this interface, run cinnamon-dbus-command --monitor")
             exit(1)
+
+        if len(sys.argv) == 2 and sys.argv[1] == "--monitor":
+            self.do_monitoring()
+            return
 
         self.parse_command(sys.argv[1:])
 
@@ -149,6 +154,32 @@ class CinnamonDBusCommand:
                 return arg
 
         return None
+
+    def do_monitoring(self):
+        bus = Gio.bus_get_sync(Gio.BusType.SESSION)
+        match_rule = "interface='org.Cinnamon', eavesdrop=true"
+
+        var = GLib.Variant("(s)", (match_rule,))
+        # var = GLib.Variant.new_string(match_rule)
+        Gio.DBusConnection.call_sync(bus,
+                                     "org.freedesktop.DBus",
+                                     "/org/freedesktop/DBus",
+                                     "org.freedesktop.DBus",
+                                     "AddMatch",
+                                     var,
+                                     None,
+                                     0,
+                                     -1,
+                                     None)
+
+        self.filter_id = bus.add_filter(self.filter_func, None)
+
+    def filter_func(self, connection, message, incoming, data=None):
+        print("%s: " % message.get_member())
+        # print(message.get_body())
+        message.print_(4)
+        # return message
+
 
 if __name__ == "__main__":
     ml = GLib.MainLoop.new(None, True)
