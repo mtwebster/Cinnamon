@@ -21,7 +21,7 @@
  * @magnifier (Magnifier.Magnifier): The magnifier
  * @xdndHandler (XdndHandler.XdndHandler): The X DND handler
  * @statusIconDispatcher (StatusIconDispatcher.StatusIconDispatcher): The status icon dispatcher
- * @keyboard (Keyboard.Keyboard): The keyboard object
+ * @virtualKeyboard (VirtualKeyboard.Keyboard): The keyboard object
  * @layoutManager (Layout.LayoutManager): The layout manager.
  * \
  * All actors that are part of the Cinnamon UI ar handled by the layout
@@ -90,7 +90,7 @@ var AppletManager = imports.ui.appletManager;
 const SearchProviderManager = imports.ui.searchProviderManager;
 const DeskletManager = imports.ui.deskletManager;
 const ExtensionSystem = imports.ui.extensionSystem;
-const Keyboard = imports.ui.keyboard;
+const VirtualKeyboard = imports.ui.virtualKeyboard;
 const MessageTray = imports.ui.messageTray;
 const OsdWindow = imports.ui.osdWindow;
 const Overview = imports.ui.overview;
@@ -418,7 +418,7 @@ function start() {
 
     wm = new imports.ui.windowManager.WindowManager();
     messageTray = new MessageTray.MessageTray();
-    keyboard = new Keyboard.Keyboard();
+    virtualKeyboard = new VirtualKeyboard.Keyboard();
     notificationDaemon = new NotificationDaemon.NotificationDaemon();
     windowAttentionHandler = new WindowAttentionHandler.WindowAttentionHandler();
     placesManager = new PlacesManager.PlacesManager();
@@ -426,7 +426,7 @@ function start() {
     magnifier = new Magnifier.Magnifier();
 
     layoutManager.init();
-    keyboard.init();
+    virtualKeyboard.init();
     overview.init();
     expo.init();
 
