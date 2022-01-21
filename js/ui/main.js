@@ -91,6 +91,7 @@ const SearchProviderManager = imports.ui.searchProviderManager;
 const DeskletManager = imports.ui.deskletManager;
 const ExtensionSystem = imports.ui.extensionSystem;
 const VirtualKeyboard = imports.ui.virtualKeyboard;
+const KeyboardLayouts = imports.misc.keyboardLayouts;
 const MessageTray = imports.ui.messageTray;
 const OsdWindow = imports.ui.osdWindow;
 const Overview = imports.ui.overview;
@@ -146,7 +147,8 @@ var uiGroup = null;
 var magnifier = null;
 var xdndHandler = null;
 var statusIconDispatcher = null;
-var keyboard = null;
+var virtualKeyboard = null;
+var keyboardLayoutManager = null;
 var layoutManager = null;
 var themeManager = null;
 var keybindingManager = null;
@@ -290,6 +292,8 @@ function start() {
     global.logWarning = _logWarning;
     global.logError = _logError;
     global.log = _logInfo;
+
+    keyboardLayoutManager = new KeyboardLayouts.KeyboardLayoutManager();
 
     installPolyfills(readOnlyError, _log);
 
