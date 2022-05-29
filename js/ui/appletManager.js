@@ -168,7 +168,7 @@ function createAppletDefinition(definition) {
 
         // Panel might not exist. Still keep definition for future use.
         if (panel) {
-            orientation = setOrientationForPanel(panel.panelPosition);
+            orientation = setOrientationForPanel(panel.panel_loc);
         }
 
         let appletDefinition = {
@@ -712,7 +712,7 @@ function get_object_for_uuid (uuid, instanceId) {
 function loadAppletsOnPanel(panel) {
     let orientation;
 
-    orientation = setOrientationForPanel(panel.panelPosition);
+    orientation = setOrientationForPanel(panel.panel_loc);
 
     for (var i = 0; i < definitions.length; i++) {
         if (definitions[i].panelId === panel.panelId) {
@@ -732,7 +732,7 @@ function loadAppletsOnPanel(panel) {
  * Updates the definition, orientation and height of applets on the panel
  */
 function updateAppletsOnPanel (panel) {
-    let orientation = setOrientationForPanel(panel.panelPosition);
+    let orientation = setOrientationForPanel(panel.panel_loc);
 
     for (let i = 0; i < definitions.length; i++) {
         if (definitions[i].panelId === panel.panelId) {
