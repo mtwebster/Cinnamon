@@ -519,15 +519,11 @@ class AppMenuButton {
         if (this._tooltip  && this._tooltip.set_text)
             this._tooltip.set_text(title);
 
-        // FIXME
-        // if (this.metaWindow.minimized) {
-        //     title = "["+ title +"]";
-        // } else if (this.metaWindow.tile_type == Meta.WindowTileType.TILED) {
-        //     title = "|"+ title;
-        // }
-        // else if (this.metaWindow.tile_type == Meta.WindowTileType.SNAPPED) {
-        //     title = "||"+ title;
-        // }
+        if (this.metaWindow.minimized) {
+            title = "["+ title +"]";
+        } else if (this.metaWindow.tile_mode != Meta.TileMode.NONE && this.metaWindow.tile_mode != Meta.TileMode.MAXIMIZED) {
+            title = "|"+ title;
+        }
 
         this._label.set_text(title);
     }
