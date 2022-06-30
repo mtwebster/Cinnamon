@@ -194,7 +194,7 @@ cinnamon_tray_manager_ensure_resources (CinnamonTrayManager *manager)
 
   manager->priv->icons = g_hash_table_new_full (NULL, NULL,
                                                 NULL, free_tray_icon);
-
+g_printerr ("ensure resource\n");
   manager->priv->na_manager = na_tray_manager_new ();
 
   g_signal_connect (manager->priv->na_manager, "tray-icon-added",
@@ -206,6 +206,7 @@ cinnamon_tray_manager_ensure_resources (CinnamonTrayManager *manager)
 static void
 cinnamon_tray_manager_release_resources (CinnamonTrayManager *manager)
 {
+    g_printerr ("cinnamon release?\n");
   g_clear_object (&manager->priv->na_manager);
   g_clear_pointer (&manager->priv->icons, g_hash_table_destroy);
 }
@@ -240,7 +241,7 @@ cinnamon_tray_manager_manage_screen (CinnamonTrayManager *manager,
                                   StWidget         *theme_widget)
 {
   MetaDisplay *display = cinnamon_global_get_display (cinnamon_global_get ());
-
+g_printerr ("manager   it %p\n", manager->priv->na_manager);
   g_set_weak_pointer (&manager->priv->theme_widget, theme_widget);
 
   if (meta_display_get_x11_display (display) != NULL)
@@ -275,6 +276,8 @@ cinnamon_tray_manager_unmanage_screen (CinnamonTrayManager *manager)
   g_set_weak_pointer (&manager->priv->theme_widget, NULL);
 
   cinnamon_tray_manager_release_resources (manager);
+  g_printerr ("cinnamon unmanager\n");
+  // na_tray_manager_unmanage_screen (manager->priv->na_manager);
 }
 
 static void

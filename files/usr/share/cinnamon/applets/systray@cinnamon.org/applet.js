@@ -61,6 +61,7 @@ class CinnamonSystrayApplet extends Applet.Applet {
     }
 
     on_applet_reloaded() {
+        global.trayReloading = true;
     }
 
     on_applet_removed_from_panel() {
@@ -81,12 +82,14 @@ class CinnamonSystrayApplet extends Applet.Applet {
 
         if (global.trayReloading) {
             global.trayReloading = false;
+            log("redisplay reloading");
             Main.statusIconDispatcher.redisplay();
         }
     }
 
     on_panel_icon_size_changed(size) {
         this.icon_size = size * global.ui_scale;
+        log("redisplayh icon size");
         Main.statusIconDispatcher.redisplay();
     }
 
@@ -145,6 +148,7 @@ class CinnamonSystrayApplet extends Applet.Applet {
                 }
                 else
                 if (etype === Clutter.EventType.LEAVE) {
+                    log("has" + button.has_pointer);
                     button.remove_style_pseudo_class("hover");
                 }
 

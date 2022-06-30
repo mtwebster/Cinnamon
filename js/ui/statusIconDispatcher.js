@@ -28,6 +28,7 @@ function StatusIconDispatcher() {
 
 StatusIconDispatcher.prototype = {
     _init: function() {
+        this.themeWidget = null;
         this._traymanager = new Cinnamon.TrayManager();
         this._traymanager.connect('tray-icon-added', Lang.bind(this, this._onTrayIconAdded));
         this._traymanager.connect('tray-icon-removed', Lang.bind(this, this._onTrayIconRemoved));
@@ -41,12 +42,18 @@ StatusIconDispatcher.prototype = {
     
     redisplay: function() {
         this.emit('before-redisplay');
-        this._traymanager.redisplay();
+        log("before red");
+        this._traymanager.unmanage_screen();
+        this.start();
+        log("after red");
         this.emit('after-redisplay');
     },
 
     start: function(themeWidget) {
-        this._traymanager.manage_screen(themeWidget);
+        if (this.themeWidget === null) {
+            this.themeWidget = themeWidget;
+        }
+        this._traymanager.manage_screen(this.themeWidget);
     },
 
     set_tray_orientation: function(orientation) {

@@ -83,8 +83,6 @@ static void na_tray_manager_get_property (GObject      *object,
                       GValue       *value,
                       GParamSpec   *pspec);
 
-static void na_tray_manager_unmanage (NaTrayManager *manager);
-
 G_DEFINE_TYPE (NaTrayManager, na_tray_manager, G_TYPE_OBJECT)
 
 static void
@@ -192,8 +190,8 @@ na_tray_manager_finalize (GObject *object)
   NaTrayManager *manager;
   
   manager = NA_TRAY_MANAGER (object);
-
-  na_tray_manager_unmanage (manager);
+g_printerr ("FINALIZE\n");
+  na_tray_manager_unmanage_screen (manager);
 
   g_list_free (manager->messages);
   g_hash_table_destroy (manager->socket_table);
@@ -498,7 +496,8 @@ na_tray_manager_window_filter (GdkXEvent *xev,
   else if (xevent->type == SelectionClear)
     {
       g_signal_emit (manager, manager_signals[LOST_SELECTION], 0);
-      na_tray_manager_unmanage (manager);
+      g_printerr ("SELECT CLEAR\n");
+      na_tray_manager_unmanage_screen (manager);
     }
 
   return GDK_FILTER_CONTINUE;
@@ -519,8 +518,8 @@ na_tray_manager_selection_clear_event (GtkWidget         *widget,
 #endif
 #endif  
 
-static void
-na_tray_manager_unmanage (NaTrayManager *manager)
+void
+na_tray_manager_unmanage_screen (NaTrayManager *manager)
 {
 #ifdef GDK_WINDOWING_X11
   GdkDisplay *display;
@@ -691,15 +690,12 @@ na_tray_manager_manage_screen_x11 (NaTrayManager *manager)
   guint32 timestamp;
   
   g_return_val_if_fail (NA_IS_TRAY_MANAGER (manager), FALSE);
-  g_return_val_if_fail (manager->screen == NULL, FALSE);
 
   /* If there's already a manager running on the screen
    * we can't create another one.
    */
-#if 0
   if (na_tray_manager_check_running_screen_x11 ())
     return FALSE;
-#endif
   
   screen = gdk_screen_get_default ();
   manager->screen = screen;
@@ -794,8 +790,6 @@ na_tray_manager_manage_screen_x11 (NaTrayManager *manager)
 gboolean
 na_tray_manager_manage_screen (NaTrayManager *manager)
 {
-  g_return_val_if_fail (manager->screen == NULL, FALSE);
-
 #ifdef GDK_WINDOWING_X11
   return na_tray_manager_manage_screen_x11 (manager);
 #else
