@@ -597,8 +597,15 @@ function _trimWorkspaceNames() {
     }
 }
 
-function _makeDefaultWorkspaceName(index) {
-    return _("Workspace") + " " + (index + 1).toString();
+function _makeDefaultWorkspaceName(index, add_mnemonic=false) {
+    let name = _("Workspace") + " ";
+
+    if (add_mnemonic) {
+        return name + "_" + (index + 1).toString();
+    }
+    else {
+        return name + (index + 1).toString();
+    }
 }
 
 /**
