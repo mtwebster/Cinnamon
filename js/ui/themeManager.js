@@ -10,6 +10,8 @@ const Signals = imports.signals;
 
 const SETTINGS_SCHEMA = 'org.cinnamon.theme';
 const SETTINGS_KEY = 'name';
+const IFACE_SCHEMA = 'org.cinnamon.desktop.interface';
+const HIGH_CONTRAST_KEY = 'high-contrast';
 
 function ThemeManager() {
     this._init();
@@ -19,8 +21,10 @@ ThemeManager.prototype = {
     _init: function() {
         this._settings = new Gio.Settings({ schema_id: SETTINGS_SCHEMA });
         this._changedId = this._settings.connect('changed::'+SETTINGS_KEY, Lang.bind(this, this._changeTheme));
+        this._ifaceSettings = new Gio.Settings({ schema_id: IFACE_SCHEMA });
+        this._ifaceChangedId = this._ifaceSettings.connect('changed::'+HIGH_CONTRAST_KEY, Lang.bind(this, this._changeTheme));
         this._changeTheme();
-    },    
+    },
     
     _findTheme: function(themeName) {
         /* This follows the same order of precedence that Gtk uses for icon and widget themes. */
@@ -60,7 +64,17 @@ ThemeManager.prototype = {
             }
         }
         let _stylesheet = null;
-        let _themeName = this._settings.get_string(SETTINGS_KEY);        
+
+        let _themeName;
+        let _settingsThemeName = this._settings.get_string(SETTINGS_KEY);
+
+        if (this._ifaceSettings.get_boolean(HIGH_CONTRAST_KEY)) {
+            global.log('loading high-contrast theme');
+            _themeName = "CinnamonHighContrast";
+            Gtk.IconTheme.get_default().append_search_path()
+        } else {
+            _themeName = _settingsThemeName;
+        }
 
         if (_themeName) {
             this.themeDirectory = this._findTheme(_themeName);

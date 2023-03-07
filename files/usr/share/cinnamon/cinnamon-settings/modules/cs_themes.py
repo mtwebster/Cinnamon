@@ -262,8 +262,6 @@ class Module:
                         cache_file.write('%s:%s\n' % (theme_name, icon_path))
 
         else:
-            if path_suffix == "cinnamon":
-                chooser.add_picture("/usr/share/cinnamon/theme/thumbnail.png", callback, title="cinnamon", id="cinnamon")
             for theme in themes:
                 theme_name = theme[0]
                 theme_path = theme[1]

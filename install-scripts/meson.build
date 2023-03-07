@@ -18,4 +18,7 @@ meson.add_install_script('meson_install_schemas.py')
 meson.add_install_script('meson_update_icon_cache.py')
 
 # Add a symlink to applications-merged
-meson.add_install_script('add_symlink.py')
+meson.add_install_script('add_xdg_menu_link.py')
+
+# Add a symlink to our default and high-contrast themes in /usr/share/cinnamon
+meson.add_install_script('add_theme_links.py')

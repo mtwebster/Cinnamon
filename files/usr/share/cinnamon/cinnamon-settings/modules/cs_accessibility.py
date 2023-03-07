@@ -51,12 +51,9 @@ class Module:
 
             settings = page.add_section(_("Visual Aids"))
 
-            switch = Switch(_("High contrast"))
-            self.iface_settings.bind_with_mapping(KEY_GTK_THEME,
-                                                  switch.content_widget, "active",
-                                                  Gio.SettingsBindFlags.DEFAULT,
-                                                  self.hi_con_get_mapping,
-                                                  self.hi_con_set_mapping)
+            switch = GSettingsSwitch(_("High contrast"),
+                                     "org.cinnamon.desktop.interface",
+                                     "high-contrast")
             settings.add_row(switch)
 
             switch = Switch(_("Large text"))
@@ -421,36 +418,6 @@ class Module:
             ret = "shape"
         else:
             ret = "screen"
-
-        return ret
-
-    def hi_con_get_mapping(self, string):
-        return string == HIGH_CONTRAST_THEME
-
-    def hi_con_set_mapping(self, active):
-        ret = None
-
-        if active:
-            ret = HIGH_CONTRAST_THEME
-
-            theme = self.iface_settings.get_string(KEY_GTK_THEME)
-            self.iface_settings.set_string(KEY_GTK_THEME_BACKUP, theme)
-
-            theme = self.iface_settings.get_string(KEY_ICON_THEME)
-            self.iface_settings.set_string(KEY_ICON_THEME_BACKUP, theme)
-            self.iface_settings.set_string(KEY_ICON_THEME, HIGH_CONTRAST_THEME)
-
-            theme = self.wm_settings.get_string(KEY_WM_THEME)
-            self.wm_settings.set_string(KEY_WM_THEME_BACKUP, theme)
-            self.wm_settings.set_string(KEY_WM_THEME, HIGH_CONTRAST_THEME)
-        else:
-            ret = self.iface_settings.get_string(KEY_GTK_THEME_BACKUP)
-
-            theme = self.iface_settings.get_string(KEY_ICON_THEME_BACKUP)
-            self.iface_settings.set_string(KEY_ICON_THEME, theme)
-
-            theme = self.wm_settings.get_string(KEY_WM_THEME_BACKUP)
-            self.wm_settings.set_string(KEY_WM_THEME, theme)
 
         return ret
 

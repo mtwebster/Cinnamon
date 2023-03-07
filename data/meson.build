@@ -5,8 +5,15 @@ install_subdir(
     install_dir: pkgdatadir,
 )
 
+# These themes are symlinked into /usr/share/themes - see install-scripts/add_theme_links.py
 install_subdir(
     'theme',
+    exclude_files: ['theme-changelog.txt'],
+    install_dir: pkgdatadir,
+)
+
+install_subdir(
+    'high-contrast-theme',
     exclude_files: ['theme-changelog.txt'],
     install_dir: pkgdatadir,
 )
