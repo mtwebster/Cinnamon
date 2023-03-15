@@ -150,12 +150,6 @@ configure_file(
     install_dir: 'share/cinnamon/js/misc/'
 )
 
-install_subdir(
-    'files',
-    install_dir: '/',
-    strip_directory: true,
-)
-
 session_conf = configuration_data()
 if has_nm
     session_conf.set('REQUIRED', 'nm-applet;')
@@ -181,3 +175,4 @@ install_subdir(
 subdir('calendar-server')
 subdir('python3')
 subdir('install-scripts')
+subdir('files')
