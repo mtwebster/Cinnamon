@@ -252,7 +252,9 @@ StScrollBar StButton#vhandle:hover {
  * ===================================================================*/
 #panel {
     color: #ffffff;
-    background-color: #555555;
+    background-color: rgba(85, 85, 85, 0.25);
+/*    background-bumpmap: url("/usr/share/cinnamon/bumpmaps/frost.png");*/
+    background-blur: 5px;
     font-weight: normal;
     height: 26px;
     width: 32px;
