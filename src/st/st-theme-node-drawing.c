@@ -2052,7 +2052,7 @@ st_theme_node_paint (StThemeNode           *node,
 
   if (node->prerendered_material != NULL ||
       node->border_slices_material != NULL)
-    {
+    {{
       if (node->prerendered_material != NULL)
         {
           ClutterActorBox paint_box;
