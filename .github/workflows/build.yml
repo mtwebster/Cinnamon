@@ -8,6 +8,12 @@ on:
     branches:
       - master
   workflow_dispatch:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: 'Start an SSH server if the build fails, in order to troubleshoot.'
+        required: false
+        default: false
 
 jobs:
   build:
