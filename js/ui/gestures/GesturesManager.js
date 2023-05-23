@@ -1,3 +1,5 @@
+// -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
+
 /*
  * Copyright 2021 - 2023 José Expósito <jose.exposito89@gmail.com>
  *
@@ -16,37 +18,29 @@
  * You should have received a copy of the  GNU General Public License along with
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
-const { GObject } = imports.gi;
+const { GObject, Cinnamon } = imports.gi;
 
-/**
- * Utility class to print information to the log prefixing it with the extension name.
- */
-const Logger = GObject.registerClass(
-  class Logger extends GObject.Object {
-    _init() {
-      this.extensionName = imports.misc.extensionUtils.getCurrentExtension().uuid;
+const gestures = imports.ui.gestures;
+const { SwitchWorkspaceAction } = gestures.actions.switchWorkspace;
+
+var actions = [];
+
+class GesturesManagerClass extends GObject.Object {
+    static start() {
+        actions = [
+            new SwitchWorkspaceAction()
+        ]
+        for (let action of actions) {
+            action.enable();
+        }
     }
 
-    /**
-     * Log an informative message.
-     *
-     * @param {string} text Text to log.
-     */
-    log(text) {
-      log(`[${this.extensionName}] ${text}`);
+    stop() {
+        for (let action of actions) {
+            action.disable();
+        }
     }
+}
 
-    /**
-     * Log a error message.
-     *
-     * @param {string} text Text to log.
-     * @param {Error} error JS Error object.
-     */
-    error(text, error) {
-      logError(error, `[${this.extensionName}] ${text}`);
-    }
-  },
-);
-
-var logger = // eslint-disable-line
-  new Logger();
+var GesturesManager = // eslint-disable-line
+  GObject.registerClass(GesturesManagerClass);

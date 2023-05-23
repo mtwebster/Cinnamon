@@ -19,10 +19,9 @@
 const { GObject, Gio, GLib } = imports.gi;
 const ByteArray = imports.byteArray;
 
-const SRC = imports.misc.extensionUtils.getCurrentExtension().imports.src;
-const { GestureType, GestureDirection } = SRC.touchegg.ToucheggTypes;
-const { AllowedGesture } = SRC.utils.AllowedGesture;
-const { logger } = SRC.utils.Logger;
+const gestures = imports.ui.gestures;
+const { GestureType, GestureDirection } = gestures.touchegg.ToucheggTypes;
+const { AllowedGesture } = gestures.utils.AllowedGesture;
 
 class ToucheggConfigClass extends GObject.Object {
   /**
@@ -72,13 +71,13 @@ class ToucheggConfigClass extends GObject.Object {
 
       // Write the changes
       if (changes !== '') {
-        logger.log('Updating Touchégg configuration');
+        global.log('Updating Touchégg configuration');
         const newXml = `${xml.substring(0, appCloseTagIndex)}\n${changes}${xml.substring(appCloseTagIndex)}`;
         this.createDir(this.getUserConfigDirPath());
         await this.writeFile(this.getUserConfigFilePath(), newXml);
       }
     } catch (error) {
-      logger.error('Error updating Touchégg config', error);
+      global.logError('Error updating Touchégg config', error);
     }
   }
 

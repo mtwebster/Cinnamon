@@ -53,6 +53,7 @@
  *
  * @keybindingManager (KeybindingManager.KeybindingManager): The keybinding manager
  * @systrayManager (Systray.SystrayManager): The systray manager
+ * @gesturesManager (GesturesManager.GesturesManager): Gesture support  from ToucheEgg.
  *
  * @osdWindow (OsdWindow.OsdWindow): Osd window that pops up when you use media
  * keys.
@@ -122,6 +123,7 @@ const {readOnlyError} = imports.ui.environment;
 const {installPolyfills} = imports.ui.overrides;
 const InputMethod = imports.misc.inputMethod;
 const ScreenRecorder = imports.ui.screenRecorder;
+var {GesturesManager} = imports.ui.gestures.GesturesManager;
 
 var LAYOUT_TRADITIONAL = "traditional";
 var LAYOUT_FLIPPED = "flipped";
@@ -169,6 +171,7 @@ var settingsManager = null;
 var systrayManager = null;
 var wmSettings = null;
 var pointerSwitcher = null;
+var gesturesManager = null;
 
 var workspace_names = [];
 
@@ -410,6 +413,8 @@ function start() {
     virtualKeyboard.init();
     overview.init();
     expo.init();
+
+    // GesturesManager.start();
 
     _addXletDirectoriesToSearchPath();
     _initUserSession();

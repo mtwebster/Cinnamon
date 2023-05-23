@@ -18,8 +18,8 @@
  */
 const { GObject } = imports.gi;
 
-const SRC = imports.misc.extensionUtils.getCurrentExtension().imports.src;
-const { GestureType, GestureDirection, DeviceType } = SRC.touchegg.ToucheggTypes;
+const gestures = imports.ui.gestures;
+const { GestureType, GestureDirection, DeviceType } = gestures.touchegg.ToucheggTypes;
 
 /**
  * Utility class used to pass extra settings to our custom SwipeTracker and know if a certain
