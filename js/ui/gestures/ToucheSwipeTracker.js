@@ -65,6 +65,7 @@ class ToucheSwipeTrackerClass extends SwipeTracker {
   }
 
   onToucheggGestureBegin(gesture, type, direction, percentage, fingers, device, time) {
+    log("foo");
     this.previosPercentage = 0;
 
     if (this.allowedGesture.isAllowed(type, fingers, direction, device)) {

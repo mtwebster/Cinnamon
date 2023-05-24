@@ -30,6 +30,7 @@ var SwitchWorkspaceAction = class {
     }
 
     enable() {
+        log("enaable");
         this._begin_id = this.tracker.connect('begin', this.action_begin.bind(this));
         this._update_id = this.tracker.connect('update', this.action_update.bind(this));
         this._end_id = this.tracker.connect('end', this.action_end.bind(this));
@@ -51,6 +52,7 @@ var SwitchWorkspaceAction = class {
     }
 
     action_begin(tracker, monitor) {
+        log("begin");
         if (Meta.prefs_get_workspaces_only_on_primary() &&
             monitor !== Main.layoutManager.primaryIndex)
             return;
@@ -130,12 +132,14 @@ var SwitchWorkspaceAction = class {
         //         xPos = -Math.round(progress * global.screen_width);
         // }
 
+        log("udate");
         // this._switchData.container.set_position(xPos, yPos);
     }
 
     action_end(tracker, duration, endProgress) {
-        if (!this._switchData)
-            return;
+        log("end");
+        // if (!this._switchData)
+        //     return;
 
         let workspaceManager = global.workspace_manager;
         let activeWorkspace = workspaceManager.get_active_workspace();
