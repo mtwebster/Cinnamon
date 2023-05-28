@@ -53,6 +53,7 @@
  *
  * @keybindingManager (KeybindingManager.KeybindingManager): The keybinding manager
  * @systrayManager (Systray.SystrayManager): The systray manager
+ * @gesturesManager (GesturesManager.GesturesManager): Gesture support  from ToucheEgg.
  *
  * @osdWindow (OsdWindow.OsdWindow): Osd window that pops up when you use media
  * keys.
@@ -122,6 +123,7 @@ const {readOnlyError} = imports.ui.environment;
 const {installPolyfills} = imports.ui.overrides;
 const InputMethod = imports.misc.inputMethod;
 const ScreenRecorder = imports.ui.screenRecorder;
+var {GesturesManager} = imports.ui.gestures.gesturesManager;
 
 var LAYOUT_TRADITIONAL = "traditional";
 var LAYOUT_FLIPPED = "flipped";
@@ -169,7 +171,7 @@ var settingsManager = null;
 var systrayManager = null;
 var wmSettings = null;
 var pointerSwitcher = null;
-
+var gesturesManager = null;
 var workspace_names = [];
 
 var applet_side = St.Side.TOP; // Kept to maintain compatibility. Doesn't seem to be used anywhere
@@ -343,6 +345,8 @@ function start() {
 
     keybindingManager = new Keybindings.KeybindingManager();
     deskletContainer = new DeskletManager.DeskletContainer();
+
+    gesturesManager = new GesturesManager();
 
     uiGroup = new Layout.UiActor({ name: 'uiGroup' });
     uiGroup.set_flags(Clutter.ActorFlags.NO_LAYOUT);
