@@ -19,7 +19,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 const { Gio, GObject, Cinnamon } = imports.gi;
-
+const Util = imports.misc.util;
 const gestures = imports.ui.gestures;
 const actions = gestures.actions;
 const { toucheggClient } = gestures.touchegg.ToucheggClient;
@@ -88,6 +88,7 @@ var GesturesManager = class {
         this.setup_actions();
         this._current_gesture = null;
 
+        this._kill_touchegg();
         this.connect_client();
     }
 
@@ -201,6 +202,22 @@ var GesturesManager = class {
         }
 
         this._current_gesture = null;
+    }
+
+    _kill_touchegg() {
+        global.log("Looking for existing touchegg client");
+        Util.spawnCommandLineAsyncIO(
+            "lslocks --json --output COMMAND,PID",
+            (stdout, stderr, code) => {
+                const json = JSON.parse(stdout);
+                for (let pinfo of json.locks) {
+                    if (pinfo.command === "touchegg") {
+                        global.log(`Killing touchegg client (pid ${pinfo.pid})`);
+                        Util.spawnCommandLineAsync(`kill ${pinfo.pid}`);
+                    }
+                }
+            }
+        );
     }
 
 }
