@@ -9,6 +9,12 @@ calendar_generated = gnome.gdbus_codegen('cinnamon-calendar',
   namespace: 'Cinnamon'
 )
 
+touchegg_generated = gnome.gdbus_codegen('touchegg',
+  sources: 'io.github.joseexposito.Touchegg.xml',
+  interface_prefix: 'io.github.joseexposito.',
+  namespace: 'Cinnamon'
+)
+
 cinnamon_headers = [
     'cinnamon-action-mode.h',
     'cinnamon-app.h',
@@ -61,7 +67,8 @@ cinnamon_sources = [
     'cinnamon-window-tracker.c',
     'cinnamon-wm.c',
     cinnamon_headers,
-    calendar_generated
+    calendar_generated,
+    touchegg_generated
 ]
 
 cinnamon_enum_types = gnome.mkenums_simple(
