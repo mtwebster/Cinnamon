@@ -50,7 +50,10 @@ emit_our_signal (CinnamonToucheggClient *client,
     gdouble percentage;
     guint64 elapsed_time;
     g_variant_get (params, "(uudiut)", &type, &direction, &percentage, &fingers, &device, &elapsed_time);
-    g_message ("signal: %s: %u, %u, %f, %d, %u, %lu", our_signal, type, direction, percentage, fingers, device, elapsed_time);
+
+    g_message ("CinnamonToucheggClient signal: %s: type %u, direction %u, progress %0.1f, fingers %d, device %u, elapsed_time %lu",
+               our_signal, type, direction, percentage, fingers, device, elapsed_time);
+
     g_signal_emit_by_name (client, our_signal, type, direction, percentage, fingers, device, g_get_monotonic_time ());
 }
 
@@ -102,6 +105,8 @@ retry_connection (gpointer data)
 {
     g_return_val_if_fail (CINNAMON_IS_TOUCHEGG_CLIENT (data), G_SOURCE_REMOVE);
     CinnamonToucheggClient *client = CINNAMON_TOUCHEGG_CLIENT (data);
+
+    g_message ("CinnamonToucheggClient: retrying connection");
 
     init_connection (client);
 
@@ -158,7 +163,6 @@ connect_listener (CinnamonToucheggClient *client)
                                                                   (GDBusSignalCallback) handle_signal,
                                                                   client,
                                                                   NULL);
-    g_printerr ("what %u\n", priv->signal_listener_id);
 }
 
 static void
@@ -220,6 +224,9 @@ cinnamon_touchegg_client_dispose (GObject *object)
             g_dbus_connection_signal_unsubscribe (priv->connection, priv->signal_listener_id);
             priv->signal_listener_id = 0;
         }
+
+        g_dbus_connection_flush_sync (priv->connection, NULL, NULL);
+        g_dbus_connection_close_sync (priv->connection, NULL, NULL);
 
         g_object_unref (priv->connection);
         priv->connection = NULL;

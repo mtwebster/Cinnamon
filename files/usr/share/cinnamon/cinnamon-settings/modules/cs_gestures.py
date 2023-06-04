@@ -15,6 +15,8 @@ NON_GESTURE_KEYS = [
     "pinch-percent-threshold"
 ]
 
+DEBUG_SHOW_ALL = True
+
 class Module:
     name = "gestures"
     category = "prefs"
@@ -29,8 +31,8 @@ class Module:
         if not self.loaded:
             print("Loading Gestures module")
 
-            have_touchpad = False
-            have_touchscreen =  False
+            have_touchpad = DEBUG_SHOW_ALL
+            have_touchscreen =  DEBUG_SHOW_ALL
 
             # Detect devices.
             out = subprocess.getoutput("csd-input-helper").replace("\t", " ").split("\n")[:4]
@@ -41,8 +43,7 @@ class Module:
                     have_touchscreen = True
 
             page = SettingsPage()
-            have_touchpad = True
-            have_touchscreen  = True
+
             if not have_touchpad and not have_touchscreen:
                 self.sidePage.add_widget(page)
                 image = Gtk.Image(icon_name="touch-disabled-symbolic", icon_size=Gtk.IconSize.DIALOG)

@@ -286,9 +286,6 @@ var init_mixer = () => {
     }
 
     mixer = new Cvc.MixerControl({ name: "cinnamon-gestures" });
-    // mixer.connect('state-changed', () => {
-
-    // });
     mixer.open();
 }
 
@@ -302,22 +299,42 @@ var VolumeAction = class extends BaseAction {
             init_mixer();
         }
 
+        this.ignoring = true;
+
         this.max_volume = mixer.get_vol_max_norm();
-        this.pct_step = this.max_volume / this.threshold;
-        this.last_percent = 0;
+        this.pct_step = this.max_volume / 100;
     }
 
-    _set_volume(increment) {
+    _set_volume(up, percentage) {
         const sink = mixer.get_default_sink();
 
         if (sink == null) {
             return;
         }
 
-        const new_volume = (sink.volume + increment).clamp(0, this.max_volume);
+        var new_volume = sink.volume;
+
+        if (this.ignoring) {
+            if (up) {
+                if (percentage * this.pct_step < sink.volume) {
+                    return;
+                }
+            } else {
+                if (percentage * this.pct_step >= sink.volume) {
+                    return;
+                }
+            }
+
+            this.ignoring = false;
+        }
+
+        new_volume = percentage * this.pct_step;
+        new_volume = new_volume.clamp(0, this.max_volume);
+        
         if (new_volume === sink.volume) {
             return;
         }
+
         sink.set_volume(new_volume);
         sink.push_volume();
 
@@ -359,43 +376,20 @@ var VolumeAction = class extends BaseAction {
     }
 
     begin(direction, percentage, time) {
-        this.last_percent = percentage;
-        let increment = 0;
-
-        if (this.definition.action === "VOLUME_UP") {
-            increment += (this.pct_step * percentage);
-        }
-        else
-        if (this.definition.action === "VOLUME_DOWN") {
-            increment -= (this.pct_step * percentage);
-        }
-
-        this._set_volume(increment);
+        this.update(direction, percentage, time);
     }
 
     update(direction, percentage, time) {
-        const percentage_diff = percentage - this.last_percent;
-
-        if (percentage_diff === 0) {
-            return;
-        }
-
-        let increment = 0;
-
         if (this.definition.action === "VOLUME_UP") {
-            increment += (this.pct_step * percentage_diff);
+            this._set_volume(true, percentage);
         }
         else
         if (this.definition.action === "VOLUME_DOWN") {
-            increment -= (this.pct_step * percentage_diff);
+            this._set_volume(false, 100 - percentage);
         }
-
-        this._set_volume(increment);
-        this.last_percent = percentage;
     }
 
     end(direction, percentage, time) {
-        global.log("mute", this.definition.action);
         if (this.definition.action === "TOGGLE_MUTE") {
             this._toggle_muted();
         }
