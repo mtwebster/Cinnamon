@@ -302,7 +302,7 @@ var VolumeAction = class extends BaseAction {
         this.ignoring = true;
 
         this.max_volume = mixer.get_vol_max_norm();
-        this.pct_step = this.max_volume / 100;
+        this.pct_step = Math.ceil(this.max_volume / 100);
     }
 
     _set_volume(up, percentage) {
@@ -313,14 +313,15 @@ var VolumeAction = class extends BaseAction {
         }
 
         var new_volume = sink.volume;
+        var int_pct = Math.ceil(percentage)
 
         if (this.ignoring) {
             if (up) {
-                if (percentage * this.pct_step < sink.volume) {
+                if (int_pct * this.pct_step < sink.volume - 2*this.pct_step) {
                     return;
                 }
             } else {
-                if (percentage * this.pct_step >= sink.volume) {
+                if (int_pct * this.pct_step >= sink.volume + 2*this.pct_step) {
                     return;
                 }
             }
@@ -328,12 +329,8 @@ var VolumeAction = class extends BaseAction {
             this.ignoring = false;
         }
 
-        new_volume = percentage * this.pct_step;
+        new_volume = int_pct * this.pct_step;
         new_volume = new_volume.clamp(0, this.max_volume);
-        
-        if (new_volume === sink.volume) {
-            return;
-        }
 
         sink.set_volume(new_volume);
         sink.push_volume();
@@ -342,7 +339,7 @@ var VolumeAction = class extends BaseAction {
             sink.change_is_muted(false);
         }
 
-        Main.osdWindowManager.show(-1, this._get_volume_icon(new_volume), Math.floor(new_volume / this.max_volume * 100), false);
+        Main.osdWindowManager.show(-1, this._get_volume_icon(int_pct, false), int_pct, false);
     }
 
     _toggle_muted() {
@@ -353,24 +350,23 @@ var VolumeAction = class extends BaseAction {
         }
 
         sink.change_is_muted(!sink.is_muted);
+
+        const percent = sink.is_muted ? 0 : (sink.volume / this.pct_step).clamp(0, 100);
+        Main.osdWindowManager.show(-1, this._get_volume_icon(percent), percent, false);
     }
 
-    _get_volume_icon(volume) {
+    _get_volume_icon(volume_pct) {
         let icon;
-        if (volume < 5) {
+        if (volume_pct < 1)
             icon = "muted";
-        } else {
-            const icon_step = Math.floor(this.max_volume / 3);
-            if (volume < icon_step)
-                icon = "low";
-            else
-            if (volume < icon_step * 2) {
-                icon = "medium";
-            }
-            else {
-                icon = "high";
-            }
-        }
+        else
+        if (volume_pct < 33)
+            icon = "low";
+        else
+        if (volume_pct < 66)
+            icon = "medium";
+        else
+            icon = "high";
 
         return new Gio.ThemedIcon({ name: `audio-volume-${icon}-symbolic` });
     }

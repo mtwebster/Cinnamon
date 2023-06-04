@@ -87,7 +87,7 @@ var parse_direction = (dir_str) => {
     }
 }
 
-const DEBUG_GESTURES=true;
+const DEBUG_GESTURES=false;
 var debug_gesture = (...args) => {
     if (DEBUG_GESTURES) {
         global.log(...args);
@@ -125,6 +125,10 @@ var GesturesManager = class {
 
         this._kill_touchegg();
         this.connect_client();
+    }
+
+    gesture_active() {
+        return this._current_gesture != null;
     }
 
     setup_actions() {

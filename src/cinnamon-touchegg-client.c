@@ -51,8 +51,8 @@ emit_our_signal (CinnamonToucheggClient *client,
     guint64 elapsed_time;
     g_variant_get (params, "(uudiut)", &type, &direction, &percentage, &fingers, &device, &elapsed_time);
 
-    g_message ("CinnamonToucheggClient signal: %s: type %u, direction %u, progress %0.1f, fingers %d, device %u, elapsed_time %lu",
-               our_signal, type, direction, percentage, fingers, device, elapsed_time);
+    g_debug ("CinnamonToucheggClient signal: %s: type %u, direction %u, progress %0.1f, fingers %d, device %u, elapsed_time %lu",
+             our_signal, type, direction, percentage, fingers, device, elapsed_time);
 
     g_signal_emit_by_name (client, our_signal, type, direction, percentage, fingers, device, g_get_monotonic_time ());
 }
@@ -124,7 +124,7 @@ connection_lost (GDBusConnection *connection,
 
     if (g_strcmp0 (priv->last_signal, "gesture-end") != 0)
     {
-        emit_our_signal (client, priv->last_signal, priv->last_params);
+        emit_our_signal (client, "gesture-end", priv->last_params);
 
         g_clear_pointer (&priv->last_signal, g_free);
         g_clear_pointer (&priv->last_params, g_variant_unref);
@@ -180,7 +180,7 @@ got_connection (GObject      *source,
     if (error != NULL)
     {
         g_critical ("Couldn't connect with touchegg daemon: %s", error->message);
-        g_free (error);
+        g_error_free (error);
         g_timeout_add_seconds (5, (GSourceFunc) retry_connection, client);
         return;
     }

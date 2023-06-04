@@ -897,16 +897,16 @@ function _log(category = 'info', msg = '') {
 
     _errorLogStack.push(out);
 
-    // if (lookingGlass) {
-    //     if (lookingGlassUpdateID > 0) {
-    //         GLib.source_remove (lookingGlassUpdateID);
-    //     }
+    if (lookingGlass && !gesturesManager.gesture_active()) {
+        if (lookingGlassUpdateID > 0) {
+            GLib.source_remove (lookingGlassUpdateID);
+        }
 
-    //     lookingGlassUpdateID = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-    //          lookingGlass.emitLogUpdate();
-    //          lookingGlassUpdateID = 0;
-    //     });
-    // }
+        lookingGlassUpdateID = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+             lookingGlass.emitLogUpdate();
+             lookingGlassUpdateID = 0;
+        });
+    }
 
     log(`[LookingGlass/${category}] ${text}`);
 }
