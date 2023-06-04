@@ -123,7 +123,7 @@ const {readOnlyError} = imports.ui.environment;
 const {installPolyfills} = imports.ui.overrides;
 const InputMethod = imports.misc.inputMethod;
 const ScreenRecorder = imports.ui.screenRecorder;
-var {GesturesManager} = imports.ui.gestures.gesturesManager;
+const {GesturesManager} = imports.ui.gestures.gesturesManager;
 
 var LAYOUT_TRADITIONAL = "traditional";
 var LAYOUT_FLIPPED = "flipped";
@@ -142,6 +142,7 @@ var overview = null;
 var expo = null;
 var runDialog = null;
 var lookingGlass = null;
+var lookingGlassUpdateID = 0;
 var wm = null;
 var a11yHandler = null;
 var messageTray = null;
@@ -896,9 +897,16 @@ function _log(category = 'info', msg = '') {
 
     _errorLogStack.push(out);
 
-    if (lookingGlass) {
-        lookingGlass.emitLogUpdate();
-    }
+    // if (lookingGlass) {
+    //     if (lookingGlassUpdateID > 0) {
+    //         GLib.source_remove (lookingGlassUpdateID);
+    //     }
+
+    //     lookingGlassUpdateID = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+    //          lookingGlass.emitLogUpdate();
+    //          lookingGlassUpdateID = 0;
+    //     });
+    // }
 
     log(`[LookingGlass/${category}] ${text}`);
 }

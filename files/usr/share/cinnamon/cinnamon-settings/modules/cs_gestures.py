@@ -42,6 +42,7 @@ class Module:
 
             page = SettingsPage()
             have_touchpad = True
+            have_touchscreen  = True
             if not have_touchpad and not have_touchscreen:
                 self.sidePage.add_widget(page)
                 image = Gtk.Image(icon_name="touch-disabled-symbolic", icon_size=Gtk.IconSize.DIALOG)
@@ -72,12 +73,6 @@ class Module:
 
             keys = sorted([key for key in all_keys if key not in NON_GESTURE_KEYS], key=cmp_to_key(sort_by_direction))
 
-            self.sidePage.stack = SettingsStack()
-            self.sidePage.add_widget(self.sidePage.stack)
-            self.sidePage.stack.add_titled(page, "main", _("Gestures"))
-
-            size_group = Gtk.SizeGroup.new(Gtk.SizeGroupMode.HORIZONTAL)
-
             actions = [
                 ["", _("Disabled")],
                 ["WORKSPACE_NEXT", _("Switch to the next workspace")],
@@ -86,13 +81,11 @@ class Module:
                 # ["WORKSPACE_DOWN", _("Switch to the workspace below")],
                 ["TOGGLE_EXPO", _("Show the workspace selection screen")],
                 ["TOGGLE_OVERVIEW", _("Show the window selection screen")],
-                ["WORKSPACE_UP", _("Switch to the workspace above")],
-                ["WORKSPACE_UP", _("Switch to the workspace above")],
-                ["WORKSPACE_UP", _("Switch to the workspace above")],
-                ["WORKSPACE_UP", _("Switch to the workspace above")],
                 ["MINIMIZE", _("Minimize window")],
                 ["MAXIMIZE", _("Maximize window")],
                 ["CLOSE", _("Close window")],
+                ["WINDOW_WORKSPACE_NEXT", _("Move window to the next workspace")],
+                ["WINDOW_WORKSPACE_PREVIOUS", _("Move window to the previous workspace")],
                 ["FULLSCREEN", _("Make window fullscreen")],
                 ["UNFULLSCREEN", _("Exit window fullscreen")],
                 ["PUSH_TILE_UP", _("Push tile up")],
@@ -100,48 +93,22 @@ class Module:
                 ["PUSH_TILE_LEFT", _("Push tile left")],
                 ["PUSH_TILE_RIGHT", _("Push tile right")],
                 ["TOGGLE_DESKTOP", _("Show desktop")],
-                ["EXEC", _("Execute a command")]
+                ["VOLUME_UP", _("Increase volume")],
+                ["VOLUME_DOWN", _("Decrease volume")],
+                ["TOGGLE_MUTE", _("Toggle mute")],
+                ["EXEC", _("Execute a command")],
             ]
 
-            section = page.add_section(_("Swipe with 3 fingers"))
+            self.sidePage.stack = SettingsStack()
+            self.sidePage.add_widget(self.sidePage.stack)
 
-            for key in keys:
-                label = self.get_key_label(key, "swipe", 3)
-                if not label:
-                    continue
-
-                widget = GestureComboBox(label, self.gesture_settings, key, actions, size_group=size_group)
-                section.add_row(widget)
-
-            section = page.add_section(_("Swipe with 4 fingers"))
-
-            for key in keys:
-                label = self.get_key_label(key, "swipe", 4)
-                if not label:
-                    continue
-
-                widget = GestureComboBox(label, self.gesture_settings, key, actions, size_group=size_group)
-                section.add_row(widget)
-
-            for fingers in range(2, 5):
-                section = page.add_section(_("Pinch with %d fingers") % fingers)
-
-                for key in keys:
-                    label = self.get_key_label(key, "pinch", fingers)
-
-                    if not label:
-                        continue
-
-                    widget = GestureComboBox(label, self.gesture_settings, key, actions, size_group=size_group)
-                    section.add_row(widget)
+            self.sidePage.stack.add_titled(page, "main", _("Swipe"))
+            size_group = Gtk.SizeGroup.new(Gtk.SizeGroupMode.HORIZONTAL)
 
             if have_touchscreen:
-                page = SettingsPage()
-                self.sidePage.stack.add_titled(page, "touchscreen", _("Touchscreen only"))
-
                 size_group = Gtk.SizeGroup.new(Gtk.SizeGroupMode.HORIZONTAL)
 
-                section = page.add_section(_("Swipe with 2 fingers"))
+                section = page.add_section(_("Swipe with 2 fingers"), _("Touchscreen only"))
 
                 for key in keys:
                     label = self.get_key_label(key, "swipe", 2)
@@ -151,7 +118,29 @@ class Module:
                     widget = GestureComboBox(label, self.gesture_settings, key, actions, size_group=size_group)
                     section.add_row(widget)
 
-                section = page.add_section(_("Swipe with 5 fingers"))
+            if have_touchpad or have_touchscreen:
+                section = page.add_section(_("Swipe with 3 fingers"))
+
+                for key in keys:
+                    label = self.get_key_label(key, "swipe", 3)
+                    if not label:
+                        continue
+
+                    widget = GestureComboBox(label, self.gesture_settings, key, actions, size_group=size_group)
+                    section.add_row(widget)
+
+                section = page.add_section(_("Swipe with 4 fingers"))
+
+                for key in keys:
+                    label = self.get_key_label(key, "swipe", 4)
+                    if not label:
+                        continue
+
+                    widget = GestureComboBox(label, self.gesture_settings, key, actions, size_group=size_group)
+                    section.add_row(widget)
+
+            if have_touchscreen:
+                section = page.add_section(_("Swipe with 5 fingers"), _("Touchscreen only"))
 
                 for key in keys:
                     label = self.get_key_label(key, "swipe", 5)
@@ -161,7 +150,25 @@ class Module:
                     widget = GestureComboBox(label, self.gesture_settings, key, actions, size_group=size_group)
                     section.add_row(widget)
 
-                section = page.add_section(_("Pinch with 5 fingers"))
+            page = SettingsPage()
+            self.sidePage.stack.add_titled(page, "pinch", _("Pinch"))
+            size_group = Gtk.SizeGroup.new(Gtk.SizeGroupMode.HORIZONTAL)
+
+            if have_touchpad or have_touchscreen:
+                for fingers in range(2, 5):
+                    section = page.add_section(_("Pinch with %d fingers") % fingers)
+
+                    for key in keys:
+                        label = self.get_key_label(key, "pinch", fingers)
+
+                        if not label:
+                            continue
+
+                        widget = GestureComboBox(label, self.gesture_settings, key, actions, size_group=size_group)
+                        section.add_row(widget)
+
+            if have_touchscreen:
+                section = page.add_section(_("Pinch with 5 fingers"), _("Touchscreen only"))
 
                 for key in keys:
                     label = self.get_key_label(key, "pinch", 5)
@@ -172,7 +179,12 @@ class Module:
                     widget = GestureComboBox(label, self.gesture_settings, key, actions, size_group=size_group)
                     section.add_row(widget)
 
-                section = page.add_section(_("Tapping"))
+            if have_touchscreen:
+                page = SettingsPage()
+                self.sidePage.stack.add_titled(page, "tap", _("Tap"))
+                size_group = Gtk.SizeGroup.new(Gtk.SizeGroupMode.HORIZONTAL)
+
+                section = page.add_section(_("Tapping"), _("Touchscreen only"))
 
                 for fingers in range(2, 6):
                     for key in keys:

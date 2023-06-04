@@ -55,7 +55,39 @@ const DeviceTypeString = [
     "touchscreen"
 ]
 
-const DEBUG_GESTURES=false;
+var parse_type = (type_str) => {
+    switch(type_str) {
+    case "swipe":
+        return GestureType.SWIPE;
+    case "pinch":
+        return GestureType.PINCH;
+    case "tap":
+        return GestureType.TAP;
+    default:
+        return GestureType.NOT_SUPPORTED;
+    }
+}
+
+var parse_direction = (dir_str) => {
+    switch(dir_str) {
+    case "up":
+        return GestureDirection.UP;
+    case "down":
+        return GestureDirection.DOWN;
+    case "left":
+        return GestureDirection.LEFT;
+    case "right":
+        return GestureDirection.RIGHT;
+    case "in":
+        return GestureDirection.IN;
+    case "out":
+        return GestureDirection.OUT
+    default:
+        return GestureDirection.UNKNOWN;
+    }
+}
+
+const DEBUG_GESTURES=true;
 var debug_gesture = (...args) => {
     if (DEBUG_GESTURES) {
         global.log(...args);
@@ -69,11 +101,11 @@ var GestureDefinition = class {
         const parts = key.split("-");
 
         if (parts.length == 2) {
-            this.type = parts[0]; // fix
+            this.type = parse_type(parts[0]);
             this.fingers = parseInt(parts[1]);
         } else {
-            this.type = parts[0]; // fix
-            this.direction = parts[1]; //fix
+            this.type = parse_type(parts[0]);
+            this.direction = parse_direction(parts[1]);
             this.fingers = parseInt(parts[2]);
         }
     }
@@ -81,7 +113,10 @@ var GestureDefinition = class {
 
 var GesturesManager = class {
     constructor(wm) {
-        toucheggClient.stablishConnection();
+        this.client = new Cinnamon.ToucheggClient();
+        // this.client.stablishConnection();
+        // this.client = toucheggClient;
+        // this.client.stablishConnection();
 
         this.settings = new Gio.Settings({ schema_id: SCHEMA })
         this.settings.connect("changed", () => this.setup_actions());
@@ -115,9 +150,13 @@ var GesturesManager = class {
 
     connect_client() {
         global.log('Connecting Touchégg client signals');
-        toucheggClient.connect('begin', this._gesture_begin.bind(this));
-        toucheggClient.connect('update', this._gesture_update.bind(this));
-        toucheggClient.connect('end', this._gesture_end.bind(this));
+        this.client.connect("gesture-begin", this._gesture_begin.bind(this));
+        this.client.connect("gesture-update", this._gesture_update.bind(this));
+        this.client.connect("gesture-end", this._gesture_end.bind(this));
+
+        // toucheggClient.connect('begin', this._gesture_begin.bind(this));
+        // toucheggClient.connect('update', this._gesture_update.bind(this));
+        // toucheggClient.connect('end', this._gesture_end.bind(this));
     }
 
     construct_map_key(type, direction, fingers) {
@@ -137,70 +176,70 @@ var GesturesManager = class {
 
     _lookup_definition(type, direction, fingers) {
         const key = this.construct_map_key(type, direction, fingers);
-        const gesture = this.live_actions.get(key);
+        const definition = this.live_actions.get(key);
 
-        if (gesture === undefined) {
+        if (definition === undefined) {
             // no action set for this gesture
             return null;
         }
 
-        if (this._current_gesture != null && gesture !== this._current_gesture) {
-            global.logWarning("Gesture mismatch (gesture event does not match starting)");
-            return null;
-        }
-
-        return gesture;
+        return definition;
     }
 
-    _gesture_begin(gesture, type, direction, percentage, fingers, device, time) {
+    _gesture_begin(client, type, direction, percentage, fingers, device, elapsed_time) {
         if (this._current_gesture != null) {
             global.logWarning("New gesture started before another was completed. Clearing the old one");
             this._current_gesture = null;
         }
 
-        const def  = this._lookup_definition(type, direction, fingers);
+        const definition_match = this._lookup_definition(type, direction, fingers);
+
+        if (definition_match == null) {
+            debug_gesture(`No definition for (${DeviceTypeString[device]}) ${GestureTypeString[type]}, ${GestureDirectionString[direction]}, fingers: ${fingers}`);
+            return;
+        }
 
         debug_gesture(`Gesture started: (${DeviceTypeString[device]}) ${GestureTypeString[type]}, ${GestureDirectionString[direction]}, fingers: ${fingers}`);
-        this._current_gesture = def;
+
+        this._current_gesture = actions.make_action(this.settings, definition_match, device);
+        this._current_gesture.begin(direction, percentage, elapsed_time);
+
     }
 
-    _gesture_update(gesture, type, direction, percentage, fingers, device, time) {
-        const def  = this._lookup_definition(type, direction, fingers);
-        if (def == null) {
+    _gesture_update(client, type, direction, percentage, fingers, device, elapsed_time) {
+        if (this._current_gesture == null) {
+            global.logWarning("Gesture update but there's no current one.");
             return;
         }
 
-        debug_gesture(`Gesture update: progress: ${parseInt(percentage)}`);
-    }
-
-    _gesture_end(gesture, type, direction, percentage, fingers, device, time) {
         const def  = this._lookup_definition(type, direction, fingers);
-        if (def === null) {
+        if (def == null || this._current_gesture == null || def !== this._current_gesture.definition) {
+            this._current_gesture = null;
+            global.logWarning("Invalid gesture update received, clearing current gesture");
             return;
         }
 
-        let reached = false;
+        debug_gesture(`Gesture update: ${GestureDirectionString[direction]}, progress: ${parseInt(percentage)}`);
+        this._current_gesture.update(direction, percentage, elapsed_time);
+    }
 
-        switch (type) {
-        case GestureType.SWIPE:
-            reached = Math.floor(percentage) >= this.settings.get_uint("swipe-percent-threshold");
-            break;
-        case GestureType.PINCH:
-            reached = Math.floor(percentage) >= this.settings.get_uint("pinch-percent-threshold");
-            break;
-        case GestureType.TAP:
-            reached = true;
-            break;
-        default:
-            break;
+    _gesture_end(client, type, direction, percentage, fingers, device, elapsed_time) {
+        const def  = this._lookup_definition(type, direction, fingers);
+
+        if (def == null || this._current_gesture == null || def !== this._current_gesture.definition) {
+            global.logWarning("Invalid gesture end received, clearing current gesture");
+            return;
         }
 
-        debug_gesture(`${GestureTypeString[type]} end: progress: ${parseInt(percentage)} - activating ${def.action}? ${reached ? "yes" : "no"}`);
+        debug_gesture(`${GestureTypeString[type]} end: progress: ${parseInt(percentage)} (threshold: ${this._current_gesture.threshold})`);
 
-        if (reached) {
-            actions.do_action(def.action, time);
+        if (percentage < this._current_gesture.threshold) {
+            debug_gesture(`Gesture threshold not met`);
+            this._current_gesture = null;
+            return;
         }
 
+        this._current_gesture.end(direction, percentage, elapsed_time)
         this._current_gesture = null;
     }
 

@@ -1,0 +1,30 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+                      "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<node>
+  <interface name='io.github.joseexposito.Touchegg'>
+    <signal name='OnGestureBegin'>
+      <arg name='gesture_type' type='u' />
+      <arg name='gesture_direction' type='u' />
+      <arg name='percentage' type='d' />
+      <arg name='fingers' type='i' />
+      <arg name='performed_on_device_type' type='u' />
+      <arg name='elapsed_time' type='t' />
+    </signal>
+    <signal name='OnGestureUpdate'>
+      <arg name='gesture_type' type='u' />
+      <arg name='gesture_direction' type='u' />
+      <arg name='percentage' type='d' />
+      <arg name='fingers' type='i' />
+      <arg name='performed_on_device_type' type='u' />
+      <arg name='elapsed_time' type='t' />
+    </signal>
+    <signal name='OnGestureEnd'>
+      <arg name='gesture_type' type='u' />
+      <arg name='gesture_direction' type='u' />
+      <arg name='percentage' type='d' />
+      <arg name='fingers' type='i' />
+      <arg name='performed_on_device_type' type='u' />
+      <arg name='elapsed_time' type='t' />
+    </signal>
+  </interface>
+</node>
