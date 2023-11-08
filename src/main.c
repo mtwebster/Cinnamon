@@ -9,10 +9,6 @@
 #include <string.h>
 
 #include <clutter/clutter.h>
-#include <clutter/x11/clutter-x11.h>
-#include <gdk/gdk.h>
-#include <gdk/gdkx.h>
-#include <gtk/gtk.h>
 #include <glib/gi18n-lib.h>
 #include <girepository.h>
 #include <meta/main.h>
@@ -323,9 +319,6 @@ main (int argc, char **argv)
   gchar *env_no_gail;
   gchar *env_no_at_bridge;
 
-  g_setenv ("CLUTTER_DISABLE_XINPUT", "1", TRUE);
-  g_setenv ("CLUTTER_BACKEND", "x11", TRUE);
-
   bindtextdomain (GETTEXT_PACKAGE, LOCALEDIR);
   bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
   textdomain (GETTEXT_PACKAGE);
@@ -364,8 +357,6 @@ main (int argc, char **argv)
     }
   else
     g_unsetenv ("NO_AT_BRIDGE");
-  g_unsetenv ("CLUTTER_DISABLE_XINPUT");
-  g_unsetenv ("CLUTTER_BACKEND");
 
   /* FIXME: Add gjs API to set this stuff and don't depend on the
    * environment.  These propagate to child processes.
