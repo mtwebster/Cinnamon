@@ -13,7 +13,6 @@ Build-Depends:
  intltool,
  libcinnamon-menu-3-dev (>= 4.8),
  libcjs-dev (>= 4.8),
- libdbus-1-dev,
  libgirepository1.0-dev (>= 1.29.15),
  libgl1-mesa-dev,
  libglib2.0-dev (>= 2.52),

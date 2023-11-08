@@ -10,7 +10,6 @@
 
 #include <clutter/clutter.h>
 #include <clutter/x11/clutter-x11.h>
-#include <dbus/dbus-shared.h>
 #include <gdk/gdk.h>
 #include <gdk/gdkx.h>
 #include <gtk/gtk.h>
@@ -89,6 +88,14 @@ cinnamon_dbus_acquire_names (GDBusProxy *bus,
   va_end (al);
 }
 
+/* From dbus/dbus-shared.h */
+#define _DBUS_NAME_FLAG_ALLOW_REPLACEMENT       0x1 /**< Allow another service to become the primary owner if requested */
+#define _DBUS_NAME_FLAG_REPLACE_EXISTING        0x2 /**< Request to replace the current primary owner */
+#define _DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER  1 /**< Service has become the primary owner of the requested name */
+#define _DBUS_REQUEST_NAME_REPLY_IN_QUEUE       2 /**< Service could not become the primary owner and has been placed in the queue */
+#define _DBUS_REQUEST_NAME_REPLY_EXISTS         3 /**< Service is already in the queue */
+#define _DBUS_REQUEST_NAME_REPLY_ALREADY_OWNER  4 /**< Service is already the primary owner */
+
 static void
 cinnamon_dbus_init (gboolean  replace,
                     gboolean *session_running)
@@ -122,16 +129,16 @@ cinnamon_dbus_init (gboolean  replace,
     g_error_free (error);
     exit (1);
   }
-  request_name_flags = G_BUS_NAME_OWNER_FLAGS_ALLOW_REPLACEMENT;
+  request_name_flags = _DBUS_NAME_FLAG_ALLOW_REPLACEMENT;
   if (replace)
-    request_name_flags |= DBUS_NAME_FLAG_REPLACE_EXISTING;
+    request_name_flags |= _DBUS_NAME_FLAG_REPLACE_EXISTING;
 
   cinnamon_dbus_acquire_name (bus,
                            request_name_flags,
                            &request_name_result,
                            CINNAMON_DBUS_SERVICE, TRUE);
-  if (!(request_name_result == DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER
-        || request_name_result == DBUS_REQUEST_NAME_REPLY_ALREADY_OWNER))
+  if (!(request_name_result == _DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER
+        || request_name_result == _DBUS_REQUEST_NAME_REPLY_ALREADY_OWNER))
     {
       g_printerr (CINNAMON_DBUS_SERVICE " already exists on bus and --replace not specified\n");
       exit (1);
@@ -141,7 +148,7 @@ cinnamon_dbus_init (gboolean  replace,
    * We always specify REPLACE_EXISTING to ensure we kill off
    * the existing service if it was running.
    */
-  request_name_flags |= G_BUS_NAME_OWNER_FLAGS_REPLACE;
+  request_name_flags |= _DBUS_NAME_FLAG_REPLACE_EXISTING;
 
   cinnamon_dbus_acquire_names (bus,
                             request_name_flags,
@@ -152,7 +159,7 @@ cinnamon_dbus_init (gboolean  replace,
                             NULL);
   /* ...and the on-screen keyboard service */
   cinnamon_dbus_acquire_name (bus,
-                           DBUS_NAME_FLAG_REPLACE_EXISTING,
+                           _DBUS_NAME_FLAG_REPLACE_EXISTING,
                            &request_name_result,
                            "org.gnome.Caribou.Keyboard", FALSE);
 
