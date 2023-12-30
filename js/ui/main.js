@@ -102,6 +102,7 @@ const Overview = imports.ui.overview;
 const Expo = imports.ui.expo;
 const Panel = imports.ui.panel;
 const PlacesManager = imports.ui.placesManager;
+const PolkitAuthenticationAgent = imports.ui.polkitAuthenticationAgent;
 const RunDialog = imports.ui.runDialog;
 const Layout = imports.ui.layout;
 const LookingGlass = imports.ui.lookingGlass;
@@ -431,10 +432,8 @@ function start() {
     _initUserSession();
     screenRecorder = new ScreenRecorder.ScreenRecorder();
 
-    // Provide the bus object for gnome-session to
-    // initiate logouts.
-    //EndSessionDialog.init();
-
+    PolkitAuthenticationAgent.init();
+    
     _startDate = new Date();
 
     global.display.connect('restart', () => {
