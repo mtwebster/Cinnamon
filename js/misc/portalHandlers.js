@@ -14,7 +14,7 @@ const CinnamonPortalIface =
     '<node> \
         <interface name="org.cinnamon.PortalHandlers"> \
             <method name="GetAppStates"> \
-                <arg type="a{su}" direction="out" name="apps" /> \
+                <arg type="a{sv}" direction="out" name="apps" /> \
             </method> \
             <signal name="RunningAppsChanged"/> \
         </interface> \
@@ -27,7 +27,8 @@ var CinnamonPortalHandler = class CinnamonPortalHandler {
         this._dbusImpl.export(Gio.DBus.session, '/org/Cinnamon');
 
         this.running_apps = {}
-        Cinnamon.AppSystem.get_default().connect("app-state-changed", ()=> this.EmitRunningAppsChanged());
+        Cinnamon.AppSystem.get_default().connect("app-state-changed", () => this.EmitRunningAppsChanged());
+        Cinnamon.WindowTracker.get_default().connect("notify::focus-app", () => this.EmitRunningAppsChanged());
     }
 
     EmitRunningAppsChanged() {
@@ -70,18 +71,18 @@ var CinnamonPortalHandler = class CinnamonPortalHandler {
                 id = app.get_id();
             }
             if (app.get_n_windows() === 0) {
-                apps[id] = XdgAppState.BACKGROUND; // Can't happen currently.
+                apps[id] = GLib.Variant.new_uint32(XdgAppState.BACKGROUND); // Can't happen currently.
             } else {
                 if (this.has_focus(app)) {
-                    apps[id] = XdgAppState.ACTIVE;
+                    apps[id] = GLib.Variant.new_uint32(XdgAppState.ACTIVE);
                 }
                 else
                 {
-                    apps[id] = XdgAppState.RUNNING;
+                    apps[id] = GLib.Variant.new_uint32(XdgAppState.RUNNING);
                 }
             }
         }
 
-        return new GLib.Variant("(a{su})", [apps]);
+        return new GLib.Variant("(a{sv})", [apps]);
     }
 }
