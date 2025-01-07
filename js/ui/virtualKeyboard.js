@@ -116,6 +116,7 @@ Key.prototype = {
     },
 
     _getExtendedKeys: function () {
+        global.log("GET EX");
         this._extended_keyboard = new St.BoxLayout({ style_class: 'keyboard-layout',
                                                      vertical: false });
         for (let i = 0; i < this._extended_keys.length; ++i) {
@@ -123,22 +124,24 @@ Key.prototype = {
             let label = this._getUnichar(extended_key);
             let key = new St.Button({ label: label, style_class: 'keyboard-key' });
             key.extended_key = extended_key;
-            key.connect('button-press-event', Lang.bind(this, function () { extended_key.press(); }));
-            key.connect('button-release-event', Lang.bind(this, function () { extended_key.release(); }));
+            key.connect('button-press-event', Lang.bind(this, function () {global.log("FFF"); extended_key.press(); }));
+            key.connect('button-release-event', Lang.bind(this, function () {global.log("GGG"); extended_key.release(); }));
             this._extended_keyboard.add(key);
         }
         this._boxPointer.bin.add_actor(this._extended_keyboard);
     },
 
     _onEventCapture: function (actor, event) {
+        global.log("cap", event)
         let source = event.get_source();
         let type = event.type();
 
         if ((type == Clutter.EventType.BUTTON_PRESS ||
              type == Clutter.EventType.BUTTON_RELEASE) &&
             this._extended_keyboard.contains(source)) {
-            source.extended_key.press();
-            source.extended_key.release();
+            global.log("FIOFIFIFIFIFI");
+            // source.extended_key.press();
+            // source.extended_key.release();
             return false;
         }
         if (type == Clutter.EventType.BUTTON_PRESS) {
@@ -165,7 +168,7 @@ Key.prototype = {
             this.actor.set_hover(false);
             if (!this._grabbed) {
                  Main.pushModal(this.actor);
-                 this._eventCaptureId = global.stage.connect('captured-event', Lang.bind(this, this._onEventCapture));
+                 // this._eventCaptureId = global.stage.connect('captured-event', Lang.bind(this, this._onEventCapture));
                  this._grabbed = true;
             }
             this._key.release();
@@ -513,10 +516,13 @@ Keyboard.prototype = {
 
     shouldTakeEvent: function(event) {
         let actor = event.get_source();
-        return !actor.is_finalized()
+        const ddd = !actor.is_finalized()
             && (Main.layoutManager.keyboardBox.contains(actor)
                 || actor.maybeGet("_extended_keys")
                 || actor.maybeGet("extended_key"));
+
+        global.log("SHOULD TAKE",ddd);
+        return ddd;
     },
 
     // D-Bus methods
