@@ -92,12 +92,12 @@ Animation.prototype = {
         }
 
         try {
-            Tweener.addTween(this.logo,
-                             { time: .75,
-                               opacity: 0,
-                               transition: 'easeInExpo',
-                               onComplete: this._fade_shroud,
-                               onCompleteScope: this });
+            this.logo.ease({
+                opacity: 0,
+                duration: 750,
+                mode: Clutter.AnimationMode.EASE_OUT_EXPO,
+                onComplete: () => this._fade_shroud()
+            });
         } catch (e) {
             this._onError(e);
         }
@@ -105,12 +105,12 @@ Animation.prototype = {
 
     _fade_shroud: function() {
         try {
-            Tweener.addTween(this.shroud,
-                             { time: .75,
-                               transition: 'easeNone',
-                               opacity: 0,
-                               onComplete: this._finished,
-                               onCompleteScope: this });
+            this.shroud.ease({
+                opacity: 0,
+                duration: 750,
+                mode: Clutter.AnimationMode.LINEAR,
+                onComplete: () => this._finished()
+            });
         } catch (e) {
             this._onError(e);
         }
