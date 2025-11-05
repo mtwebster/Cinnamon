@@ -179,7 +179,7 @@ class HotCorner {
         // We draw a ripple by using a source image and animating it scaling
         // outwards and fading away. We want the ripples to move linearly
         // or it looks unrealistic, but if the opacity of the ripple goes
-        // linearly to zero it fades away too quickly, so we use Tweener's
+        // linearly to zero it fades away too quickly, so we use easing
         // 'onUpdate' to give a non-linear curve to the fade-away and make
         // it more visible in the middle section.
 

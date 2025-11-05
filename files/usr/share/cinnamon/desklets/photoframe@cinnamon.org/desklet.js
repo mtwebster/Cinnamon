@@ -1,3 +1,4 @@
+const Cinnamon = imports.gi.Cinnamon;
 const Gio = imports.gi.Gio;
 const St = imports.gi.St;
 const Desklet = imports.ui.desklet;
@@ -5,7 +6,6 @@ const Lang = imports.lang;
 const Mainloop = imports.mainloop;
 const Clutter = imports.gi.Clutter;
 const GLib = imports.gi.GLib;
-const Tweener = imports.ui.tweener;
 const Util = imports.misc.util;
 const Settings = imports.ui.settings;
 
@@ -109,7 +109,7 @@ class CinnamonPhotoFrameDesklet extends Desklet.Desklet {
     setup_display() {
         this._photoFrame = new St.Bin({style_class: 'photoframe-box', x_align: St.Align.START});
 
-        this._bin = new St.Bin();
+        this._bin = new St.Widget({ layout_manager: new Clutter.BinLayout() });
         this._bin.set_size(this.width, this.height);
 
         this._images = [];
@@ -189,23 +189,24 @@ class CinnamonPhotoFrameDesklet extends Desklet.Desklet {
         this.currentPicture.path = image_path;
 
         if (this.fade_delay > 0) {
-            Tweener.addTween(this._bin, {
-                opacity: 0,
-                time: this.fade_delay,
-                transition: 'easeInSine',
-                onComplete: () => {
-                    this._bin.set_child(this.currentPicture);
-                    Tweener.addTween(this._bin, {
-                        opacity: 255,
-                        time: this.fade_delay,
-                        transition: 'easeInSine'
-                    });
-                }
+            this.currentPicture.opacity = 0;
+            this._bin.insert_child_at_index(this.currentPicture, 0);
+
+            if (old_pic) {
+                old_pic.ease({
+                    opacity: 0,
+                    duration: this.fade_delay * 1000,
+                    mode: Clutter.AnimationMode.LINEAR,
+                    onComplete: () => old_pic.destroy()
+                });
+            }
+            this.currentPicture.ease({
+                opacity: 255,
+                duration: this.fade_delay * 1000,
+                mode: Clutter.AnimationMode.LINEAR
             });
         } else {
-            this._bin.set_child(this.currentPicture);
-        }
-        if (old_pic) {
+            this._bin.add_actor(this.currentPicture);
             old_pic.destroy();
         }
 
@@ -230,7 +231,8 @@ class CinnamonPhotoFrameDesklet extends Desklet.Desklet {
 
             image._notif_id = image.connect('notify::size', Lang.bind(this, this._size_pic));
 
-            return image;
+            let imageHolder = new St.Bin({ child: image });
+            return imageHolder;
         } catch (x) {
             // Probably a non-image is in the folder
             return null;
