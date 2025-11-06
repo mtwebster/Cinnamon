@@ -9,7 +9,6 @@ const Cinnamon = imports.gi.Cinnamon;
 
 const DND = imports.ui.dnd;
 const Main = imports.ui.main;
-const Tweener = imports.ui.tweener;
 const ExpoThumbnail = imports.ui.expoThumbnail;
 
 // ***************
@@ -177,7 +176,7 @@ Expo.prototype = {
                 return false;
             }));
         this._expo = new ExpoThumbnail.ExpoThumbnailsBox();
-        this._group.add_actor(this._expo.actor);
+        this._group.add_actor(this._expo);
         this._relayout();
     },
 
@@ -223,8 +222,8 @@ Expo.prototype = {
         this._windowCloseArea.height = node.get_length('height');
         this._windowCloseArea.width = node.get_length('width');
 
-        this._expo.actor.set_position(0, 0);
-        this._expo.actor.set_size((primary.width - buttonWidth), primary.height);
+        this._expo.set_position(0, 0);
+        this._expo.set_size((primary.width - buttonWidth), primary.height);
 
         let buttonY = (primary.height - buttonHeight) / 2;
 
@@ -302,7 +301,7 @@ Expo.prototype = {
         this._expo.connect('drag-end', Lang.bind(this, this._hideCloseArea));
 
         let activeWorkspace = this._expo.lastActiveWorkspace;
-        let activeWorkspaceActor = activeWorkspace.actor;
+        let activeWorkspaceActor = activeWorkspace;
 
         //We need to allocate activeWorkspace before we begin its clone animation
         let allocateID = this._expo.connect('allocated', Lang.bind(this, function() {
@@ -427,7 +426,7 @@ Expo.prototype = {
         this.animationInProgress = true;
         this._hideInProgress = true;
 
-        let activeWorkspaceActor = activeWorkspace.actor;
+        let activeWorkspaceActor = activeWorkspace;
         Main.layoutManager.monitors.forEach(function(monitor,index) {
             let cover = new Clutter.Group();
             global.overlay_group.add_actor(cover);
