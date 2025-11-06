@@ -2,6 +2,7 @@
 
 const Clutter = imports.gi.Clutter;
 const GLib = imports.gi.GLib;
+const GObject = imports.gi.GObject;
 const Gtk = imports.gi.Gtk;
 const St = imports.gi.St;
 const Lang = imports.lang;
@@ -697,28 +698,34 @@ function makeDraggable(actor, params, target) {
     return new _Draggable(actor, params, target);
 }
 
-function GenericDragItemContainer() {
-    this._init();
-}
+var GenericDragItemContainer = GObject.registerClass({
+    Properties: {
+        'child-scale': GObject.ParamSpec.double(
+            'child-scale', 'child-scale', 'child-scale',
+            GObject.ParamFlags.READWRITE,
+            0, 1.0, 1.0)
+    },
+}, class GenericDragItemContainer extends St.Widget {
+    _init() {
+        super._init({
+            style_class: 'drag-item-container',
+        });
 
-GenericDragItemContainer.prototype = {
-    _init: function() {
-        this.actor = new Cinnamon.GenericContainer({ style_class: 'drag-item-container' });
-        this.actor.connect('get-preferred-width',
-                           Lang.bind(this, this._getPreferredWidth));
-        this.actor.connect('get-preferred-height',
-                           Lang.bind(this, this._getPreferredHeight));
-        this.actor.connect('allocate',
-                           Lang.bind(this, this._allocate));
-        this.actor._delegate = this;
+        // this.actor.connect('get-preferred-width',
+        //                    Lang.bind(this, this._getPreferredWidth));
+        // this.actor.connect('get-preferred-height',
+        //                    Lang.bind(this, this._getPreferredHeight));
+        // this.actor.connect('allocate',
+        //                    Lang.bind(this, this._allocate));
+        this._delegate = this;
 
         this.child = null;
-        this._childScale = 1;
+        // this._childScale = 1;
         this._childOpacity = 255;
         this.animatingOut = false;
-    },
+    }
 
-    _allocate: function(actor, box, flags) {
+    vfunc_allocate(box, flags) {
         if (this.child == null)
             return;
 
@@ -738,43 +745,34 @@ GenericDragItemContainer.prototype = {
         childBox.y2 = childBox.y1 + childHeight;
 
         this.child.allocate(childBox, flags);
-    },
+    }
 
-    _getPreferredHeight: function(actor, forWidth, alloc) {
-        alloc.min_size = 0;
-        alloc.natural_size = 0;
-
+    vfunc_get_preferred_height(forWidth) {
         if (this.child == null)
             return;
 
         let [minHeight, natHeight] = this.child.get_preferred_height(forWidth);
-        alloc.min_size += minHeight * this.child.scale_y;
-        alloc.natural_size += natHeight * this.child.scale_y;
-    },
+        return [minHeight * this.child.scale_y, natHeight * this.child.scale_y];
+    }
 
-    _getPreferredWidth: function(actor, forHeight, alloc) {
-        alloc.min_size = 0;
-        alloc.natural_size = 0;
-
+    vfunc_get_preferred_width(forHeight) {
         if (this.child == null)
             return;
 
-        let [minWidth, natWidth] = this.child.get_preferred_width(forHeight);
-        alloc.min_size = minWidth * this.child.scale_y;
-        alloc.natural_size = natWidth * this.child.scale_y;
-    },
+        return this.child.get_preferred_width(forHeight);
+    }
 
-    setChild: function(actor) {
+    setChild(actor) {
         if (this.child == actor)
             return;
 
-        this.actor.destroy_all_children();
+        this.destroy_all_children();
 
         this.child = actor;
-        this.actor.add_actor(this.child);
-    },
+        this.add_actor(this.child);
+    }
 
-    animateIn: function(onCompleteFunc) {
+    animateIn(onCompleteFunc) {
         if (!this.child) {
             if (typeof(onCompleteFunc) === 'function')
                 onCompleteFunc();
@@ -784,22 +782,28 @@ GenericDragItemContainer.prototype = {
         this.childScale = 0;
         this.childOpacity = 0;
 
-        let params = { childScale: 1.0,
-                       childOpacity: 255,
-                       time: DND_ANIMATION_TIME,
-                       transition: 'easeOutQuad' };
+        this.ease_property(
+            "child-scale", 1.0,
+            {
+                duration: DND_ANIMATION_TIME,
+                mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                onUpdate: () => {
+                    this.childOpacity = this.childScale * 255;
+                },
+                onComplete: () => {
+                    this.childOpacity = 255;
+                    if (onCompleteFunc)
+                        onCompleteFunc();
+                }
+            }
+        );
+    }
 
-        if (typeof(onCompleteFunc) === 'function')
-            params.onComplete = onCompleteFunc;
-
-        Tweener.addTween(this, params);
-    },
-
-    animateOutAndDestroy: function(onCompleteFunc) {
+    animateOutAndDestroy(onCompleteFunc) {
         let _onComplete = () => {
             if (typeof(onCompleteFunc) === 'function')
                 onCompleteFunc();
-            this.actor.destroy();
+            this.destroy();
         };
 
         if (!this.child) {
@@ -809,17 +813,27 @@ GenericDragItemContainer.prototype = {
 
         this.animatingOut = true;
         this.childScale = 1.0;
-        Tweener.addTween(this,
-                         { childScale: 0.0,
-                           childOpacity: 0,
-                           time: DND_ANIMATION_TIME,
-                           transition: 'easeOutQuad',
-                           onComplete: _onComplete });
-    },
+        this.ease_property(
+            "child-scale", 0.0,
+            {
+                duration: DND_ANIMATION_TIME,
+                mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                onUpdate: () => {
+                    this.childOpacity = this.childScale * 255;
+                },
+                onComplete: () => {
+                    this.childOpacity = 0;
+                    _onComplete()
+                }
+            }
+        );
+    }
 
-    set childScale(scale) {
+    set child_scale(scale) {
         if (this.child.is_finalized()) return;
         this._childScale = scale;
+
+        this.notify('child-scale');
 
         if (this.child == null)
             return;
@@ -828,12 +842,12 @@ GenericDragItemContainer.prototype = {
         this.child.pivot_point.y = 0.5;
         this.child.scale_x = scale;
         this.child.scale_y = scale;
-        this.actor.queue_relayout();
-    },
+        this.queue_relayout();
+    }
 
-    get childScale() {
+    get child_scale() {
         return this._childScale;
-    },
+    }
 
     set childOpacity(opacity) {
         if (this.child.is_finalized()) return;
@@ -843,26 +857,21 @@ GenericDragItemContainer.prototype = {
             return;
 
         this.child.set_opacity(opacity);
-        this.actor.queue_redraw();
-    },
+        this.queue_redraw();
+    }
 
     get childOpacity() {
         return this._childOpacity;
     }
-};
+});
 
-function GenericDragPlaceholderItem() {
-    this._init();
-}
-
-GenericDragPlaceholderItem.prototype = {
-    __proto__: GenericDragItemContainer.prototype,
-
-    _init: function() {
-        GenericDragItemContainer.prototype._init.call(this);
+var GenericDragPlaceholderItem = GObject.registerClass(
+class GenericDragPlaceholderItem extends GenericDragItemContainer {
+    _init() {
+        super._init();
         this.setChild(new St.Bin({ style_class: 'drag-placeholder' }));
     }
-};
+});
 
 var LauncherDraggable = class {
     constructor(launchersBox) {
