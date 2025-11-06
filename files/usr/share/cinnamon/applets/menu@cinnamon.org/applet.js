@@ -952,7 +952,7 @@ class FavoriteAppsBox {
         // the remove target has the same size as "normal" items, we don't
         // need to do the same adjustment there.
         if (this._dragPlaceholder) {
-            boxHeight -= this._dragPlaceholder.actor.height;
+            boxHeight -= this._dragPlaceholder.height;
             numChildren--;
         }
 
@@ -973,7 +973,7 @@ class FavoriteAppsBox {
                 if (this._dragPlaceholder) {
                     this._dragPlaceholder.animateOutAndDestroy();
                     this._animatingPlaceholdersCount++;
-                    this._dragPlaceholder.actor.connect('destroy', () => {
+                    this._dragPlaceholder.connect('destroy', () => {
                         this._animatingPlaceholdersCount--;
                     });
                 }
@@ -987,7 +987,7 @@ class FavoriteAppsBox {
             // an animation
             let fadeIn;
             if (this._dragPlaceholder) {
-                this._dragPlaceholder.actor.destroy();
+                this._dragPlaceholder.destroy();
                 fadeIn = false;
             } else {
                 fadeIn = true;
@@ -996,7 +996,7 @@ class FavoriteAppsBox {
             this._dragPlaceholder = new DND.GenericDragPlaceholderItem();
             this._dragPlaceholder.child.set_width (source.actor.height);
             this._dragPlaceholder.child.set_height (source.actor.height);
-            this.actor.insert_child_at_index(this._dragPlaceholder.actor,
+            this.actor.insert_child_at_index(this._dragPlaceholder,
                                              this._dragPlaceholderPos);
             if (fadeIn)
                 this._dragPlaceholder.animateIn();
@@ -1026,7 +1026,7 @@ class FavoriteAppsBox {
         let children = this.actor.get_children();
         for (let i = 0; i < this._dragPlaceholderPos; i++) {
             if (this._dragPlaceholder &&
-                children[i] == this._dragPlaceholder.actor)
+                children[i] == this._dragPlaceholder)
                 continue;
 
             if (!(children[i]._delegate instanceof FavoritesButton)) continue;
