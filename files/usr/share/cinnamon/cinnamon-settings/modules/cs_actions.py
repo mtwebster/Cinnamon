@@ -16,7 +16,7 @@ class Module:
 
     def __init__(self, content_box):
         self.window = None
-        self.sidePage = ActionsViewSidePage(content_box, self)
+        self.sidePage = ActionsViewSidePage(content_box, self, self._nemo_check())
 
     def on_module_selected(self):
         if not self.loaded:
@@ -26,12 +26,32 @@ class Module:
     def _setParentRef(self, window):
         self.window = window
 
+    def _nemo_check(self):
+        have_nemo = False
+
+        try:
+            import gi
+            gi.require_version('Nemo', '3.0')
+
+            from gi.repository import Nemo
+
+            if Nemo.DesktopPreferences:
+                have_nemo = True
+        except ImportError:
+            pass
+        except AttributeError:
+            pass
+        except ValueError:
+            pass
+
+        return have_nemo
 
 class ActionsViewSidePage(SidePage):
     collection_type = "action"
 
-    def __init__(self, content_box, module):
+    def __init__(self, content_box, module, have_nemo):
         self.RemoveString = ""
+        self.have_nemo = have_nemo
         keywords = _("action")
 
         super().__init__(_("Actions"), "cs-actions", keywords,
@@ -52,28 +72,42 @@ class ActionsViewSidePage(SidePage):
         download_actions_page = DownloadSpicesPage(self, self.collection_type, self.spices, self.window)
         self.stack.add_titled(download_actions_page, 'more', _("Download"))
 
-        if GLib.find_program_in_path("nemo-action-layout-editor"):
-            for dir in GLib.get_system_data_dirs():
-                path = Path(dir).joinpath("nemo/layout-editor")
-                if path.exists():
-                    sys.path.append(str(path))
-                    try:
-                        import nemo_action_layout_editor
-                        editor = nemo_action_layout_editor.NemoActionsOrganizer(self.window)
-                        editor.props.margin_start = 80
-                        editor.props.margin_end = 80
-                        editor.props.margin_top = 15
-                        editor.props.margin_bottom = 30
-                        self.stack.add_titled(editor, 'editor', _("Layout"))
 
-                        def on_window_delete(window, event, data=None):
-                            if not editor.quit():
-                                return True
 
-                        self.window.connect("delete-event", on_window_delete)
-                    except Exception as e:
-                        print(e)
-                    break
+        if self.have_nemo:
+            from gi.repository import Nemo
+
+            editor = Nemo.ActionLayoutEditor()
+            # editor.props.margin_start = 80
+            # editor.props.margin_end = 80
+            editor.props.margin_top = 15
+            editor.props.margin_bottom = 30
+            self.stack.add_titled(editor, 'editor', _("Layout"))
+
+
+
+        # if GLib.find_program_in_path("nemo-action-layout-editor"):
+        #     for dir in GLib.get_system_data_dirs():
+        #         path = Path(dir).joinpath("nemo/layout-editor")
+        #         if path.exists():
+        #             sys.path.append(str(path))
+        #             try:
+        #                 import nemo_action_layout_editor
+        #                 editor = nemo_action_layout_editor.NemoActionsOrganizer(self.window)
+        #                 editor.props.margin_start = 80
+        #                 editor.props.margin_end = 80
+        #                 editor.props.margin_top = 15
+        #                 editor.props.margin_bottom = 30
+        #                 self.stack.add_titled(editor, 'editor', _("Layout"))
+
+        #                 def on_window_delete(window, event, data=None):
+        #                     if not editor.quit():
+        #                         return True
+
+        #                 self.window.connect("delete-event", on_window_delete)
+        #             except Exception as e:
+        #                 print(e)
+        #             break
 
 class ManageActionsPage(ManageSpicesPage):
     directories = [f"{GLib.get_home_dir()}/.local/share/nemo/actions"]
