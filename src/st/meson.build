@@ -238,3 +238,13 @@ st_gir = gnome.generate_gir(
         '--quiet',
     ],
 )
+
+# St Wayland client test (for development/testing)
+st_wayland_test = executable(
+    'st-wayland-test',
+    '../shell-wayland-proto/main-st.c',
+    c_args: ['-DST_H_INSIDE'],
+    dependencies: [st_dep],
+    include_directories: st_inc,
+    install: false,
+)
