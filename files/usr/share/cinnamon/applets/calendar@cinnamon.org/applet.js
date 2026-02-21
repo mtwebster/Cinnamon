@@ -30,6 +30,8 @@ class CinnamonCalendarApplet extends Applet.TextApplet {
             this.menuManager = new PopupMenu.PopupMenuManager(this);
             this.orientation = orientation;
 
+            this.vm = Gio.VolumeMonitor.get();
+
             this._initContextMenu();
             this.menu.setCustomStyleClass('calendar-background');
 
