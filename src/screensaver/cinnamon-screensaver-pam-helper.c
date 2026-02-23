@@ -30,7 +30,6 @@
 
 #include <glib-unix.h>
 #include <glib/gi18n.h>
-#include <glib/gi18n.h>
 #include <glib/gprintf.h>
 #include <gio/gunixinputstream.h>
 
@@ -335,7 +334,8 @@ stdin_monitor_task_thread (GTask        *task,
 
     while (!g_cancellable_is_cancelled (cancellable))
     {
-        guint8 input[255];
+        guint8 input[256];
+        memset (input, 0, sizeof (input));
         // Blocks
         size = g_input_stream_read (stream, input, 255, cancellable, &error);
 
@@ -354,8 +354,8 @@ stdin_monitor_task_thread (GTask        *task,
                 input [size - 1] = 0;
             }
 
-            password_ptr = g_strdup ((gchar *) &input);
-            memset (input, '\b', 255);
+            password_ptr = g_strdup ((gchar *) input);
+            memset (input, '\b', sizeof (input));
         }
 
         g_mutex_unlock (&password_mutex);
