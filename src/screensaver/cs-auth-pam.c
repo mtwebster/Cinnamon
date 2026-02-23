@@ -98,8 +98,8 @@ typedef struct {
         gboolean           should_interrupt_stack;
 } GsAuthMessageHandlerData;
 
-static GCond  *message_handled_condition;
-static GMutex *message_handler_mutex;
+static GCond  message_handled_condition;
+static GMutex message_handler_mutex;
 
 GQuark
 cs_auth_error_quark (void)
@@ -189,7 +189,7 @@ cs_auth_queued_message_handler (GsAuthMessageHandlerData *data)
                 DEBUG ("Waiting for lock\n");
         }
 
-        g_mutex_lock (message_handler_mutex);
+        g_mutex_lock (&message_handler_mutex);
 
         if (cs_auth_get_verbose ()) {
                 DEBUG ("Waiting for response\n");
@@ -203,8 +203,8 @@ cs_auth_queued_message_handler (GsAuthMessageHandlerData *data)
 
         DEBUG ("should interrupt: %d\n", data->should_interrupt_stack);
 
-        g_cond_signal (message_handled_condition);
-        g_mutex_unlock (message_handler_mutex);
+        g_cond_signal (&message_handled_condition);
+        g_mutex_unlock (&message_handler_mutex);
 
         if (cs_auth_get_verbose ()) {
                 DEBUG ("Got response\n");
@@ -227,7 +227,7 @@ cs_auth_run_message_handler (struct pam_closure *c,
         data.resp = resp;
         data.should_interrupt_stack = TRUE;
 
-        g_mutex_lock (message_handler_mutex);
+        g_mutex_lock (&message_handler_mutex);
 
         /* Queue the callback in the gui (the main) thread
          */
@@ -239,9 +239,9 @@ cs_auth_run_message_handler (struct pam_closure *c,
 
         /* Wait for the response
          */
-        g_cond_wait (message_handled_condition,
-                     message_handler_mutex);
-        g_mutex_unlock (message_handler_mutex);
+        g_cond_wait (&message_handled_condition,
+                     &message_handler_mutex);
+        g_mutex_unlock (&message_handler_mutex);
 
         if (cs_auth_get_verbose ()) {
                 DEBUG ("cs-auth-pam (pid %i): Got response to message style %d: interrupt:%d\n", getpid (), style, data.should_interrupt_stack);
@@ -359,15 +359,8 @@ close_pam_handle (int status)
                 }
         }
 
-        if (message_handled_condition != NULL) {
-                g_cond_free (message_handled_condition);
-                message_handled_condition = NULL;
-        }
-
-        if (message_handler_mutex != NULL) {
-                g_mutex_free (message_handler_mutex);
-                message_handler_mutex = NULL;
-        }
+        g_cond_clear (&message_handled_condition);
+        g_mutex_clear (&message_handler_mutex);
 
         return TRUE;
 }
@@ -435,8 +428,8 @@ create_pam_handle (const char      *username,
 	}
 
         ret = TRUE;
-	message_handled_condition = g_cond_new ();
-	message_handler_mutex = g_mutex_new ();
+	g_cond_init (&message_handled_condition);
+	g_mutex_init (&message_handler_mutex);
 
  out:
         if (status_code != NULL) {
@@ -479,6 +472,12 @@ set_pam_error (GError **error,
                              CS_AUTH_ERROR_AUTH_DENIED,
                              "%s",
                              _("No longer permitted to access the system."));
+        } else {
+                g_set_error (error,
+                             CS_AUTH_ERROR,
+                             CS_AUTH_ERROR_AUTH_ERROR,
+                             _("Authentication error: %s"),
+                             PAM_STRERROR (NULL, status));
         }
 
 }
@@ -742,7 +741,7 @@ cs_auth_priv_init (void)
 {
         /* We have nothing to do at init-time.
            However, we might as well do some error checking.
-           If "/etc/pam.d" exists and is a directory, but "/etc/pam.d/xlock"
+           If "/etc/pam.d" exists and is a directory, but "/etc/pam.d/" PAM_SERVICE_NAME
            does not exist, warn that PAM probably isn't going to work.
 
            This is a priv-init instead of a non-priv init in case the directory
