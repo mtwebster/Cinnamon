@@ -201,7 +201,7 @@ cs_auth_queued_message_handler (GsAuthMessageHandlerData *data)
                                       data->closure->cb_data);
         data->should_interrupt_stack = res == FALSE;
 
-        g_printerr ("should interrupt: %d\n", data->should_interrupt_stack);
+        DEBUG ("should interrupt: %d\n", data->should_interrupt_stack);
 
         g_cond_signal (message_handled_condition);
         g_mutex_unlock (message_handler_mutex);

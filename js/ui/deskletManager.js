@@ -4,6 +4,7 @@ const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const St = imports.gi.St;
 const Meta = imports.gi.Meta;
+const Cinnamon = imports.gi.Cinnamon;
 const Mainloop = imports.mainloop;
 const Lang = imports.lang;
 

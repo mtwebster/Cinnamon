@@ -2,7 +2,6 @@ const Applet = imports.ui.applet;
 const Lang = imports.lang;
 const Mainloop = imports.mainloop;
 const Gio = imports.gi.Gio;
-const Interfaces = imports.misc.interfaces;
 const Util = imports.misc.util;
 const Cinnamon = imports.gi.Cinnamon;
 const Clutter = imports.gi.Clutter;
@@ -17,8 +16,6 @@ const Slider = imports.ui.slider;
 const Pango = imports.gi.Pango;
 const MprisPlayerModule = imports.misc.mprisPlayer;
 
-const MEDIA_PLAYER_2_PATH = "/org/mpris/MediaPlayer2";
-const MEDIA_PLAYER_2_NAME = "org.mpris.MediaPlayer2";
 const MEDIA_PLAYER_2_PLAYER_NAME = "org.mpris.MediaPlayer2.Player";
 
 // how long to show the output icon when volume is adjusted during media playback.
@@ -1005,10 +1002,10 @@ class CinnamonSoundApplet extends Applet.TextIconApplet {
 
         // Use shared MPRIS module for player discovery
         this._mprisManager = MprisPlayerModule.getMprisPlayerManager();
-        this._mprisManager.connect('player-added', (manager, mprisPlayer) => {
+        this._playerAddedId = this._mprisManager.connect('player-added', (manager, mprisPlayer) => {
             this._addPlayer(mprisPlayer);
         });
-        this._mprisManager.connect('player-removed', (manager, busName, owner) => {
+        this._playerRemovedId = this._mprisManager.connect('player-removed', (manager, busName, owner) => {
             this._removePlayer(busName, owner);
         });
 
@@ -1140,8 +1137,10 @@ class CinnamonSoundApplet extends Applet.TextIconApplet {
             this._iconTimeoutId = 0;
         }
 
-        // Note: MprisPlayerManager is a singleton shared by multiple components,
-        // so we don't destroy it here. Individual player cleanup happens in destroy().
+        if (this._mprisManager) {
+            this._mprisManager.disconnect(this._playerAddedId);
+            this._mprisManager.disconnect(this._playerRemovedId);
+        }
 
         for(let i in this._players)
             this._players[i].destroy();
@@ -1472,16 +1471,6 @@ class CinnamonSoundApplet extends Applet.TextIconApplet {
             }
             this._updatePlayerMenuItems();
             this.setAppletTextIcon(this._players[this._activePlayer], true);
-        }
-    }
-
-    _changePlayerOwner(busName, oldOwner, newOwner) {
-        if (this._players[oldOwner] && busName == this._players[oldOwner]._busName) {
-            this._players[newOwner] = this._players[oldOwner];
-            this._players[newOwner]._owner = newOwner;
-            delete this._players[oldOwner];
-            if (this._activePlayer == oldOwner)
-                this._activePlayer = newOwner;
         }
     }
 

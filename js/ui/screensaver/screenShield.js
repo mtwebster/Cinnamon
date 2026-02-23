@@ -45,23 +45,17 @@ var _widgetRegistry = [];
  */
 function registerScreensaverWidget(widgetClass) {
     if (_widgetRegistry.length >= MAX_SCREENSAVER_WIDGETS) {
-        if (global.logWarning) {
-            global.logWarning(`ScreenShield: Cannot register widget - registry full (max ${MAX_SCREENSAVER_WIDGETS})`);
-        }
+        global.logWarning(`ScreenShield: Cannot register widget - registry full (max ${MAX_SCREENSAVER_WIDGETS})`);
         return false;
     }
 
     if (_widgetRegistry.includes(widgetClass)) {
-        if (global.logWarning) {
-            global.logWarning('ScreenShield: Widget class already registered');
-        }
+        global.logWarning('ScreenShield: Widget class already registered');
         return false;
     }
 
     _widgetRegistry.push(widgetClass);
-    if (global.log) {
-        _log(`ScreenShield: Registered widget class (total: ${_widgetRegistry.length})`);
-    }
+    _log(`ScreenShield: Registered widget class (total: ${_widgetRegistry.length})`);
     return true;
 }
 
@@ -75,16 +69,12 @@ function registerScreensaverWidget(widgetClass) {
 function deregisterScreensaverWidget(widgetClass) {
     let index = _widgetRegistry.indexOf(widgetClass);
     if (index === -1) {
-        if (global.logWarning) {
-            global.logWarning('ScreenShield: Widget class not found in registry');
-        }
+        global.logWarning('ScreenShield: Widget class not found in registry');
         return false;
     }
 
     _widgetRegistry.splice(index, 1);
-    if (global.log) {
-        _log(`ScreenShield: Deregistered widget class (total: ${_widgetRegistry.length})`);
-    }
+    _log(`ScreenShield: Deregistered widget class (total: ${_widgetRegistry.length})`);
     return true;
 }
 
@@ -237,7 +227,6 @@ var ScreenShield = GObject.registerClass({
         this._syncInhibitor();
     }
 
-
     /**
      * _onCapturedEvent:
      *
@@ -367,8 +356,7 @@ var ScreenShield = GObject.registerClass({
         if (this.isLocked())
             return;
 
-        if (awayMessage)
-            this._awayMessage = awayMessage;
+        this._awayMessage = awayMessage;
 
         _log(`ScreenShield: Locking screen (immediate=${immediate})`);
 
@@ -1202,6 +1190,7 @@ var ScreenShield = GObject.registerClass({
     }
 
     vfunc_destroy() {
+        this._stopLockDelay();
         this._cancelWidgetLoading();
         this._backupLockerCall('Unlock', null);
 
