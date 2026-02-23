@@ -345,6 +345,12 @@ stdin_monitor_task_thread (GTask        *task,
             break;
         }
 
+        if (size == 0)
+        {
+            g_cancellable_cancel (cancellable);
+            break;
+        }
+
         g_mutex_lock (&password_mutex);
 
         if (size > 0)

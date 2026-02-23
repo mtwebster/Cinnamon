@@ -143,7 +143,17 @@ var AuthClient = class {
         try {
             let bytes_read = pipe.read_bytes_finish(res);
 
-            if (bytes_read && bytes_read.get_size() > 0) {
+            if (!bytes_read || bytes_read.get_size() === 0) {
+                global.logWarning('authClient: PAM helper pipe returned no data, helper may have died');
+                GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                    this.emit('auth-cancel');
+                    return GLib.SOURCE_REMOVE;
+                });
+                this._endProc();
+                return;
+            }
+
+            if (bytes_read.get_size() > 0) {
                 let raw_string = ByteArray.toString(bytes_read.toArray());
                 let lines = raw_string.split('\n');
 
@@ -153,40 +163,35 @@ var AuthClient = class {
                         if (ScreenShield._debug)
                             global.log(`authClient: received: '${output}'`);
 
-                        if (output.includes('CS_PAM_AUTH_FAILURE')) {
+                        if (output === 'CS_PAM_AUTH_FAILURE') {
                             GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
                                 this.emit('auth-failure');
                                 return GLib.SOURCE_REMOVE;
                             });
-                        }
-                        if (output.includes('CS_PAM_AUTH_SUCCESS')) {
+                        } else if (output === 'CS_PAM_AUTH_SUCCESS') {
                             GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
                                 this.emit('auth-success');
                                 return GLib.SOURCE_REMOVE;
                             });
                             terminate = true;
-                        }
-                        if (output.includes('CS_PAM_AUTH_CANCELLED')) {
+                        } else if (output === 'CS_PAM_AUTH_CANCELLED') {
                             GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
                                 this.emit('auth-cancel');
                                 return GLib.SOURCE_REMOVE;
                             });
                             terminate = true;
-                        }
-                        if (output.includes('CS_PAM_AUTH_BUSY_TRUE')) {
+                        } else if (output === 'CS_PAM_AUTH_BUSY_TRUE') {
                             GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
                                 this.emit('auth-busy', true);
                                 return GLib.SOURCE_REMOVE;
                             });
-                        }
-                        if (output.includes('CS_PAM_AUTH_BUSY_FALSE')) {
+                        } else if (output === 'CS_PAM_AUTH_BUSY_FALSE') {
                             GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
                                 this.emit('auth-busy', false);
                                 return GLib.SOURCE_REMOVE;
                             });
-                        }
-                        if (output.includes('CS_PAM_AUTH_SET_PROMPT')) {
-                            let match = output.match(/CS_PAM_AUTH_SET_PROMPT_(.*)_/);
+                        } else if (output.startsWith('CS_PAM_AUTH_SET_PROMPT_')) {
+                            let match = output.match(/^CS_PAM_AUTH_SET_PROMPT_(.*)_$/);
                             if (match && match[1]) {
                                 let prompt = match[1];
                                 GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
@@ -194,9 +199,8 @@ var AuthClient = class {
                                     return GLib.SOURCE_REMOVE;
                                 });
                             }
-                        }
-                        if (output.includes('CS_PAM_AUTH_SET_ERROR')) {
-                            let match = output.match(/CS_PAM_AUTH_SET_ERROR_(.*)_/);
+                        } else if (output.startsWith('CS_PAM_AUTH_SET_ERROR_')) {
+                            let match = output.match(/^CS_PAM_AUTH_SET_ERROR_(.*)_$/);
                             if (match && match[1]) {
                                 let error = match[1];
                                 GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
@@ -204,9 +208,8 @@ var AuthClient = class {
                                     return GLib.SOURCE_REMOVE;
                                 });
                             }
-                        }
-                        if (output.includes('CS_PAM_AUTH_SET_INFO')) {
-                            let match = output.match(/CS_PAM_AUTH_SET_INFO_(.*)_/);
+                        } else if (output.startsWith('CS_PAM_AUTH_SET_INFO_')) {
+                            let match = output.match(/^CS_PAM_AUTH_SET_INFO_(.*)_$/);
                             if (match && match[1]) {
                                 let info = match[1];
                                 GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {

@@ -316,6 +316,7 @@ class UnlockDialog extends St.BoxLayout {
         this._setBusy(false);
         this._messageLabel.text = '';
         this._infoLabel.text = '';
+        this.initializePam();
     }
 
     _onAuthBusy(authClient, busy) {
