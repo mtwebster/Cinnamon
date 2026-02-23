@@ -845,101 +845,19 @@ function _processIsRunning(name) {
 
 /**
  * getTtyVals:
- * @debug: (boolean): if true, log verbose debug output
  *
- * Determines the tty number for a free text console and the tty number
- * of the current graphical session. Used by the backup locker to tell
- * the user which Ctrl+Alt+F key to use.
+ * Determines the VT number of the current graphical session and a free
+ * text console VT. Used by the backup locker to tell the user which
+ * Ctrl+Alt+F key to use for recovery.
  *
- * Returns: (array): [termTty, sessionTty] as strings
+ * Returns: (array): [termTty, sessionTty] as integers
  */
-function getTtyVals(debug) {
-    let sessionTty = null;
-    let termTty = null;
-    let username = GLib.get_user_name().substring(0, 8);
-    let usedTty = [];
+function getTtyVals() {
+    let sessionTty = parseInt(GLib.getenv('XDG_VTNR'));
+    if (isNaN(sessionTty))
+        sessionTty = 7;
 
-    function _log(msg) {
-        if (debug)
-            global.log(msg);
-    }
+    let termTty = sessionTty !== 2 ? 2 : 1;
 
-    try {
-        let [ok, stdout] = GLib.spawn_command_line_sync('w -h');
-        _log(`getTtyVals: w -h ok=${ok}, has stdout=${stdout != null}`);
-        if (ok && stdout) {
-            let output = imports.byteArray.toString(stdout);
-            let lines = output.split('\n');
-
-            _log(`getTtyVals: w -h output (username='${username}'):\n${output}`);
-
-            for (let line of lines) {
-                if (line.startsWith(username)) {
-                    if (line.includes('cinnamon-session') && line.includes('tty')) {
-                        let parts = line.trim().split(/\s+/);
-                        if (parts.length >= 2) {
-                            sessionTty = parts[1].replace('tty', '');
-                            usedTty.push(sessionTty);
-                            _log(`getTtyVals: Found session tty=${sessionTty} from: ${line.trim()}`);
-                        }
-                    } else if (line.includes('tty')) {
-                        let parts = line.trim().split(/\s+/);
-                        if (parts.length >= 2) {
-                            termTty = parts[1].replace('tty', '');
-                            _log(`getTtyVals: Found term tty=${termTty} from: ${line.trim()}`);
-                        }
-                    }
-                } else if (line.includes('tty')) {
-                    let parts = line.trim().split(/\s+/);
-                    if (parts.length >= 2) {
-                        usedTty.push(parts[1].replace('tty', ''));
-                        _log(`getTtyVals: Other user tty=${parts[1].replace('tty', '')} from: ${line.trim()}`);
-                    }
-                }
-            }
-
-            usedTty.sort();
-            _log(`getTtyVals: After parsing: sessionTty=${sessionTty}, termTty=${termTty}, usedTty=[${usedTty}]`);
-
-            if (termTty === null) {
-                for (let i = 1; i <= 5; i++) {
-                    if (!usedTty.includes(String(i))) {
-                        termTty = String(i);
-                        _log(`getTtyVals: Picked unused tty=${termTty} for terminal`);
-                        break;
-                    }
-                }
-            }
-        }
-    } catch (e) {
-        global.logWarning(`getTtyVals: Failed to get tty numbers using w -h: ${e.message}`);
-    }
-
-    if (sessionTty === null) {
-        sessionTty = GLib.getenv('XDG_VTNR');
-        _log(`getTtyVals: sessionTty fallback to XDG_VTNR=${sessionTty}`);
-        if (sessionTty === null)
-            sessionTty = '7';
-    }
-
-    if (termTty === null) {
-        termTty = sessionTty !== '2' ? '2' : '1';
-        _log(`getTtyVals: termTty fallback to ${termTty}`);
-    }
-
-    let termVal = parseInt(termTty);
-    let sessionVal = parseInt(sessionTty);
-
-    if (isNaN(sessionVal)) {
-        global.logWarning(`getTtyVals: invalid sessionTty '${sessionTty}', defaulting to 7`);
-        sessionVal = 7;
-    }
-
-    if (isNaN(termVal)) {
-        global.logWarning(`getTtyVals: invalid termTty '${termTty}', defaulting to 2`);
-        termVal = sessionVal !== 2 ? 2 : 1;
-    }
-
-    _log(`getTtyVals: Final tty values: term=${termVal}, session=${sessionVal}`);
-    return [termVal, sessionVal];
+    return [termTty, sessionTty];
 }
