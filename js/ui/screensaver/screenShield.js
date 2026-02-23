@@ -195,7 +195,7 @@ var ScreenShield = GObject.registerClass({
         if (global.settings.get_boolean('session-locked-state')) {
             _log('ScreenShield: Restoring locked state from previous session');
             this._backupLockerCall('ReleaseGrabs', null, () => {
-                this.lock(false);
+                this.lock(true);
             }, true);
 
         }
@@ -591,7 +591,7 @@ var ScreenShield = GObject.registerClass({
 
             let lockOnSuspend = this._powerSettings.get_boolean('lock-on-suspend');
             if (lockOnSuspend && !this.isLocked()) {
-                this.lock(false);
+                this.lock(true);
             }
         } else {
             _log('ScreenShield: System resuming');
@@ -604,7 +604,7 @@ var ScreenShield = GObject.registerClass({
 
     _onSessionLock() {
         _log('ScreenShield: Received lock signal from LoginManager');
-        this.lock(false);
+        this.lock(true);
     }
 
     _onSessionUnlock() {
