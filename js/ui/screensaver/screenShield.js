@@ -412,13 +412,14 @@ var ScreenShield = GObject.registerClass({
         this._lastMotionY = -1;
         this._activationTime = GLib.get_monotonic_time();
 
-        this._setState(State.SHOWN);
-
-        this._createBackgrounds();
         if (!Main.pushModal(this, global.get_current_time(), 0, Cinnamon.ActionMode.LOCK_SCREEN)) {
             global.logError('ScreenShield: Failed to acquire modal grab');
             return;
         }
+
+        this._setState(State.SHOWN);
+
+        this._createBackgrounds();
 
         this._capturedEventId = global.stage.connect('captured-event',
             this._onCapturedEvent.bind(this));
@@ -558,7 +559,7 @@ var ScreenShield = GObject.registerClass({
             _log('ScreenShield: Acquiring sleep inhibitor');
             this._loginManager.inhibit('Cinnamon needs to lock the screen', (inhibitor) => {
                 if (!inhibitor) {
-                    _log('ScreenShield: Failed to acquire sleep inhibitor');
+                    global.logWarning('ScreenShield: Failed to acquire sleep inhibitor');
                     return;
                 }
 
@@ -1138,7 +1139,7 @@ var ScreenShield = GObject.registerClass({
                 try {
                     connection.call_finish(result);
                 } catch (e) {
-                    _log(`ScreenShield: BackupLocker.${method} failed: ${e.message}`);
+                    global.logWarning(`ScreenShield: BackupLocker.${method} failed: ${e.message}`);
                 }
                 if (callback)
                     callback();

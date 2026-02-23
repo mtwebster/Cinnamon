@@ -1352,7 +1352,6 @@ function pushModal(actor, timestamp, options, mode) {
 
     global.set_stage_input_mode(Cinnamon.StageInputMode.FULLSCREEN);
 
-    let previousMode = actionMode;
     actionMode = mode;
 
     modalCount += 1;
@@ -1366,8 +1365,7 @@ function pushModal(actor, timestamp, options, mode) {
         actor: actor,
         focus: global.stage.get_key_focus(),
         destroyId: actorDestroyId,
-        actionMode: mode,
-        previousActionMode: previousMode
+        actionMode: mode
     };
     if (record.focus != null) {
         record.focusDestroyId = record.focus.connect('destroy', function() {
