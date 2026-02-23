@@ -16,29 +16,12 @@ var FloatPosition = class FloatPosition {
         this.valign = valign;
     }
 
-    copy() {
-        return new FloatPosition(this.monitor, this.halign, this.valign);
-    }
-
     copyFrom(other) {
         this.monitor = other.monitor;
         this.halign = other.halign;
         this.valign = other.valign;
     }
 
-    equals(other) {
-        return this.monitor === other.monitor &&
-               this.halign === other.halign &&
-               this.valign === other.valign;
-    }
-
-    toKey() {
-        return `${this.monitor}:${this.halign}:${this.valign}`;
-    }
-
-    toAlignKey() {
-        return `${this.halign}:${this.valign}`;
-    }
 };
 
 /**
@@ -91,10 +74,6 @@ class ScreensaverWidget extends St.BoxLayout {
 
     getAwakePosition() {
         return this._awakePosition;
-    }
-
-    getNextPosition() {
-        return this._nextPosition;
     }
 
     onScreensaverActivated() {

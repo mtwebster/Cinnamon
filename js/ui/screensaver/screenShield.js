@@ -4,7 +4,6 @@ const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const GObject = imports.gi.GObject;
-const Lang = imports.lang;
 const Meta = imports.gi.Meta;
 const St = imports.gi.St;
 const Cinnamon = imports.gi.Cinnamon;
@@ -28,7 +27,7 @@ const DEBUG_FLOAT = false;  // Set to true for 5-second intervals during develop
 const MAX_SCREENSAVER_WIDGETS = 3;
 const WIDGET_LOAD_DELAY = 1000;
 
-var _debug = true;
+var _debug = false;
 
 function _log(msg) {
     if (_debug)
@@ -91,17 +90,15 @@ function deregisterScreensaverWidget(widgetClass) {
 
 const State = {
     HIDDEN: 0,      // Screensaver not active
-    FADING: 1,      // Idle fade in progress
-    SHOWN: 2,       // Screensaver visible but not locked
-    LOCKED: 3,      // Locked state (dialog hidden)
-    UNLOCKING: 4    // Unlock dialog visible
+    SHOWN: 1,       // Screensaver visible but not locked
+    LOCKED: 2,      // Locked state (dialog hidden)
+    UNLOCKING: 3    // Unlock dialog visible
 };
 
 var ScreenShield = GObject.registerClass({
     Signals: {
         'locked': {},
-        'unlocked': {},
-        'state-changed': { param_types: [GObject.TYPE_INT, GObject.TYPE_INT] }
+        'unlocked': {}
     }
 }, class ScreenShield extends St.Widget {
     _init() {
@@ -205,8 +202,9 @@ var ScreenShield = GObject.registerClass({
         if (global.settings.get_boolean('session-locked-state')) {
             _log('ScreenShield: Restoring locked state from previous session');
             this._backupLockerCall('ReleaseGrabs', null, () => {
-                this.lock(false, true);
+                this.lock(false);
             }, true);
+
         }
     }
 
@@ -215,8 +213,7 @@ var ScreenShield = GObject.registerClass({
             return;
 
         const validTransitions = {
-            [State.HIDDEN]: [State.FADING, State.SHOWN, State.LOCKED],
-            [State.FADING]: [State.SHOWN, State.HIDDEN],
+            [State.HIDDEN]: [State.SHOWN, State.LOCKED],
             [State.SHOWN]: [State.LOCKED, State.HIDDEN],
             [State.LOCKED]: [State.UNLOCKING, State.HIDDEN],
             [State.UNLOCKING]: [State.LOCKED, State.HIDDEN]
@@ -230,7 +227,6 @@ var ScreenShield = GObject.registerClass({
         let oldState = this._state;
         this._state = newState;
         _log(`ScreenShield: State ${oldState} -> ${newState}`);
-        this.emit('state-changed', oldState, newState);
 
         let locked = newState === State.LOCKED || newState === State.UNLOCKING;
         let wasLocked = oldState === State.LOCKED || oldState === State.UNLOCKING;
@@ -305,7 +301,7 @@ var ScreenShield = GObject.registerClass({
         this._setState(State.UNLOCKING);
 
         this._lastPointerMonitor = global.display.get_current_monitor();
-        Main.setActionMode(this,Cinnamon.ActionMode.UNLOCK_SCREEN);
+        Main.setActionMode(this, Cinnamon.ActionMode.UNLOCK_SCREEN);
 
         global.stage.show_cursor();
 
@@ -353,7 +349,7 @@ var ScreenShield = GObject.registerClass({
 
                 this._setState(State.LOCKED);
 
-                Main.setActionMode(this,Cinnamon.ActionMode.LOCK_SCREEN);
+                Main.setActionMode(this, Cinnamon.ActionMode.LOCK_SCREEN);
 
                 global.stage.hide_cursor();
                 this._onSleep();
@@ -603,7 +599,7 @@ var ScreenShield = GObject.registerClass({
 
             let lockOnSuspend = this._powerSettings.get_boolean('lock-on-suspend');
             if (lockOnSuspend && !this.isLocked()) {
-                this.lock(false, true);
+                this.lock(false);
             }
         } else {
             _log('ScreenShield: System resuming');
@@ -616,7 +612,7 @@ var ScreenShield = GObject.registerClass({
 
     _onSessionLock() {
         _log('ScreenShield: Received lock signal from LoginManager');
-        this.lock(false, true);
+        this.lock(false);
     }
 
     _onSessionUnlock() {
@@ -683,8 +679,8 @@ var ScreenShield = GObject.registerClass({
         let monitor = Main.layoutManager.monitors[monitorIndex];
 
         // Get dialog's preferred size
-        let [minWidth, natWidth] = this._dialog.get_preferred_width(-1);
-        let [minHeight, natHeight] = this._dialog.get_preferred_height(natWidth);
+        let [, natWidth] = this._dialog.get_preferred_width(-1);
+        let [, natHeight] = this._dialog.get_preferred_height(natWidth);
 
         // When keyboard is visible, center dialog in the remaining space
         let availableHeight = monitor.height;
@@ -804,8 +800,8 @@ var ScreenShield = GObject.registerClass({
         let sectorTop = monitor.y + (sectorY * sectorHeight);
 
         // Get widget's preferred size
-        let [minWidth, natWidth] = widget.get_preferred_width(-1);
-        let [minHeight, natHeight] = widget.get_preferred_height(natWidth);
+        let [, natWidth] = widget.get_preferred_width(-1);
+        let [, natHeight] = widget.get_preferred_height(natWidth);
 
         // Constrain widget size to fit within sector
         let widgetWidth = Math.min(natWidth, sectorWidth);
@@ -813,7 +809,7 @@ var ScreenShield = GObject.registerClass({
 
         // If we constrained width, recalculate height with new width
         if (widgetWidth < natWidth) {
-            [minHeight, natHeight] = widget.get_preferred_height(widgetWidth);
+            [, natHeight] = widget.get_preferred_height(widgetWidth);
             widgetHeight = Math.min(natHeight, sectorHeight);
         }
 

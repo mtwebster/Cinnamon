@@ -169,39 +169,39 @@ function deviceKindToString(kind) {
 function deviceKindToIcon(kind, fallbackIcon) {
     switch (kind) {
         case UPDeviceKind.MONITOR:
-            return ("xsi-video-display");
+            return "xsi-video-display";
         case UPDeviceKind.MOUSE:
-            return ("xsi-input-mouse");
+            return "xsi-input-mouse";
         case UPDeviceKind.KEYBOARD:
-            return ("xsi-input-keyboard");
+            return "xsi-input-keyboard";
         case UPDeviceKind.PHONE:
         case UPDeviceKind.MEDIA_PLAYER:
-            return ("xsi-phone-apple-iphone");
+            return "xsi-phone-apple-iphone";
         case UPDeviceKind.TABLET:
-            return ("xsi-input-tablet");
+            return "xsi-input-tablet";
         case UPDeviceKind.COMPUTER:
-            return ("xsi-computer");
+            return "xsi-computer";
         case UPDeviceKind.GAMING_INPUT:
-            return ("xsi-input-gaming");
+            return "xsi-input-gaming";
         case UPDeviceKind.TOUCHPAD:
-            return ("xsi-input-touchpad");
+            return "xsi-input-touchpad";
         case UPDeviceKind.HEADSET:
-            return ("xsi-audio-headset");
+            return "xsi-audio-headset";
         case UPDeviceKind.SPEAKERS:
-            return ("xsi-audio-speakers");
+            return "xsi-audio-speakers";
         case UPDeviceKind.HEADPHONES:
-            return ("xsi-audio-headphones");
+            return "xsi-audio-headphones";
         case UPDeviceKind.PRINTER:
-            return ("xsi-printer");
+            return "xsi-printer";
         case UPDeviceKind.SCANNER:
-            return ("xsi-scanner");
+            return "xsi-scanner";
         case UPDeviceKind.CAMERA:
-            return ("xsi-camera-photo");
+            return "xsi-camera-photo";
         default:
             if (fallbackIcon) {
                 return fallbackIcon;
             } else {
-                return ("xsi-battery-level-100");
+                return "xsi-battery-level-100";
             }
     }
 }

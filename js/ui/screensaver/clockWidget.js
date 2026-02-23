@@ -99,15 +99,6 @@ class ClockWidget extends ScreensaverWidget.ScreensaverWidget {
         }
     }
 
-    setAwayMessage(message) {
-        this._awayMessage = message;
-        this._updateClock();
-    }
-
-    shouldShowInSleepMode() {
-        return this._showClock;
-    }
-
     onScreensaverActivated() {
         if (!this._showClock) {
             this.hide();
@@ -128,11 +119,6 @@ class ClockWidget extends ScreensaverWidget.ScreensaverWidget {
         if (this._wallClock) {
             this._wallClock.run_dispose();
             this._wallClock = null;
-        }
-
-        if (this._tzMonitor) {
-            this._tzMonitor.cancel();
-            this._tzMonitor = null;
         }
 
         super.destroy();

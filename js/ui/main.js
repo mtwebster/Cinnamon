@@ -200,7 +200,6 @@ var keyboardManager = null;
 var workspace_names = [];
 
 var actionMode = Cinnamon.ActionMode.NORMAL;
-var _actionModeStack = [];
 
 var applet_side = St.Side.TOP; // Kept to maintain compatibility. Doesn't seem to be used anywhere
 var deskletContainer = null;

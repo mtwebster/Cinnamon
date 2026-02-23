@@ -22,7 +22,6 @@ const Util = imports.misc.util;
 const SCREENSAVER_SCHEMA = 'org.cinnamon.desktop.screensaver';
 const ALBUM_ART_SIZE_BASE = 300;
 const CONTROL_ICON_SIZE_BASE = 24;
-const VOLUME_ADJUSTMENT_STEP = 0.05;
 
 var AlbumArtWidget = GObject.registerClass(
 class AlbumArtWidget extends ScreensaverWidget.ScreensaverWidget {
@@ -435,18 +434,25 @@ class AlbumArtWidget extends ScreensaverWidget.ScreensaverWidget {
         }
     }
 
-    _downloadAlbumArt(url) {
-        if (!this._coverFileTmp) {
-            try {
-                let [file, iostream] = Gio.file_new_tmp('XXXXXX.albumart-cover');
-                this._coverFileTmp = file;
-                iostream.close(null);
-            } catch (e) {
-                global.logError(`AlbumArtWidget: Failed to create temp file: ${e}`);
-                this._showDefaultArt();
-                return;
-            }
+    _ensureTempFile() {
+        if (this._coverFileTmp)
+            return true;
+
+        try {
+            let [file, iostream] = Gio.file_new_tmp('XXXXXX.albumart-cover');
+            this._coverFileTmp = file;
+            iostream.close(null);
+            return true;
+        } catch (e) {
+            global.logError(`AlbumArtWidget: Failed to create temp file: ${e}`);
+            this._showDefaultArt();
+            return false;
         }
+    }
+
+    _downloadAlbumArt(url) {
+        if (!this._ensureTempFile())
+            return;
 
         Util.spawn_async(
             ['wget', '-q', url, '-O', this._coverFileTmp.get_path()],
@@ -493,17 +499,8 @@ class AlbumArtWidget extends ScreensaverWidget.ScreensaverWidget {
             return;
         }
 
-        if (!this._coverFileTmp) {
-            try {
-                let [file, iostream] = Gio.file_new_tmp('XXXXXX.albumart-cover');
-                this._coverFileTmp = file;
-                iostream.close(null);
-            } catch (e) {
-                global.logError(`AlbumArtWidget: Failed to create temp file: ${e}`);
-                this._showDefaultArt();
-                return;
-            }
-        }
+        if (!this._ensureTempFile())
+            return;
 
         try {
             let decoded = GLib.base64_decode(match[2]);
