@@ -125,8 +125,6 @@ var ScreenShield = GObject.registerClass({
         }
 
         this._state = State.HIDDEN;
-        this._isModal = false;
-        this._currentActionMode = null;
         this._lockTimeoutId = 0;
         this._backgrounds = [];  // Array of background actors, one per monitor
         this._lastPointerMonitor = -1;  // Track which monitor pointer is on
@@ -243,42 +241,6 @@ var ScreenShield = GObject.registerClass({
         this._syncInhibitor();
     }
 
-    _pushModal(actionMode) {
-        if (this._isModal)
-            return true;
-
-        if (!Main.pushModal(this, global.get_current_time(), 0, actionMode)) {
-            global.logError('ScreenShield: Failed to acquire modal grab');
-            return false;
-        }
-
-        this._isModal = true;
-        this._currentActionMode = actionMode;
-        return true;
-    }
-
-    _popModal() {
-        if (!this._isModal)
-            return;
-
-        Main.popModal(this);
-        this._isModal = false;
-        this._currentActionMode = null;
-    }
-
-    _changeActionMode(newMode) {
-        if (!this._isModal) {
-            global.logWarning('ScreenShield: Cannot change ActionMode - not modal');
-            return;
-        }
-
-        if (this._currentActionMode === newMode)
-            return;
-
-        // Pop and re-push with new mode
-        this._popModal();
-        this._pushModal(newMode);
-    }
 
     /**
      * _onCapturedEvent:
@@ -343,7 +305,7 @@ var ScreenShield = GObject.registerClass({
         this._setState(State.UNLOCKING);
 
         this._lastPointerMonitor = global.display.get_current_monitor();
-        this._changeActionMode(Cinnamon.ActionMode.UNLOCK_SCREEN);
+        Main.setActionMode(this,Cinnamon.ActionMode.UNLOCK_SCREEN);
 
         global.stage.show_cursor();
 
@@ -391,7 +353,7 @@ var ScreenShield = GObject.registerClass({
 
                 this._setState(State.LOCKED);
 
-                this._changeActionMode(Cinnamon.ActionMode.LOCK_SCREEN);
+                Main.setActionMode(this,Cinnamon.ActionMode.LOCK_SCREEN);
 
                 global.stage.hide_cursor();
                 this._onSleep();
@@ -469,7 +431,7 @@ var ScreenShield = GObject.registerClass({
         this._setState(State.SHOWN);
 
         this._createBackgrounds();
-        if (!this._pushModal(Cinnamon.ActionMode.LOCK_SCREEN)) {
+        if (!Main.pushModal(this, global.get_current_time(), 0, Cinnamon.ActionMode.LOCK_SCREEN)) {
             global.logError('ScreenShield: Failed to acquire modal grab');
             return;
         }
@@ -571,7 +533,7 @@ var ScreenShield = GObject.registerClass({
             duration: FADE_TIME,
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
             onComplete: () => {
-                this._popModal();
+                Main.popModal(this);
                 this.hide();
                 Main.layoutManager.screenShieldGroup.hide();
                 this._destroyAllWidgets();

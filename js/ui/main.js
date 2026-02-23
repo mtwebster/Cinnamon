@@ -1385,6 +1385,29 @@ function pushModal(actor, timestamp, options, mode) {
 }
 
 /**
+ * setActionMode:
+ * @actor (Clutter.Actor): actor currently holding the modal grab.
+ * @mode (Cinnamon.ActionMode): the new action mode.
+ *
+ * Change the action mode for an existing modal grab without releasing
+ * and reacquiring the grab. This avoids a window where there is no
+ * grab, which is important for the lock screen.
+ */
+function setActionMode(actor, mode) {
+    let focusIndex = _findModal(actor);
+    if (focusIndex < 0) {
+        global.logWarning('setActionMode: actor is not in the modal stack');
+        return;
+    }
+
+    if (modalActorFocusStack[focusIndex].actionMode === mode)
+        return;
+
+    actionMode = mode;
+    modalActorFocusStack[focusIndex].actionMode = mode;
+}
+
+/**
  * popModal:
  * @actor (Clutter.Actor): actor passed to original invocation of pushModal().
  * @timestamp (int): optional timestamp
