@@ -77,18 +77,14 @@ class ScreensaverWidget extends St.BoxLayout {
     }
 
     onScreensaverActivated() {
-        // Override in subclasses
     }
 
     onScreensaverDeactivated() {
-        // Override in subclasses
     }
 
     onAwake() {
-        // Override in subclasses
     }
 
     onSleep() {
-        // Override in subclasses
     }
 });

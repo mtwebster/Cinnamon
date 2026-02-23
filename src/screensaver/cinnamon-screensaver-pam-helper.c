@@ -308,9 +308,6 @@ auth_check_idle (gpointer user_data)
         {
             DEBUG ("cinnamon-screensaver-pam-helper: Authentication failed, quitting (max failures)\n");
             again = FALSE;
-            /* Don't quit immediately, but rather request that cinnamon-screensaver
-             * terminates us after it has finished the dialog shake. Time out
-             * after 5 seconds and quit anyway if this doesn't happen though */
             send_cancelled ();
         }
     }
@@ -404,8 +401,6 @@ setup_stdin_monitor (void)
 
     stdin_cancellable = g_cancellable_new ();
     task = g_task_new (NULL, stdin_cancellable, stdin_monitor_task_finished, NULL);
-
-    // g_task_set_return_on_cancel (task, TRUE);
 
     g_task_run_in_thread (task, stdin_monitor_task_thread);
     g_object_unref (task);

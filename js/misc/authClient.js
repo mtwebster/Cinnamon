@@ -54,7 +54,6 @@ var AuthClient = class {
 
         this.initialized = true;
 
-        // Start reading messages from helper
         this._readMessages();
 
         return true;
@@ -117,7 +116,6 @@ var AuthClient = class {
             return;
 
         try {
-            // Convert string to bytes using ByteArray
             let bytes = ByteArray.fromString(password + '\n');
             let gbytes = GLib.Bytes.new(bytes);
             this.in_pipe.write_bytes(gbytes, this.cancellable);
@@ -146,7 +144,6 @@ var AuthClient = class {
             let bytes_read = pipe.read_bytes_finish(res);
 
             if (bytes_read && bytes_read.get_size() > 0) {
-                // Convert bytes to string using ByteArray
                 let raw_string = ByteArray.toString(bytes_read.toArray());
                 let lines = raw_string.split('\n');
 
@@ -233,7 +230,6 @@ var AuthClient = class {
             return;
         }
 
-        // Continue reading
         this._readMessages();
     }
 }

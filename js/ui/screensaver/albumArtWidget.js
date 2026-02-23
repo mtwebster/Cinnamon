@@ -169,7 +169,6 @@ class AlbumArtWidget extends ScreensaverWidget.ScreensaverWidget {
         });
         this._infoContainer.add_child(this._artContainer);
 
-        // Album art
         this._artBin = new St.Bin({
             style_class: 'albumart-cover-bin',
             width: this._artSize,

@@ -1,6 +1,5 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
-// Used by sound applet and screensaver album art widget.
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const Signals = imports.signals;
