@@ -830,6 +830,7 @@ function _doSwitchToGreeter() {
         }
     }
 
+    global.logWarning('switchToGreeter: No supported display manager method available');
     return GLib.SOURCE_REMOVE;
 }
 
@@ -926,6 +927,19 @@ function getTtyVals(debug) {
         _log(`getTtyVals: termTty fallback to ${termTty}`);
     }
 
-    _log(`getTtyVals: Final tty values: term=${termTty}, session=${sessionTty}`);
-    return [termTty, sessionTty];
+    let termVal = parseInt(termTty);
+    let sessionVal = parseInt(sessionTty);
+
+    if (isNaN(sessionVal)) {
+        global.logWarning(`getTtyVals: invalid sessionTty '${sessionTty}', defaulting to 7`);
+        sessionVal = 7;
+    }
+
+    if (isNaN(termVal)) {
+        global.logWarning(`getTtyVals: invalid termTty '${termTty}', defaulting to 2`);
+        termVal = sessionVal !== 2 ? 2 : 1;
+    }
+
+    _log(`getTtyVals: Final tty values: term=${termVal}, session=${sessionVal}`);
+    return [termVal, sessionVal];
 }

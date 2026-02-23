@@ -379,7 +379,7 @@ var ScreenShield = GObject.registerClass({
             let stageXid = global.get_stage_xwindow();
             let [termTty, sessionTty] = Util.getTtyVals(_debug);
             this._backupLockerCall('Lock',
-                GLib.Variant.new('(tuu)', [stageXid, parseInt(termTty), parseInt(sessionTty)]));
+                GLib.Variant.new('(tuu)', [stageXid, termTty, sessionTty]));
 
             this.emit('locked');
         } else {
