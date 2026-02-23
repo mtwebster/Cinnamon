@@ -66,6 +66,7 @@ var MprisPlayer = class MprisPlayer {
 
     _initProxies() {
         let proxiesAcquired = 0;
+        let failCount = 0;
         let totalProxies = 3;
 
         let asyncReadyCb = (proxy, error, property) => {
@@ -73,6 +74,10 @@ var MprisPlayer = class MprisPlayer {
 
             if (error) {
                 global.logWarning(`MprisPlayer: Error acquiring ${property} for ${this._busName}: ${error}`);
+                failCount++;
+                if (proxiesAcquired + failCount === totalProxies) {
+                    this.destroy();
+                }
                 return;
             }
 
