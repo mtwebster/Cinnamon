@@ -15,6 +15,7 @@ const UnlockDialog = imports.ui.screensaver.unlockDialog;
 const ClockWidget = imports.ui.screensaver.clockWidget;
 const AlbumArtWidget = imports.ui.screensaver.albumArtWidget;
 const InfoPanel = imports.ui.screensaver.infoPanel;
+const NameBlocker = imports.ui.screensaver.nameBlocker;
 
 const SCREENSAVER_SCHEMA = 'org.cinnamon.desktop.screensaver';
 const POWER_SCHEMA = 'org.cinnamon.settings-daemon.plugins.power';
@@ -128,6 +129,8 @@ var ScreenShield = GObject.registerClass({
         this._widgetLoadIdleId = 0;
         this._infoPanel = null;
         this._inhibitor = null;
+
+        this._nameBlocker = new NameBlocker.NameBlocker();
 
         this._settings = new Gio.Settings({ schema_id: SCREENSAVER_SCHEMA });
         this._settings.connect('changed::lock-enabled', this._syncInhibitor.bind(this));
@@ -1212,6 +1215,11 @@ var ScreenShield = GObject.registerClass({
 
         this._destroyBackgrounds();
         this._destroyAllWidgets();
+
+        if (this._nameBlocker) {
+            this._nameBlocker.destroy();
+            this._nameBlocker = null;
+        }
 
         super.vfunc_destroy();
     }
