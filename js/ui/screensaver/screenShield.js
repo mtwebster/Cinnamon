@@ -378,12 +378,6 @@ var ScreenShield = GObject.registerClass({
         if (locked) {
             this._dialog.saveSystemLayout();
             this._setState(State.LOCKED);
-
-            let stageXid = global.get_stage_xwindow();
-            let [termTty, sessionTty] = Util.getTtyVals();
-            this._backupLockerCall('Lock',
-                GLib.Variant.new('(tuu)', [stageXid, termTty, sessionTty]));
-
             this.emit('locked');
         } else {
             this._setState(State.SHOWN);
@@ -437,6 +431,7 @@ var ScreenShield = GObject.registerClass({
 
         if (immediate) {
             this.opacity = 255;
+            this._activateBackupLocker();
             this._scheduleWidgetLoading();
         } else {
             this.opacity = 0;
@@ -445,6 +440,7 @@ var ScreenShield = GObject.registerClass({
                 duration: FADE_TIME,
                 mode: Clutter.AnimationMode.EASE_OUT_QUAD,
                 onComplete: () => {
+                    this._activateBackupLocker();
                     this._scheduleWidgetLoading();
                 }
             });
@@ -1125,6 +1121,13 @@ var ScreenShield = GObject.registerClass({
         this._startFloatTimer();
         this._floatersNeedUpdate = true;
         this._updateFloaters();
+    }
+
+    _activateBackupLocker() {
+        let stageXid = global.get_stage_xwindow();
+        let [termTty, sessionTty] = Util.getTtyVals();
+        this._backupLockerCall('Lock',
+            GLib.Variant.new('(tuu)', [stageXid, termTty, sessionTty]));
     }
 
     _backupLockerCall(method, params, callback, noAutoStart = false) {
