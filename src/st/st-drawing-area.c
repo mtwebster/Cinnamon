@@ -20,6 +20,7 @@
 
 /**
  * SECTION:st-drawing-area
+ * @title: StDrawingArea
  * @short_description: A dynamically-sized Cairo drawing area
  *
  * #StDrawingArea is similar to #ClutterCairoTexture in that

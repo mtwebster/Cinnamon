@@ -21,6 +21,7 @@
 
 /**
  * SECTION:st-table
+ * @title: StTable
  * @short_description: A multi-child layout container based on rows
  * and columns
  *

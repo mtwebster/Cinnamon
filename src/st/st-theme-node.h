@@ -32,7 +32,8 @@
 G_BEGIN_DECLS
 
 /**
- * SECTION:StThemeNode
+ * SECTION:st-theme-node
+ * @title: StThemeNode
  * @short_description: style information for one node in a tree of themed objects
  *
  * A #StThemeNode represents the CSS style information (the set of CSS properties) for one
@@ -59,6 +60,15 @@ typedef struct _StThemeNodeClass StThemeNodeClass;
 #define ST_IS_THEME_NODE_CLASS(klass)   (G_TYPE_CHECK_CLASS_TYPE ((klass),     ST_TYPE_THEME_NODE))
 #define ST_THEME_NODE_GET_CLASS(obj)    (G_TYPE_INSTANCE_GET_CLASS ((obj),     ST_TYPE_THEME_NODE, StThemeNodeClass))
 
+/**
+ * StSide:
+ * @ST_SIDE_TOP: The top side
+ * @ST_SIDE_RIGHT: The right side
+ * @ST_SIDE_BOTTOM: The bottom side
+ * @ST_SIDE_LEFT: The left side
+ *
+ * Used to identify a side of a box for operations like border and padding queries.
+ */
 typedef enum {
     ST_SIDE_TOP,
     ST_SIDE_RIGHT,
@@ -66,6 +76,15 @@ typedef enum {
     ST_SIDE_LEFT
 } StSide;
 
+/**
+ * StCorner:
+ * @ST_CORNER_TOPLEFT: The top-left corner
+ * @ST_CORNER_TOPRIGHT: The top-right corner
+ * @ST_CORNER_BOTTOMRIGHT: The bottom-right corner
+ * @ST_CORNER_BOTTOMLEFT: The bottom-left corner
+ *
+ * Used to identify a corner of a box for border-radius queries.
+ */
 typedef enum {
     ST_CORNER_TOPLEFT,
     ST_CORNER_TOPRIGHT,
@@ -73,7 +92,15 @@ typedef enum {
     ST_CORNER_BOTTOMLEFT
 } StCorner;
 
-/* These are the CSS values; that doesn't mean we have to implement blink... */
+/**
+ * StTextDecoration:
+ * @ST_TEXT_DECORATION_UNDERLINE: Underline text decoration
+ * @ST_TEXT_DECORATION_OVERLINE: Overline text decoration
+ * @ST_TEXT_DECORATION_LINE_THROUGH: Strikethrough text decoration
+ * @ST_TEXT_DECORATION_BLINK: Blinking text decoration (defined by CSS, not implemented)
+ *
+ * Flags for CSS text-decoration property. These can be combined as a bitmask.
+ */
 typedef enum {
     ST_TEXT_DECORATION_UNDERLINE    = 1 << 0,
     ST_TEXT_DECORATION_OVERLINE     = 1 << 1,
@@ -81,6 +108,16 @@ typedef enum {
     ST_TEXT_DECORATION_BLINK        = 1 << 3
 } StTextDecoration;
 
+/**
+ * StTextAlign:
+ * @ST_TEXT_ALIGN_LEFT: Left-aligned text
+ * @ST_TEXT_ALIGN_CENTER: Center-aligned text
+ * @ST_TEXT_ALIGN_RIGHT: Right-aligned text
+ * @ST_TEXT_ALIGN_JUSTIFY: Justified text
+ *
+ * Corresponds to the CSS text-align property. The first three values
+ * map directly to #PangoAlignment values.
+ */
 typedef enum {
     ST_TEXT_ALIGN_LEFT = PANGO_ALIGN_LEFT,
     ST_TEXT_ALIGN_CENTER = PANGO_ALIGN_CENTER,
@@ -88,6 +125,15 @@ typedef enum {
     ST_TEXT_ALIGN_JUSTIFY
 } StTextAlign;
 
+/**
+ * StGradientType:
+ * @ST_GRADIENT_NONE: No gradient
+ * @ST_GRADIENT_VERTICAL: Vertical gradient (top to bottom)
+ * @ST_GRADIENT_HORIZONTAL: Horizontal gradient (left to right)
+ * @ST_GRADIENT_RADIAL: Radial gradient (center outward)
+ *
+ * The type of background gradient to apply, as specified by CSS.
+ */
 typedef enum {
   ST_GRADIENT_NONE,
   ST_GRADIENT_VERTICAL,
@@ -95,6 +141,14 @@ typedef enum {
   ST_GRADIENT_RADIAL
 } StGradientType;
 
+/**
+ * StIconStyle:
+ * @ST_ICON_STYLE_REQUESTED: Use the icon style as requested by the theme
+ * @ST_ICON_STYLE_REGULAR: Use the regular (full-color) icon style
+ * @ST_ICON_STYLE_SYMBOLIC: Use the symbolic (monochrome) icon style
+ *
+ * Controls whether icons are rendered in symbolic or regular style.
+ */
 typedef enum {
   ST_ICON_STYLE_REQUESTED,
   ST_ICON_STYLE_REGULAR,

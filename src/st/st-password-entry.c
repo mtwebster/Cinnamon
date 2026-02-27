@@ -17,6 +17,16 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * SECTION:st-password-entry
+ * @title: StPasswordEntry
+ * @short_description: A password entry widget
+ *
+ * #StPasswordEntry is a text entry widget for password input. It extends
+ * #StEntry by masking the text with bullet characters and optionally
+ * displaying a peek icon to toggle password visibility.
+ */
+
 #include "st-private.h"
 #include "st-password-entry.h"
 #include "st-icon.h"

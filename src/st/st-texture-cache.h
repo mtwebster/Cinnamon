@@ -47,6 +47,13 @@ struct _StTextureCache
   StTextureCachePrivate *priv;
 };
 
+/**
+ * StTextureCachePolicy:
+ * @ST_TEXTURE_CACHE_POLICY_NONE: No caching; the texture is not kept after use
+ * @ST_TEXTURE_CACHE_POLICY_FOREVER: Cache the texture permanently for the lifetime of the cache
+ *
+ * Determines whether and how a texture is cached by #StTextureCache.
+ */
 typedef enum {
   ST_TEXTURE_CACHE_POLICY_NONE,
   ST_TEXTURE_CACHE_POLICY_FOREVER

@@ -18,6 +18,16 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * SECTION:st-image-content
+ * @title: StImageContent
+ * @short_description: A ClutterImage with preferred size support
+ *
+ * #StImageContent extends #ClutterImage to report a preferred size,
+ * allowing image content to request a specific width and height from
+ * the layout system.
+ */
+
 #include "st-image-content.h"
 #include "st-private.h"
 

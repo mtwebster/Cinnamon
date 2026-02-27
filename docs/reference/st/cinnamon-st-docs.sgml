@@ -17,6 +17,7 @@
     <title>API reference</title>
     <chapter id="base">
       <title>Abstract classes and Interfaces</title>
+      <xi:include href="xml/st-types.xml"/>
       <xi:include href="xml/st-widget.xml"/>
       <xi:include href="xml/st-widget-accessible.xml"/>
       <xi:include href="xml/st-scrollable.xml"/>
@@ -26,8 +27,13 @@
       <xi:include href="xml/st-button.xml"/>
       <xi:include href="xml/st-drawing-area.xml"/>
       <xi:include href="xml/st-entry.xml"/>
+      <xi:include href="xml/st-password-entry.xml"/>
       <xi:include href="xml/st-icon.xml"/>
       <xi:include href="xml/st-label.xml"/>
+      <xi:include href="xml/st-polygon.xml"/>
+      <xi:include href="xml/st-image-content.xml"/>
+      <xi:include href="xml/st-scroll-bar.xml"/>
+      <xi:include href="xml/st-group.xml"/>
     </chapter>
     <chapter id="containers">
       <title>Containers</title>
@@ -35,14 +41,30 @@
       <xi:include href="xml/st-box-layout.xml"/>
       <xi:include href="xml/st-scroll-view.xml"/>
       <xi:include href="xml/st-table.xml"/>
+      <xi:include href="xml/st-viewport.xml"/>
     </chapter>
-
+    <chapter id="container-children">
+      <title>Container Children</title>
+      <xi:include href="xml/st-box-layout-child.xml"/>
+      <xi:include href="xml/st-table-child.xml"/>
+    </chapter>
     <chapter id="styling">
       <title>Styling</title>
       <xi:include href="xml/st-theme.xml"/>
       <xi:include href="xml/st-theme-context.xml"/>
       <xi:include href="xml/st-theme-node.xml"/>
       <xi:include href="xml/st-texture-cache.xml"/>
+      <xi:include href="xml/st-border-image.xml"/>
+      <xi:include href="xml/st-icon-colors.xml"/>
+      <xi:include href="xml/st-shadow.xml"/>
+      <xi:include href="xml/st-scroll-view-fade.xml"/>
+      <xi:include href="xml/st-settings.xml"/>
+    </chapter>
+    <chapter id="utilities">
+      <title>Utilities</title>
+      <xi:include href="xml/st-adjustment.xml"/>
+      <xi:include href="xml/st-clipboard.xml"/>
+      <xi:include href="xml/st-focus-manager.xml"/>
     </chapter>
   </part>
   <chapter id="object-tree">

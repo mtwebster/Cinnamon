@@ -20,6 +20,7 @@
 
 /**
  * SECTION:st-adjustment
+ * @title: StAdjustment
  * @short_description: A GObject representing an adjustable bounded value
  *
  * The #StAdjustment object represents a range of values bounded between a
@@ -298,6 +299,19 @@ st_adjustment_init (StAdjustment *self)
   priv->is_constructing = TRUE;
 }
 
+/**
+ * st_adjustment_new:
+ * @value: the initial value
+ * @lower: the minimum value
+ * @upper: the maximum value
+ * @step_increment: the step increment
+ * @page_increment: the page increment
+ * @page_size: the page size
+ *
+ * Creates a new #StAdjustment.
+ *
+ * Returns: a new #StAdjustment
+ */
 StAdjustment *
 st_adjustment_new (gdouble value,
                    gdouble lower,
@@ -316,6 +330,14 @@ st_adjustment_new (gdouble value,
                        NULL);
 }
 
+/**
+ * st_adjustment_get_value:
+ * @adjustment: an #StAdjustment
+ *
+ * Gets the current value of the adjustment.
+ *
+ * Returns: the current value
+ */
 gdouble
 st_adjustment_get_value (StAdjustment *adjustment)
 {
@@ -324,6 +346,14 @@ st_adjustment_get_value (StAdjustment *adjustment)
   return ((StAdjustmentPrivate *)st_adjustment_get_instance_private (adjustment))->value;
 }
 
+/**
+ * st_adjustment_set_value:
+ * @adjustment: an #StAdjustment
+ * @value: the new value
+ *
+ * Sets the current value of the adjustment. The value is clamped to lie
+ * between the lower and upper bounds.
+ */
 void
 st_adjustment_set_value (StAdjustment *adjustment,
                          gdouble       value)
@@ -350,6 +380,16 @@ st_adjustment_set_value (StAdjustment *adjustment,
     }
 }
 
+/**
+ * st_adjustment_clamp_page:
+ * @adjustment: an #StAdjustment
+ * @lower: the lower bound of the visible page
+ * @upper: the upper bound of the visible page
+ *
+ * Ensures the current value falls within the visible page defined by
+ * @lower and @upper. If the value is outside the page, it is adjusted
+ * to bring the page into view.
+ */
 void
 st_adjustment_clamp_page (StAdjustment *adjustment,
                           gdouble       lower,
@@ -495,6 +535,19 @@ st_adjustment_set_page_size (StAdjustment *adjustment,
   return FALSE;
 }
 
+/**
+ * st_adjustment_set_values:
+ * @adjustment: an #StAdjustment
+ * @value: the new value
+ * @lower: the new minimum value
+ * @upper: the new maximum value
+ * @step_increment: the new step increment
+ * @page_increment: the new page increment
+ * @page_size: the new page size
+ *
+ * Sets all properties of the adjustment at once, emitting a single
+ * #StAdjustment::changed signal if any property changed.
+ */
 void
 st_adjustment_set_values (StAdjustment *adjustment,
                           gdouble       value,
@@ -691,6 +744,16 @@ st_adjustment_get_transition (StAdjustment *adjustment,
   return clos->transition;
 }
 
+/**
+ * st_adjustment_add_transition:
+ * @adjustment: an #StAdjustment
+ * @name: the name of the transition
+ * @transition: the #ClutterTransition to add
+ *
+ * Adds a named transition to the adjustment. The transition will animate
+ * the adjustment's properties. If a transition with @name already exists,
+ * a warning is emitted and the new transition is not added.
+ */
 void
 st_adjustment_add_transition (StAdjustment      *adjustment,
                               const char        *name,
@@ -731,6 +794,14 @@ st_adjustment_add_transition (StAdjustment      *adjustment,
   clutter_timeline_start (CLUTTER_TIMELINE (transition));
 }
 
+/**
+ * st_adjustment_remove_transition:
+ * @adjustment: an #StAdjustment
+ * @name: the name of the transition to remove
+ *
+ * Removes the named transition from the adjustment, stopping it if
+ * it is currently playing.
+ */
 void
 st_adjustment_remove_transition (StAdjustment *adjustment,
                                  const char   *name)

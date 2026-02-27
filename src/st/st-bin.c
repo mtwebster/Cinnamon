@@ -20,6 +20,7 @@
 
 /**
  * SECTION:st-bin
+ * @title: StBin
  * @short_description: a simple container with one actor
  *
  * #StBin is a simple container capable of having only one

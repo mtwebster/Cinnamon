@@ -42,6 +42,15 @@ typedef struct _StScrollView          StScrollView;
 typedef struct _StScrollViewPrivate   StScrollViewPrivate;
 typedef struct _StScrollViewClass     StScrollViewClass;
 
+/**
+ * StPolicyType:
+ * @ST_POLICY_ALWAYS: Always show the scrollbar
+ * @ST_POLICY_AUTOMATIC: Show the scrollbar only when content overflows
+ * @ST_POLICY_NEVER: Never show the scrollbar
+ * @ST_POLICY_EXTERNAL: Scrollbar is managed externally (e.g. overlay scrollbars)
+ *
+ * Controls the scrollbar visibility policy for an #StScrollView.
+ */
 typedef enum
 {
   ST_POLICY_ALWAYS,

@@ -19,6 +19,7 @@
 
 /**
  * SECTION:st-clipboard
+ * @title: StClipboard
  * @short_description: a simple representation of the clipboard
  *
  * #StCliboard is a very simple object representation of the clipboard
@@ -248,6 +249,14 @@ st_clipboard_set_text (StClipboard     *clipboard,
   g_bytes_unref (bytes);
 }
 
+/**
+ * st_clipboard_set_selection:
+ * @selection: the #MetaSelection to use for clipboard operations
+ *
+ * Sets the #MetaSelection instance used by the clipboard for all
+ * selection operations. This should be called during initialization
+ * with the display's selection object.
+ */
 void
 st_clipboard_set_selection (MetaSelection *selection)
 {

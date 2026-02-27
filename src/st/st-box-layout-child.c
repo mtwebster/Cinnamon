@@ -19,6 +19,7 @@
 
 /**
  * SECTION:st-box-layout-child
+ * @title: StBoxLayoutChild
  * @short_description: meta data associated with a #StBoxLayout child.
  *
  * #StBoxLayoutChild is a #ClutterChildMeta implementation that stores the

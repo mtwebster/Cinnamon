@@ -89,6 +89,7 @@ struct _StWidgetPrivate
 
 /**
  * SECTION:st-widget
+ * @title: StWidget
  * @short_description: Base class for stylable actors
  *
  * #StWidget is a simple abstract class on top of #ClutterActor. It
@@ -489,6 +490,18 @@ st_widget_real_style_changed (StWidget *self)
   notify_children_of_style_change ((ClutterActor *) self);
 }
 
+/**
+ * st_widget_style_changed:
+ * @widget: a #StWidget
+ *
+ * Indicates that the style of @widget has changed and its theme node
+ * needs to be recomputed. This invalidates the current theme node and,
+ * if the widget is mapped, triggers a style recomputation including
+ * any background effects.
+ *
+ * This is intended for use by subclasses of #StWidget when they need
+ * to signal a style change.
+ */
 void
 st_widget_style_changed (StWidget *widget)
 {
@@ -1715,12 +1728,27 @@ st_widget_ensure_style (StWidget *widget)
 
 static StTextDirection default_direction = ST_TEXT_DIRECTION_LTR;
 
+/**
+ * st_widget_get_default_direction:
+ *
+ * Retrieves the default text direction for all #StWidget instances.
+ *
+ * Returns: the default #StTextDirection
+ */
 StTextDirection
 st_widget_get_default_direction (void)
 {
   return default_direction;
 }
 
+/**
+ * st_widget_set_default_direction:
+ * @dir: a #StTextDirection (must not be %ST_TEXT_DIRECTION_NONE)
+ *
+ * Sets the default text direction for all #StWidget instances.
+ * Widgets that have not had an explicit direction set via
+ * st_widget_set_direction() will use this default.
+ */
 void
 st_widget_set_default_direction (StTextDirection dir)
 {
@@ -1729,6 +1757,16 @@ st_widget_set_default_direction (StTextDirection dir)
   default_direction = dir;
 }
 
+/**
+ * st_widget_get_direction:
+ * @self: a #StWidget
+ *
+ * Gets the text direction for @self. If no explicit direction has been
+ * set on this widget, the default direction (as set by
+ * st_widget_set_default_direction()) is returned.
+ *
+ * Returns: the #StTextDirection for @self
+ */
 StTextDirection
 st_widget_get_direction (StWidget *self)
 {
@@ -1740,6 +1778,16 @@ st_widget_get_direction (StWidget *self)
     return default_direction;
 }
 
+/**
+ * st_widget_set_direction:
+ * @self: a #StWidget
+ * @dir: a #StTextDirection
+ *
+ * Sets the text direction for @self. If the new effective direction
+ * differs from the previous one, the widget's style will be recomputed.
+ * Use %ST_TEXT_DIRECTION_NONE to unset a previously set direction and
+ * revert to the default.
+ */
 void
 st_widget_set_direction (StWidget *self, StTextDirection dir)
 {
@@ -3020,13 +3068,13 @@ st_widget_destroy_children (StWidget *widget)
   clutter_actor_destroy_all_children (CLUTTER_ACTOR (widget));
 }
 
-/* st_widget_move_child:
- * @widget: An #StWidget
- * @actor: A #ClutterActor
- * @pos: An #int
+/**
+ * st_widget_move_child:
+ * @widget: an #StWidget
+ * @actor: a #ClutterActor child of @widget
+ * @pos: the new position index for @actor
  *
- *
- * A simple compatibility wrapper around clutter_actor_set_child_at_index.
+ * A simple compatibility wrapper around clutter_actor_set_child_at_index().
  *
  * Deprecated:3.0: Use clutter_actor_set_child_at_index() instead
  */
@@ -3039,11 +3087,13 @@ st_widget_move_child (StWidget     *widget,
                                     actor, pos);
 }
 
-/* st_widget_move_before:
- * @widget: An #StWidget
- * @actor: A #ClutterActor
+/**
+ * st_widget_move_before:
+ * @widget: an #StWidget
+ * @actor: a #ClutterActor child of @widget
+ * @sibling: (nullable): a #ClutterActor child of @widget, or %NULL
  *
- * A simple compatibility wrapper around clutter_actor_set_child_below_sibling.
+ * A simple compatibility wrapper around clutter_actor_set_child_below_sibling().
  *
  * Deprecated:3.0: Use clutter_actor_set_child_below_sibling() instead
  */

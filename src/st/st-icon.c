@@ -20,6 +20,7 @@
 
 /**
  * SECTION:st-icon
+ * @title: StIcon
  * @short_description: a simple styled icon actor
  *
  * #StIcon is a simple styled texture actor that displays an image from
@@ -522,6 +523,14 @@ st_icon_new (void)
   return g_object_new (ST_TYPE_ICON, NULL);
 }
 
+/**
+ * st_icon_get_icon_name:
+ * @icon: an #StIcon
+ *
+ * Gets the name of the icon being displayed.
+ *
+ * Returns: (nullable): the icon name, or %NULL
+ */
 const gchar *
 st_icon_get_icon_name (StIcon *icon)
 {
@@ -530,6 +539,14 @@ st_icon_get_icon_name (StIcon *icon)
   return icon->priv->icon_name;
 }
 
+/**
+ * st_icon_set_icon_name:
+ * @icon: an #StIcon
+ * @icon_name: (nullable): the name of the icon, or %NULL
+ *
+ * Sets the name of the icon to display. The icon will be looked up in
+ * the icon theme.
+ */
 void
 st_icon_set_icon_name (StIcon      *icon,
                        const gchar *icon_name)

@@ -1995,6 +1995,18 @@ st_theme_node_paint_outline (StThemeNode           *node,
   cogl_framebuffer_draw_rectangles (fb, node->color_pipeline, rects, 4);
 }
 
+/**
+ * st_theme_node_paint: (skip)
+ * @node: a #StThemeNode
+ * @fb: the #CoglFramebuffer to paint on
+ * @box: the bounding box of the node's allocation
+ * @paint_opacity: the opacity to apply when painting
+ * @background_blur_effect: (nullable): an optional #StBackgroundBlurEffect
+ * @background_bumpmap_effect: (nullable): an optional #StBackgroundBumpmapEffect
+ *
+ * Paints the background, border, and outline of @node into @fb
+ * within the given @box allocation and at the specified @paint_opacity.
+ */
 void
 st_theme_node_paint (StThemeNode           *node,
                      CoglFramebuffer       *fb,

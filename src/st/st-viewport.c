@@ -37,6 +37,7 @@
 
 /**
  * SECTION:st-viewport
+ * @title: StViewport
  * @short_description: a scrollable container
  *
  * The #StViewport is a generic #StScrollable implementation.

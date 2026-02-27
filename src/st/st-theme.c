@@ -252,6 +252,18 @@ insert_stylesheet (StTheme      *theme,
   g_hash_table_insert (theme->filenames_by_stylesheet, stylesheet, filename_copy);
 }
 
+/**
+ * st_theme_load_stylesheet:
+ * @theme: an #StTheme
+ * @path: the path of a CSS stylesheet to load
+ * @error: (nullable): return location for a #GError, or %NULL
+ *
+ * Loads a custom CSS stylesheet and adds it to the theme. The stylesheet
+ * will be used for rule matching in addition to the theme's built-in
+ * stylesheets. Emits the #StTheme::stylesheets-changed signal on success.
+ *
+ * Returns: %TRUE if the stylesheet was successfully loaded
+ */
 gboolean
 st_theme_load_stylesheet (StTheme    *theme,
                           const char *path,
@@ -271,6 +283,15 @@ st_theme_load_stylesheet (StTheme    *theme,
   return TRUE;
 }
 
+/**
+ * st_theme_unload_stylesheet:
+ * @theme: an #StTheme
+ * @path: the path of a previously loaded CSS stylesheet
+ *
+ * Removes a custom CSS stylesheet previously added with
+ * st_theme_load_stylesheet(). Emits the #StTheme::stylesheets-changed
+ * signal if the stylesheet was found and removed.
+ */
 void
 st_theme_unload_stylesheet (StTheme    *theme,
                             const char *path)

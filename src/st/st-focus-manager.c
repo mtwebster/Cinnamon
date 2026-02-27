@@ -20,6 +20,7 @@
 
 /**
  * SECTION:st-focus-manager
+ * @title: StFocusManager
  * @short_description: Keyboard focus management
  *
  * #StFocusManager handles keyboard focus for all actors on the stage.

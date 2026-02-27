@@ -29,6 +29,7 @@ G_BEGIN_DECLS
 
 /**
  * SECTION:st-types
+ * @title: StTypes
  * @short_description: type definitions used throughout St
  *
  * Common types for StWidgets.

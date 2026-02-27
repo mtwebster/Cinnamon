@@ -17,6 +17,16 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * SECTION:st-settings
+ * @title: StSettings
+ * @short_description: Global St toolkit settings
+ *
+ * #StSettings provides access to global settings that affect the St toolkit,
+ * such as the font name, icon theme, magnifier state, and animation
+ * preferences. It reads from GSettings and notifies on changes.
+ */
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif

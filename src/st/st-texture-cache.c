@@ -19,6 +19,17 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * SECTION:st-texture-cache
+ * @title: StTextureCache
+ * @short_description: A cache for textures and icon lookups
+ *
+ * #StTextureCache is responsible for caching textures and icons loaded
+ * from disk or generated from #GIcon objects. It avoids redundant I/O
+ * and texture creation by maintaining an internal cache keyed by file
+ * path, icon name, or other identifiers.
+ */
+
 #include "config.h"
 
 #include "st-image-content.h"
@@ -2173,6 +2184,15 @@ st_texture_cache_get_default (void)
   return instance;
 }
 
+/**
+ * st_texture_cache_rescan_icon_theme:
+ * @cache: an #StTextureCache
+ *
+ * Rescans the icon theme if it has changed on disk, invalidating any
+ * cached icons that may be stale.
+ *
+ * Returns: %TRUE if the icon theme was rescanned
+ */
 gboolean
 st_texture_cache_rescan_icon_theme (StTextureCache *cache)
 {

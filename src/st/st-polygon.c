@@ -20,6 +20,7 @@
 
 /**
  * SECTION:st-polygon
+ * @title: StPolygon
  * @short_description: A dynamically-sized Cairo drawing area
  *
  * #StPolygon is similar to #ClutterCairoTexture in that

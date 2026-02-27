@@ -36,6 +36,7 @@
 
 /**
  * SECTION:st-box-layout
+ * @title: StBoxLayout
  * @short_description: a layout container arranging children in a single line
  *
  * The #StBoxLayout arranges its children along a single line, where each

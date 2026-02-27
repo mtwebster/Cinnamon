@@ -23,6 +23,7 @@
 
 /**
  * SECTION:st-scrollable
+ * @title: StScrollable
  * @short_description: A #ClutterActor that can be scrolled
  *
  * The #StScrollable interface is exposed by actors that support scrolling.
@@ -119,6 +120,14 @@ st_scrollable_get_type (void)
   return type;
 }
 
+/**
+ * st_scrollable_set_adjustments:
+ * @scrollable: an #StScrollable
+ * @hadjustment: the horizontal #StAdjustment
+ * @vadjustment: the vertical #StAdjustment
+ *
+ * Sets the horizontal and vertical adjustments used to control scrolling.
+ */
 void
 st_scrollable_set_adjustments (StScrollable *scrollable,
                                StAdjustment *hadjustment,
@@ -130,7 +139,7 @@ st_scrollable_set_adjustments (StScrollable *scrollable,
 }
 
 /**
- * st_scroll_bar_get_adjustments:
+ * st_scrollable_get_adjustments:
  * @hadjustment: (transfer none) (out) (allow-none): location to store the horizontal adjustment, or %NULL
  * @vadjustment: (transfer none) (out) (allow-none): location to store the vertical adjustment, or %NULL
  *

@@ -21,6 +21,7 @@
 
 /**
  * SECTION:st-label
+ * @title: StLabel
  * @short_description: Widget for displaying text
  *
  * #StLabel is a simple widget for displaying text. It derives from

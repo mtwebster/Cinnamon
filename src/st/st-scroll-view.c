@@ -22,6 +22,7 @@
 
 /**
  * SECTION:st-scroll-view
+ * @title: StScrollView
  * @short_description: a container for scrollable children
  *
  * #StScrollView is a single child container for actors that implement
@@ -1170,6 +1171,13 @@ clutter_container_iface_init (ClutterContainerIface *iface)
   iface->remove = st_scroll_view_remove;
 }
 
+/**
+ * st_scroll_view_new:
+ *
+ * Creates a new #StScrollView.
+ *
+ * Returns: (transfer full): a new #StScrollView
+ */
 StWidget *
 st_scroll_view_new (void)
 {
@@ -1208,6 +1216,14 @@ st_scroll_view_get_vscroll_bar (StScrollView *scroll)
   return scroll->priv->vscroll;
 }
 
+/**
+ * st_scroll_view_get_column_size:
+ * @scroll: a #StScrollView
+ *
+ * Gets the step increment of the horizontal scrollbar adjustment.
+ *
+ * Returns: the horizontal step increment, in pixels
+ */
 gfloat
 st_scroll_view_get_column_size (StScrollView *scroll)
 {
@@ -1222,6 +1238,15 @@ st_scroll_view_get_column_size (StScrollView *scroll)
   return column_size;
 }
 
+/**
+ * st_scroll_view_set_column_size:
+ * @scroll: a #StScrollView
+ * @column_size: the horizontal step increment, or a negative value to unset
+ *
+ * Sets the step increment of the horizontal scrollbar adjustment.
+ * A negative value unsets the override, allowing the adjustment to
+ * manage its own step increment.
+ */
 void
 st_scroll_view_set_column_size (StScrollView *scroll,
                                 gfloat        column_size)
@@ -1244,6 +1269,14 @@ st_scroll_view_set_column_size (StScrollView *scroll,
     }
 }
 
+/**
+ * st_scroll_view_get_row_size:
+ * @scroll: a #StScrollView
+ *
+ * Gets the step increment of the vertical scrollbar adjustment.
+ *
+ * Returns: the vertical step increment, in pixels
+ */
 gfloat
 st_scroll_view_get_row_size (StScrollView *scroll)
 {
@@ -1258,6 +1291,15 @@ st_scroll_view_get_row_size (StScrollView *scroll)
   return row_size;
 }
 
+/**
+ * st_scroll_view_set_row_size:
+ * @scroll: a #StScrollView
+ * @row_size: the vertical step increment, or a negative value to unset
+ *
+ * Sets the step increment of the vertical scrollbar adjustment.
+ * A negative value unsets the override, allowing the adjustment to
+ * manage its own step increment.
+ */
 void
 st_scroll_view_set_row_size (StScrollView *scroll,
                              gfloat        row_size)
@@ -1280,6 +1322,13 @@ st_scroll_view_set_row_size (StScrollView *scroll,
     }
 }
 
+/**
+ * st_scroll_view_set_mouse_scrolling:
+ * @scroll: a #StScrollView
+ * @enabled: %TRUE to enable mouse wheel scrolling
+ *
+ * Sets whether mouse wheel scrolling is enabled or disabled.
+ */
 void
 st_scroll_view_set_mouse_scrolling (StScrollView *scroll,
                                     gboolean      enabled)
@@ -1300,6 +1349,14 @@ st_scroll_view_set_mouse_scrolling (StScrollView *scroll,
     }
 }
 
+/**
+ * st_scroll_view_get_mouse_scrolling:
+ * @scroll: a #StScrollView
+ *
+ * Gets whether mouse wheel scrolling is enabled or disabled.
+ *
+ * Returns: %TRUE if mouse wheel scrolling is enabled
+ */
 gboolean
 st_scroll_view_get_mouse_scrolling (StScrollView *scroll)
 {
@@ -1359,8 +1416,8 @@ st_scroll_view_get_overlay_scrollbars (StScrollView *scroll)
 /**
  * st_scroll_view_set_policy:
  * @scroll: A #StScrollView
- * @hscroll: Whether to enable horizontal scrolling
- * @vscroll: Whether to enable vertical scrolling
+ * @hscroll: Horizontal scroll policy (#StPolicyType)
+ * @vscroll: Vertical scroll policy (#StPolicyType)
  *
  * Set the scroll policy.
  */
@@ -1399,6 +1456,15 @@ st_scroll_view_set_policy (StScrollView   *scroll,
   g_object_thaw_notify ((GObject *) scroll);
 }
 
+/**
+ * st_scroll_view_set_auto_scrolling:
+ * @scroll: a #StScrollView
+ * @enabled: %TRUE to enable automatic scrolling
+ *
+ * Sets whether automatic scrolling is enabled. When enabled, the view
+ * automatically scrolls when the mouse pointer moves near the edges
+ * of the scroll view.
+ */
 void
 st_scroll_view_set_auto_scrolling (StScrollView *scroll,
                                    gboolean      enabled)
@@ -1432,6 +1498,14 @@ st_scroll_view_set_auto_scrolling (StScrollView *scroll,
     }
 }
 
+/**
+ * st_scroll_view_get_auto_scrolling:
+ * @scroll: a #StScrollView
+ *
+ * Gets whether automatic scrolling is enabled.
+ *
+ * Returns: %TRUE if automatic scrolling is enabled
+ */
 gboolean
 st_scroll_view_get_auto_scrolling (StScrollView *scroll)
 {

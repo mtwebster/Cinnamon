@@ -22,6 +22,7 @@
 
 /**
  * SECTION:st-scroll-bar
+ * @title: StScrollBar
  * @short_description: a user interface element to control scrollable areas.
  *
  * The #StScrollBar allows users to scroll scrollable actors, either by
@@ -907,6 +908,14 @@ on_changed (StAdjustment *adjustment,
   scroll_bar_update_positions (bar);
 }
 
+/**
+ * st_scroll_bar_set_adjustment:
+ * @bar: a #StScrollBar
+ * @adjustment: an #StAdjustment
+ *
+ * Sets the adjustment object for the scroll bar. The adjustment controls
+ * the position and range of the scroll bar.
+ */
 void
 st_scroll_bar_set_adjustment (StScrollBar  *bar,
                               StAdjustment *adjustment)

@@ -31,6 +31,7 @@
 
 /**
  * SECTION:st-table-child
+ * @title: StTableChild
  * @short_description: The child property store for #StTable
  *
  * The #ClutterChildMeta implementation for the #StTable container widget.

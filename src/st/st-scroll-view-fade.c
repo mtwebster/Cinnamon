@@ -18,6 +18,15 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * SECTION:st-scroll-view-fade
+ * @title: StScrollViewFade
+ * @short_description: Edge fade effect for StScrollView
+ *
+ * #StScrollViewFade is a #ClutterShaderEffect that fades the edges of an
+ * #StScrollView when content extends beyond the visible area. The fade
+ * offset is controlled by the `-st-vfade-offset` CSS property.
+ */
 
 #include "st-private.h"
 #include "st-scroll-view-fade.h"

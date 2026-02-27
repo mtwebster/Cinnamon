@@ -295,6 +295,15 @@ st_theme_node_get_theme (StThemeNode *node)
   return node->theme;
 }
 
+/**
+ * st_theme_node_get_element_type:
+ * @node: a #StThemeNode
+ *
+ * Gets the #GType of the element that this node represents in the
+ * themed object tree.
+ *
+ * Returns: the element's #GType
+ */
 GType
 st_theme_node_get_element_type (StThemeNode *node)
 {
@@ -422,6 +431,17 @@ st_theme_node_equal (StThemeNode *node_a, StThemeNode *node_b)
   return TRUE;
 }
 
+/**
+ * st_theme_node_hash:
+ * @node: a #StThemeNode
+ *
+ * Computes a hash value for @node, to be used alongside
+ * st_theme_node_equal() when storing theme nodes in a hash table.
+ * The hash is based on the node's parent, context, theme, element type,
+ * element id, inline style, element classes, and pseudo-classes.
+ *
+ * Returns: a hash value for @node
+ */
 guint
 st_theme_node_hash (StThemeNode *node)
 {
@@ -1730,6 +1750,15 @@ _st_theme_node_ensure_geometry (StThemeNode *node)
     }
 }
 
+/**
+ * st_theme_node_get_border_width:
+ * @node: a #StThemeNode
+ * @side: a #StSide
+ *
+ * Gets the width of the border on @side of @node, in pixels.
+ *
+ * Returns: the border width in pixels
+ */
 int
 st_theme_node_get_border_width (StThemeNode *node,
                                 StSide       side)
@@ -1742,6 +1771,15 @@ st_theme_node_get_border_width (StThemeNode *node,
   return node->border_width[side];
 }
 
+/**
+ * st_theme_node_get_border_radius:
+ * @node: a #StThemeNode
+ * @corner: a #StCorner
+ *
+ * Gets the border-radius for @corner of @node, in pixels.
+ *
+ * Returns: the border radius in pixels
+ */
 int
 st_theme_node_get_border_radius (StThemeNode *node,
                                  StCorner     corner)
@@ -1754,6 +1792,14 @@ st_theme_node_get_border_radius (StThemeNode *node,
   return node->border_radius[corner];
 }
 
+/**
+ * st_theme_node_get_outline_width:
+ * @node: a #StThemeNode
+ *
+ * Gets the width of the outline on @node, in pixels.
+ *
+ * Returns: the outline width in pixels
+ */
 int
 st_theme_node_get_outline_width (StThemeNode  *node)
 {
@@ -1782,6 +1828,15 @@ st_theme_node_get_outline_color (StThemeNode  *node,
   *color = node->outline_color;
 }
 
+/**
+ * st_theme_node_get_width:
+ * @node: a #StThemeNode
+ *
+ * Gets the CSS width property of @node, in pixels. A value of -1 means
+ * the width has not been set.
+ *
+ * Returns: the width in pixels, or -1 if not set
+ */
 int
 st_theme_node_get_width (StThemeNode *node)
 {
@@ -1791,6 +1846,15 @@ st_theme_node_get_width (StThemeNode *node)
   return node->width;
 }
 
+/**
+ * st_theme_node_get_height:
+ * @node: a #StThemeNode
+ *
+ * Gets the CSS height property of @node, in pixels. A value of -1 means
+ * the height has not been set.
+ *
+ * Returns: the height in pixels, or -1 if not set
+ */
 int
 st_theme_node_get_height (StThemeNode *node)
 {
@@ -1800,6 +1864,15 @@ st_theme_node_get_height (StThemeNode *node)
   return node->height;
 }
 
+/**
+ * st_theme_node_get_min_width:
+ * @node: a #StThemeNode
+ *
+ * Gets the CSS min-width property of @node, in pixels. A value of -1 means
+ * the min-width has not been set.
+ *
+ * Returns: the minimum width in pixels, or -1 if not set
+ */
 int
 st_theme_node_get_min_width (StThemeNode *node)
 {
@@ -1809,6 +1882,15 @@ st_theme_node_get_min_width (StThemeNode *node)
   return node->min_width;
 }
 
+/**
+ * st_theme_node_get_min_height:
+ * @node: a #StThemeNode
+ *
+ * Gets the CSS min-height property of @node, in pixels. A value of -1 means
+ * the min-height has not been set.
+ *
+ * Returns: the minimum height in pixels, or -1 if not set
+ */
 int
 st_theme_node_get_min_height (StThemeNode *node)
 {
@@ -1818,6 +1900,15 @@ st_theme_node_get_min_height (StThemeNode *node)
   return node->min_height;
 }
 
+/**
+ * st_theme_node_get_max_width:
+ * @node: a #StThemeNode
+ *
+ * Gets the CSS max-width property of @node, in pixels. A value of -1 means
+ * the max-width has not been set.
+ *
+ * Returns: the maximum width in pixels, or -1 if not set
+ */
 int
 st_theme_node_get_max_width (StThemeNode *node)
 {
@@ -1827,6 +1918,15 @@ st_theme_node_get_max_width (StThemeNode *node)
   return node->max_width;
 }
 
+/**
+ * st_theme_node_get_max_height:
+ * @node: a #StThemeNode
+ *
+ * Gets the CSS max-height property of @node, in pixels. A value of -1 means
+ * the max-height has not been set.
+ *
+ * Returns: the maximum height in pixels, or -1 if not set
+ */
 int
 st_theme_node_get_max_height (StThemeNode *node)
 {
@@ -2280,6 +2380,15 @@ st_theme_node_get_border_color (StThemeNode  *node,
   *color = node->border_color[side];
 }
 
+/**
+ * st_theme_node_get_padding:
+ * @node: a #StThemeNode
+ * @side: a #StSide
+ *
+ * Gets the padding on @side of @node, in pixels.
+ *
+ * Returns: the padding in pixels
+ */
 double
 st_theme_node_get_padding (StThemeNode *node,
                            StSide       side)
@@ -2292,6 +2401,15 @@ st_theme_node_get_padding (StThemeNode *node,
   return node->padding[side];
 }
 
+/**
+ * st_theme_node_get_margin:
+ * @node: a #StThemeNode
+ * @side: a #StSide
+ *
+ * Gets the margin on @side of @node, in pixels.
+ *
+ * Returns: the margin in pixels
+ */
 double
 st_theme_node_get_margin (StThemeNode *node,
                           StSide side)
@@ -2336,6 +2454,16 @@ st_theme_node_get_transition_duration (StThemeNode *node)
   return factor * node->transition_duration;
 }
 
+/**
+ * st_theme_node_get_icon_style:
+ * @node: a #StThemeNode
+ *
+ * Gets the value of the -st-icon-style property on @node, which controls
+ * whether icons are displayed as regular (full-color) or symbolic
+ * (monochrome). This property is inherited from parent nodes.
+ *
+ * Returns: the #StIconStyle for @node
+ */
 StIconStyle
 st_theme_node_get_icon_style (StThemeNode *node)
 {
@@ -2378,6 +2506,16 @@ st_theme_node_get_icon_style (StThemeNode *node)
   return ST_ICON_STYLE_REQUESTED;
 }
 
+/**
+ * st_theme_node_get_text_decoration:
+ * @node: a #StThemeNode
+ *
+ * Gets the value of the text-decoration property on @node. This is a
+ * bitmask of #StTextDecoration flags indicating underline, overline,
+ * line-through, and blink decorations.
+ *
+ * Returns: the text decoration flags for @node
+ */
 StTextDecoration
 st_theme_node_get_text_decoration (StThemeNode *node)
 {
@@ -2445,6 +2583,15 @@ st_theme_node_get_text_decoration (StThemeNode *node)
   return 0;
 }
 
+/**
+ * st_theme_node_get_text_align:
+ * @node: a #StThemeNode
+ *
+ * Gets the value of the text-align property on @node. This property
+ * is inherited from parent nodes if not explicitly set.
+ *
+ * Returns: the #StTextAlign for @node
+ */
 StTextAlign
 st_theme_node_get_text_align(StThemeNode *node)
 {
@@ -2969,6 +3116,17 @@ st_theme_node_get_font (StThemeNode *node)
   return node->font_desc;
 }
 
+/**
+ * st_theme_node_get_font_features:
+ * @node: a #StThemeNode
+ *
+ * Gets the value of the font-feature-settings CSS property on @node.
+ * This property is inherited from parent nodes. A return value of %NULL
+ * means font features are set to normal (no special features enabled).
+ *
+ * Returns: (transfer full) (nullable): the font feature settings string,
+ *   or %NULL if no features are set
+ */
 gchar *
 st_theme_node_get_font_features (StThemeNode *node)
 {

@@ -19,6 +19,16 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * SECTION:st-icon-colors
+ * @title: StIconColors
+ * @short_description: Colors for colorizing symbolic icons
+ *
+ * #StIconColors holds the foreground, warning, error, and success colors
+ * used to colorize symbolic icons. These are derived from the CSS theme
+ * and passed to the icon rendering pipeline.
+ */
+
 #include "st-icon-colors.h"
 
 /**

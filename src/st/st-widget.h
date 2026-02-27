@@ -35,6 +35,14 @@
 
 G_BEGIN_DECLS
 
+/**
+ * StTextDirection:
+ * @ST_TEXT_DIRECTION_NONE: No direction set
+ * @ST_TEXT_DIRECTION_LTR: Left-to-right text direction
+ * @ST_TEXT_DIRECTION_RTL: Right-to-left text direction
+ *
+ * The text direction of a widget.
+ */
 typedef enum {
   ST_TEXT_DIRECTION_NONE,
   ST_TEXT_DIRECTION_LTR,

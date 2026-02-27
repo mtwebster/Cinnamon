@@ -18,6 +18,15 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * SECTION:st-border-image
+ * @title: StBorderImage
+ * @short_description: Stores information about a CSS border-image
+ *
+ * #StBorderImage holds the filename and border widths for a CSS
+ * border-image property, as used by #StThemeNode for rendering.
+ */
+
 #include <config.h>
 
 #include <string.h>
@@ -64,6 +73,18 @@ st_border_image_init (StBorderImage *image)
 {
 }
 
+/**
+ * st_border_image_new:
+ * @filename: the path to the border image file
+ * @border_top: the top border width in pixels
+ * @border_right: the right border width in pixels
+ * @border_bottom: the bottom border width in pixels
+ * @border_left: the left border width in pixels
+ *
+ * Creates a new #StBorderImage with the given file and border widths.
+ *
+ * Returns: a new #StBorderImage
+ */
 StBorderImage *
 st_border_image_new (const char *filename,
                        int         border_top,
@@ -84,6 +105,14 @@ st_border_image_new (const char *filename,
   return image;
 }
 
+/**
+ * st_border_image_get_filename:
+ * @image: an #StBorderImage
+ *
+ * Gets the path to the border image file.
+ *
+ * Returns: the filename of the border image
+ */
 const char *
 st_border_image_get_filename (StBorderImage *image)
 {
@@ -92,6 +121,16 @@ st_border_image_get_filename (StBorderImage *image)
   return image->filename;
 }
 
+/**
+ * st_border_image_get_borders:
+ * @image: an #StBorderImage
+ * @border_top: (out) (optional): return location for the top border width
+ * @border_right: (out) (optional): return location for the right border width
+ * @border_bottom: (out) (optional): return location for the bottom border width
+ * @border_left: (out) (optional): return location for the left border width
+ *
+ * Gets the border widths of the image in pixels.
+ */
 void
 st_border_image_get_borders (StBorderImage *image,
                              int           *border_top,

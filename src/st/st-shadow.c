@@ -27,7 +27,8 @@ G_DEFINE_BOXED_TYPE (StShadow, st_shadow, st_shadow_ref, st_shadow_unref)
 G_DEFINE_BOXED_TYPE (StShadowHelper, st_shadow_helper, st_shadow_helper_copy, st_shadow_helper_free)
 
 /**
- * SECTION: st-shadow
+ * SECTION:st-shadow
+ * @title: StShadow
  * @short_description: Boxed type for -st-shadow attributes
  *
  * #StShadow is a boxed type for storing attributes of the -st-shadow
@@ -180,7 +181,8 @@ st_shadow_get_box (StShadow              *shadow,
 }
 
 /**
- * SECTION: st-shadow-helper
+ * SECTION:st-shadow-helper
+ * @title: StShadowHelper
  *
  * An helper for implementing a drop shadow on a actor.
  * The actor is expected to recreate the helper whenever its contents

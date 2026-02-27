@@ -21,6 +21,7 @@
 
 /**
  * SECTION:st-button
+ * @title: StButton
  * @short_description: Button widget
  *
  * A button widget with support for either a text label or icon, toggle mode
