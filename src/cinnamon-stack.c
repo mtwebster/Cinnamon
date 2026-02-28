@@ -2,6 +2,7 @@
 
 /**
  * SECTION:cinnamon-stack
+ * @title: CinnamonStack
  * @short_description: Pure "Z-axis" container class
  *
  * A #CinnamonStack draws its children on top of each other,

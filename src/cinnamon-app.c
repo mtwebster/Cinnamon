@@ -42,6 +42,7 @@ typedef struct {
 
 /**
  * SECTION:cinnamon-app
+ * @title: CinnamonApp
  * @short_description: Object representing an application
  *
  * This object wraps a #GMenuTreeEntry, providing methods and signals
@@ -113,6 +114,12 @@ cinnamon_app_get_property (GObject    *gobject,
     }
 }
 
+/**
+ * cinnamon_app_get_id:
+ * @app: a #CinnamonApp
+ *
+ * Returns: (transfer none): the desktop file ID (e.g. "firefox.desktop")
+ */
 const char *
 cinnamon_app_get_id (CinnamonApp *app)
 {
@@ -121,6 +128,12 @@ cinnamon_app_get_id (CinnamonApp *app)
   return app->window_id_string;
 }
 
+/**
+ * cinnamon_app_get_flatpak_app_id:
+ * @app: a #CinnamonApp
+ *
+ * Returns: (transfer full): the Flatpak application ID, or %NULL if not a Flatpak app
+ */
 char *
 cinnamon_app_get_flatpak_app_id (CinnamonApp *app)
 {
@@ -385,6 +398,12 @@ get_common_name (CinnamonApp *app)
     }
 }
 
+/**
+ * cinnamon_app_get_name:
+ * @app: a #CinnamonApp
+ *
+ * Returns: (transfer none): the human-readable name of the application
+ */
 const char *
 cinnamon_app_get_name (CinnamonApp *app)
 {
@@ -394,6 +413,12 @@ cinnamon_app_get_name (CinnamonApp *app)
   return get_common_name (app);
 }
 
+/**
+ * cinnamon_app_get_description:
+ * @app: a #CinnamonApp
+ *
+ * Returns: (transfer none): the application's description from its desktop entry
+ */
 const char *
 cinnamon_app_get_description (CinnamonApp *app)
 {
@@ -403,6 +428,12 @@ cinnamon_app_get_description (CinnamonApp *app)
     return NULL;
 }
 
+/**
+ * cinnamon_app_get_keywords:
+ * @app: a #CinnamonApp
+ *
+ * Returns: (transfer none): the application's keywords from its desktop entry
+ */
 const char *
 cinnamon_app_get_keywords (CinnamonApp *app)
 {
@@ -437,6 +468,12 @@ cinnamon_app_get_keywords (CinnamonApp *app)
     return ret;
 }
 
+/**
+ * cinnamon_app_get_nodisplay:
+ * @app: a #CinnamonApp
+ *
+ * Returns: %TRUE if the app is marked NoDisplay in its desktop entry
+ */
 gboolean
 cinnamon_app_get_nodisplay (CinnamonApp *app)
 {
@@ -828,6 +865,12 @@ cinnamon_app_get_windows (CinnamonApp *app)
   return app->running_state->windows;
 }
 
+/**
+ * cinnamon_app_get_n_windows:
+ * @app: a #CinnamonApp
+ *
+ * Returns: the number of windows belonging to this application
+ */
 guint
 cinnamon_app_get_n_windows (CinnamonApp *app)
 {
@@ -836,6 +879,13 @@ cinnamon_app_get_n_windows (CinnamonApp *app)
   return g_slist_length (app->running_state->windows);
 }
 
+/**
+ * cinnamon_app_is_on_workspace:
+ * @app: a #CinnamonApp
+ * @workspace: a #MetaWorkspace
+ *
+ * Returns: %TRUE if the application has windows on @workspace
+ */
 gboolean
 cinnamon_app_is_on_workspace (CinnamonApp *app,
                            MetaWorkspace   *workspace)

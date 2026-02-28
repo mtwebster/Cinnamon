@@ -14,6 +14,7 @@ typedef struct _CinnamonPerfBlock CinnamonPerfBlock;
 
 /**
  * SECTION:cinnamon-perf-log
+ * @title: CinnamonPerfLog
  * @short_description: Event recorder for performance measurement
  *
  * CinnamonPerfLog provides a way for different parts of the code to
@@ -283,8 +284,8 @@ define_event (CinnamonPerfLog *perf_log,
  * cinnamon_perf_log_define_event:
  * @perf_log: a #CinnamonPerfLog
  * @name: name of the event. This should of the form
- *   '<namespace>.<specific event>', for example
- *   'clutter.stagePaintDone'.
+ *   `namespace.specific_event`, for example
+ *   `clutter.stagePaintDone`.
  * @description: human readable description of the event.
  * @signature: signature defining the arguments that event takes.
  *   This is a string of type characters, using the same characters
@@ -812,9 +813,11 @@ write_string (GOutputStream *out,
  * as JSON, to the specified output stream. The JSON output is an array,
  * with each element being a dictionary of the form:
  *
- * { name: <name of event>,
- *   description: <description of string>,
+ * |[<!-- language="plain" -->
+ * { name: &lt;name of event&gt;,
+ *   description: &lt;description of string&gt;,
  *   statistic: true } (only for statistics)
+ * ]|
  *
  * Return value: %TRUE if the dump succeeded. %FALSE if an IO error occurred
  */
@@ -937,7 +940,7 @@ replay_to_json (gint64      time,
  * in should generally be a buffered (or memory) output stream, since
  * it will be written to in small pieces. The JSON output is an array
  * with the elements of the array also being arrays, of the form
- * '[' <time>, <event name> [, <event_arg>... ] ']'.
+ * `[time, event_name, event_arg...]`.
  *
  * Return value: %TRUE if the dump succeeded. %FALSE if an IO error occurred
  */

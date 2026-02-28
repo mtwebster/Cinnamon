@@ -589,6 +589,13 @@ cinnamon_screenshot_pick_color (CinnamonScreenshot *screenshot,
   clutter_actor_queue_redraw (stage);
 }
 
+/**
+ * cinnamon_screenshot_new:
+ *
+ * Creates a new #CinnamonScreenshot object.
+ *
+ * Returns: (transfer full): a new #CinnamonScreenshot
+ */
 CinnamonScreenshot *
 cinnamon_screenshot_new (void)
 {

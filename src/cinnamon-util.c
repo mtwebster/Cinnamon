@@ -2,6 +2,15 @@
 
 #include "config.h"
 
+/**
+ * SECTION:cinnamon-util
+ * @title: CinnamonUtil
+ * @short_description: Miscellaneous utility functions
+ *
+ * Various helper functions for text formatting, weekday
+ * calculation, file operations, and subprocess management.
+ */
+
 #include <sys/types.h>
 #include <sys/wait.h>
 
@@ -229,8 +238,15 @@ cinnamon_util_get_icon_for_uri_known_folders (const char *uri)
   return icon;
 }
 
-/* This is based on nautilus_compute_title_for_uri() and
- * nautilus_file_get_display_name_nocopy() */
+/**
+ * cinnamon_util_get_label_for_uri:
+ * @text_uri: a URI string
+ *
+ * Returns a human-readable label for the given URI, resolving
+ * well-known locations (home, desktop, mounts) to friendly names.
+ *
+ * Returns: (transfer full): a display label for the URI
+ */
 char *
 cinnamon_util_get_label_for_uri (const char *text_uri)
 {
@@ -836,6 +852,20 @@ cinnamon_util_get_content_for_window_actor (MetaWindowActor *window_actor,
   return content;
 }
 
+/**
+ * cinnamon_util_composite_capture_images:
+ * @captures: (array length=n_captures): array of #ClutterCapture structs
+ * @n_captures: number of captures
+ * @x: x offset of the target area
+ * @y: y offset of the target area
+ * @target_width: width of the composited surface
+ * @target_height: height of the composited surface
+ * @target_scale: device scale factor for the surface
+ *
+ * Composites multiple capture images into a single cairo surface.
+ *
+ * Returns: (transfer full): the composited surface
+ */
 cairo_surface_t *
 cinnamon_util_composite_capture_images (ClutterCapture  *captures,
                                         int              n_captures,

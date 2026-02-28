@@ -2,6 +2,7 @@
 
 /**
  * SECTION:cinnamon-glsl-effect
+ * @title: CinnamonGLSLEffect
  * @short_description: An offscreen effect using GLSL
  *
  * A #CinnamonGLSLEffect is #ClutterOffscreenEffect that allows

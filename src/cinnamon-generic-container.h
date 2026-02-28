@@ -41,10 +41,13 @@ struct _CinnamonGenericContainerClass
 
 GType    cinnamon_generic_container_get_type         (void) G_GNUC_CONST;
 
+G_GNUC_DEPRECATED
 guint    cinnamon_generic_container_get_n_skip_paint (CinnamonGenericContainer *self);
 
+G_GNUC_DEPRECATED
 gboolean cinnamon_generic_container_get_skip_paint   (CinnamonGenericContainer *self,
                                                    ClutterActor          *child);
+G_GNUC_DEPRECATED
 void     cinnamon_generic_container_set_skip_paint   (CinnamonGenericContainer *self,
                                                    ClutterActor          *child,
                                                    gboolean               skip);

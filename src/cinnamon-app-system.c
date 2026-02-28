@@ -16,6 +16,16 @@
 #include "cinnamon-global.h"
 #include "cinnamon-util.h"
 
+/**
+ * SECTION:cinnamon-app-system
+ * @title: CinnamonAppSystem
+ * @short_description: Tracks installed and running applications
+ *
+ * The #CinnamonAppSystem maintains a cache of installed applications
+ * and provides lookup methods by desktop ID, WM class, and startup
+ * notification ID.
+ */
+
 // Set to 1 to enable debugging of the duplicate renaming stuff.
 #define DEBUG_APPSYS_RENAMING 0
 

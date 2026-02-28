@@ -17,11 +17,17 @@
  * 02110-1335, USA.
  */
 
-/*
- * This is a shim class to help compatibility with older (pre-5.2)
- * js code. MetaScreen no longer exists (global.screen), and its api
- * is distributed in MetaDisplay, MetaWorkspaceManager and elsewhere.
- * We should use new api when possible, especially in core cinnamon js.
+/**
+ * SECTION:cinnamon-screen
+ * @title: CinnamonScreen
+ * @short_description: Compatibility shim for the former MetaScreen API
+ *
+ * #CinnamonScreen is a compatibility shim for JavaScript code that
+ * used the old MetaScreen API. It delegates to #MetaDisplay,
+ * #MetaWorkspaceManager and other current Muffin interfaces.
+ *
+ * > #CinnamonScreen is deprecated since 6.0. Use #MetaDisplay,
+ * > #MetaWorkspaceManager and related APIs directly.
  */
 
 #include <config.h>
@@ -434,6 +440,16 @@ cinnamon_screen_init (CinnamonScreen *screen)
 {
 }
 
+/**
+ * cinnamon_screen_new:
+ * @display: a #MetaDisplay
+ *
+ * Creates a new #CinnamonScreen for the given display.
+ *
+ * Returns: (transfer full): a new #CinnamonScreen
+ *
+ * Deprecated: 6.0: Use #MetaDisplay, #MetaWorkspaceManager and related APIs directly.
+ */
 CinnamonScreen *
 cinnamon_screen_new (MetaDisplay *display)
 {

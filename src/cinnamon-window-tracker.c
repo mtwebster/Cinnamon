@@ -26,6 +26,7 @@
 
 /**
  * SECTION:cinnamon-window-tracker
+ * @title: CinnamonWindowTracker
  * @short_description: Associate windows with applications
  *
  * Maintains a mapping from windows to applications (.desktop file ids).

@@ -9,6 +9,7 @@
 
 /**
  * SECTION:cinnamon-doc-system
+ * @title: CinnamonDocSystem
  * @short_description: Track recently used documents
  *
  * Wraps #GtkRecentManager, caching recently used document information, and adds

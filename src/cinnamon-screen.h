@@ -31,6 +31,7 @@
 #define CINNAMON_TYPE_SCREEN (cinnamon_screen_get_type ())
 G_DECLARE_FINAL_TYPE (CinnamonScreen, cinnamon_screen, CINNAMON, SCREEN, GObject)
 
+G_GNUC_DEPRECATED
 CinnamonScreen *cinnamon_screen_new (MetaDisplay *display);
 
 MetaDisplay *cinnamon_screen_get_display (CinnamonScreen *screen);

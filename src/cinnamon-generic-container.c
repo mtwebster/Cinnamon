@@ -2,6 +2,7 @@
 
 /**
  * SECTION:cinnamon-generic-container
+ * @title: CinnamonGenericContainer
  * @short_description: A container class with signals for allocation
  *
  * #CinnamonGenericContainer is mainly a workaround for the current
@@ -11,6 +12,9 @@
  *
  * #CinnamonGenericContainer is an #StWidget, and automatically takes its
  * borders and padding into account during size request and allocation.
+ *
+ * > #CinnamonGenericContainer is deprecated since 6.0. Use a
+ * > #ClutterActor subclass in JavaScript directly.
  */
 
 #include "config.h"
@@ -186,6 +190,8 @@ cinnamon_generic_container_get_focus_chain (StWidget *widget)
  * @self:  A #CinnamonGenericContainer
  *
  * Returns: Number of children which will not be painted.
+ *
+ * Deprecated: 6.0: Use a #ClutterActor subclass in JavaScript directly.
  */
 guint
 cinnamon_generic_container_get_n_skip_paint (CinnamonGenericContainer  *self)
@@ -201,6 +207,8 @@ cinnamon_generic_container_get_n_skip_paint (CinnamonGenericContainer  *self)
  * Gets whether or not @actor is skipped when painting.
  *
  * Return value: %TRUE or %FALSE
+ *
+ * Deprecated: 6.0: Use a #ClutterActor subclass in JavaScript directly.
  */
 gboolean
 cinnamon_generic_container_get_skip_paint (CinnamonGenericContainer  *self,
@@ -217,6 +225,8 @@ cinnamon_generic_container_get_skip_paint (CinnamonGenericContainer  *self,
  *
  * Set whether or not we should skip painting @actor.  Workaround for
  * lack of gjs ability to override _paint vfunc.
+ *
+ * Deprecated: 6.0: Use a #ClutterActor subclass in JavaScript directly.
  */
 void
 cinnamon_generic_container_set_skip_paint (CinnamonGenericContainer  *self,
@@ -334,6 +344,8 @@ cinnamon_generic_container_class_init (CinnamonGenericContainerClass *klass)
    * @alloc's fields are initialized to 0, so unless you have a fixed
    * width specified (via #ClutterActor:width or CSS), you must
    * connect to this signal and fill in the values.
+   *
+   * Deprecated: 6.0: Use a #ClutterActor subclass in JavaScript directly.
    */
   cinnamon_generic_container_signals[GET_PREFERRED_WIDTH] =
     g_signal_new ("get-preferred-width",
@@ -358,6 +370,8 @@ cinnamon_generic_container_class_init (CinnamonGenericContainerClass *klass)
    * @alloc's fields are initialized to 0, so unless you have a fixed
    * height specified (via #ClutterActor:height or CSS), you must
    * connect to this signal and fill in the values.
+   *
+   * Deprecated: 6.0: Use a #ClutterActor subclass in JavaScript directly.
    */
   cinnamon_generic_container_signals[GET_PREFERRED_HEIGHT] =
     g_signal_new ("get-preferred-height",
@@ -378,6 +392,8 @@ cinnamon_generic_container_class_init (CinnamonGenericContainerClass *klass)
    *
    * Note that @box is @self's content box (qv
    * st_theme_node_get_content_box()), NOT its allocation.
+   *
+   * Deprecated: 6.0: Use a #ClutterActor subclass in JavaScript directly.
    */
   cinnamon_generic_container_signals[ALLOCATE] =
     g_signal_new ("allocate",

@@ -4,6 +4,7 @@
 
 /**
  * SECTION:cinnamon-screenshot
+ * @title: CinnamonScreenshot
  * @short_description: Grabs screenshots of areas and/or windows
  *
  * The #CinnamonScreenshot object is used to take screenshots of screen

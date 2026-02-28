@@ -2,6 +2,16 @@
 
 #include "config.h"
 
+/**
+ * SECTION:cinnamon-wm
+ * @title: CinnamonWM
+ * @short_description: Window management interface
+ *
+ * #CinnamonWM bridges the Muffin window manager and the JavaScript
+ * UI layer, emitting signals for window lifecycle events and
+ * providing control over window animations and keybindings.
+ */
+
 #include <string.h>
 
 #include <meta/meta-enum-types.h>

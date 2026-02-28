@@ -22,25 +22,26 @@
   <chapter>
     <title>Application tracking</title>
     <xi:include href="xml/cinnamon-app.xml"/>
-    <xi:include href="xml/cinnamon-window-tracker.xml"/>
-  </chapter>
-  <chapter>
-    <title>Search</title>
     <xi:include href="xml/cinnamon-app-system.xml"/>
+    <xi:include href="xml/cinnamon-window-tracker.xml"/>
+    <xi:include href="xml/cinnamon-doc-system.xml"/>
   </chapter>
   <chapter>
     <title>Tray Icons</title>
-    <xi:include href="xml/cinnamon-embedded-window.xml"/>
-    <xi:include href="xml/cinnamon-gtk-embed.xml"/>
-    <xi:include href="xml/cinnamon-tray-icon.xml"/>
+<xi:include href="xml/cinnamon-tray-icon.xml"/>
     <xi:include href="xml/cinnamon-tray-manager.xml"/>
+  </chapter>
+  <chapter>
+    <title>Effects</title>
+    <xi:include href="xml/cinnamon-glsl-effect.xml"/>
   </chapter>
   <chapter>
     <title>Integration helpers and utilities</title>
     <xi:include href="xml/cinnamon-global.xml"/>
-    <xi:include href="xml/cinnamon-wm.xml"/>
     <xi:include href="xml/cinnamon-util.xml"/>
     <xi:include href="xml/cinnamon-action-mode.xml"/>
+    <xi:include href="xml/cinnamon-screen.xml"/>
+    <xi:include href="xml/cinnamon-screenshot.xml"/>
   </chapter>
   <chapter id="object-tree">
     <title>Object Hierarchy</title>

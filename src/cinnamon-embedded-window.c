@@ -7,6 +7,16 @@
 
 #include "cinnamon-embedded-window-private.h"
 
+/**
+ * SECTION:cinnamon-embedded-window
+ * @title: CinnamonEmbeddedWindow
+ * @short_description: A GtkWindow embedded in the Clutter stage
+ *
+ * #CinnamonEmbeddedWindow is a #GtkWindow subclass that is tied to a
+ * #CinnamonGtkEmbed actor, allowing GTK widgets to be displayed
+ * within the Clutter stage.
+ */
+
 /* This type is a subclass of GtkWindow that ties the window to a
  * CinnamonGtkEmbed; the resizing logic is bound to the clutter logic.
  *
@@ -239,6 +249,14 @@ _cinnamon_embedded_window_unmap (CinnamonEmbeddedWindow *window)
 
 /*
  * Public API
+ */
+
+/**
+ * cinnamon_embedded_window_new:
+ *
+ * Creates a new #CinnamonEmbeddedWindow.
+ *
+ * Returns: (transfer full): a new #GtkWidget
  */
 GtkWidget *
 cinnamon_embedded_window_new (void)

@@ -2,6 +2,15 @@
 
 #include "config.h"
 
+/**
+ * SECTION:cinnamon-tray-manager
+ * @title: CinnamonTrayManager
+ * @short_description: Manages system tray icons
+ *
+ * #CinnamonTrayManager listens for system tray icons being added or
+ * removed and wraps them as #CinnamonTrayIcon actors.
+ */
+
 #include <clutter/clutter.h>
 #include <clutter/x11/clutter-x11.h>
 #include <girepository.h>
@@ -181,6 +190,13 @@ cinnamon_tray_manager_class_init (CinnamonTrayManagerClass *klass)
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 }
 
+/**
+ * cinnamon_tray_manager_new:
+ *
+ * Creates a new #CinnamonTrayManager.
+ *
+ * Returns: (transfer full): a new #CinnamonTrayManager
+ */
 CinnamonTrayManager *
 cinnamon_tray_manager_new (void)
 {
@@ -241,6 +257,14 @@ cinnamon_tray_manager_manage_screen_internal (CinnamonTrayManager *manager)
   na_tray_manager_manage_screen (manager->priv->na_manager);
 }
 
+/**
+ * cinnamon_tray_manager_manage_screen:
+ * @manager: a #CinnamonTrayManager
+ * @theme_widget: an #StWidget used for icon styling
+ *
+ * Starts managing the system tray, watching for icons to be added
+ * or removed.
+ */
 void
 cinnamon_tray_manager_manage_screen (CinnamonTrayManager *manager,
                                   StWidget         *theme_widget)
@@ -265,6 +289,13 @@ cinnamon_tray_manager_manage_screen (CinnamonTrayManager *manager,
   cinnamon_tray_manager_style_changed (theme_widget, manager);
 }
 
+/**
+ * cinnamon_tray_manager_unmanage_screen:
+ * @manager: a #CinnamonTrayManager
+ *
+ * Stops managing the system tray, disconnecting signal handlers
+ * and releasing resources.
+ */
 void
 cinnamon_tray_manager_unmanage_screen (CinnamonTrayManager *manager)
 {
@@ -380,6 +411,13 @@ na_tray_icon_removed (NaTrayManager *na_manager, GtkWidget *socket,
   g_hash_table_remove (manager->priv->icons, socket);
 }
 
+/**
+ * cinnamon_tray_manager_set_orientation:
+ * @manager: a #CinnamonTrayManager
+ * @orientation: the desired #ClutterOrientation
+ *
+ * Sets the orientation of the tray icon layout.
+ */
 void
 cinnamon_tray_manager_set_orientation (CinnamonTrayManager *manager,
                                        ClutterOrientation   orientation)

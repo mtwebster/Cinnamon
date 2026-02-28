@@ -2,6 +2,15 @@
 
 #include "config.h"
 
+/**
+ * SECTION:cinnamon-tray-icon
+ * @title: CinnamonTrayIcon
+ * @short_description: A Clutter actor wrapping a system tray icon
+ *
+ * #CinnamonTrayIcon wraps an X11 system tray icon (an XEMBED
+ * client) as a Clutter actor for display within the shell.
+ */
+
 #include "cinnamon-tray-icon.h"
 #include "cinnamon-gtk-embed.h"
 #include "tray/na-tray-child.h"
@@ -161,6 +170,15 @@ cinnamon_tray_icon_init (CinnamonTrayIcon *icon)
 
 /*
  * Public API
+ */
+
+/**
+ * cinnamon_tray_icon_new:
+ * @window: a #CinnamonEmbeddedWindow
+ *
+ * Creates a new #CinnamonTrayIcon actor for the given window.
+ *
+ * Returns: (transfer full): a new #ClutterActor
  */
 ClutterActor *
 cinnamon_tray_icon_new (CinnamonEmbeddedWindow *window)

@@ -1,16 +1,23 @@
 ignore = [
     'cinnamon-recorder-src.h',
     'cinnamon-recorder.h',
+    'cinnamon-keyring-prompt.h',
+    'cinnamon-polkit-authentication-agent.h',
+    'cinnamon-secure-text-buffer.h',
+    'cinnamon-touchegg-client.h',
+    'cinnamon-network-agent.h',
+    'cinnamon-perf-log.h',
+    'cinnamon-wm.h',
+    'cinnamon-embedded-window.h',
+    'cinnamon-gtk-embed.h',
+    'cinnamon-plugin.c',
+    cinnamon_private_headers,
     st_headers,
     st_private_headers,
-    tray_headers,
+    'tray',
     sniffer_headers,
-    backup_locker_headers,
+    'screensaver',
 ]
-
-if not internal_nm_agent
-    ignore += 'cinnamon-network-agent.h'
-endif
 
 if not get_option('build_recorder')
     ignore += 'cinnamon-recorder.h'

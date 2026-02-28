@@ -2,6 +2,15 @@
 
 #include "config.h"
 
+/**
+ * SECTION:cinnamon-gtk-embed
+ * @title: CinnamonGtkEmbed
+ * @short_description: Clutter actor for embedding a GtkWindow
+ *
+ * #CinnamonGtkEmbed is a #ClutterClone that embeds a
+ * #CinnamonEmbeddedWindow into the Clutter scene graph.
+ */
+
 #include "cinnamon-embedded-window-private.h"
 #include "cinnamon-global.h"
 #include "cinnamon-util.h"
@@ -365,6 +374,15 @@ cinnamon_gtk_embed_init (CinnamonGtkEmbed *embed)
 
 /*
  * Public API
+ */
+
+/**
+ * cinnamon_gtk_embed_new:
+ * @window: a #CinnamonEmbeddedWindow
+ *
+ * Creates a new #CinnamonGtkEmbed actor for the given window.
+ *
+ * Returns: (transfer full): a new #ClutterActor
  */
 ClutterActor *
 cinnamon_gtk_embed_new (CinnamonEmbeddedWindow *window)

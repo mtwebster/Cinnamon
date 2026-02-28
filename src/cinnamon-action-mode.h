@@ -1,20 +1,29 @@
 /**
+ * SECTION:cinnamon-action-mode
+ * @title: CinnamonActionMode
+ * @short_description: Flags controlling when actions are allowed
+ *
+ * #CinnamonActionMode is a set of flags that determine in which
+ * Cinnamon states an action (keybinding, keybinding etc.) should be
+ * handled.
+ */
+
+/**
  * CinnamonActionMode:
  * @CINNAMON_ACTION_MODE_NONE: block action
  * @CINNAMON_ACTION_MODE_NORMAL: allow action when in window mode,
  *     e.g. when the focus is in an application window
  * @CINNAMON_ACTION_MODE_OVERVIEW: allow action while the overview
  *     is active
+ * @CINNAMON_ACTION_MODE_EXPO: allow action while the expo is active
  * @CINNAMON_ACTION_MODE_LOCK_SCREEN: allow action when the screen
  *     is locked, e.g. when the screen shield is shown
  * @CINNAMON_ACTION_MODE_UNLOCK_SCREEN: allow action in the unlock
  *     dialog
- * @CINNAMON_ACTION_MODE_LOGIN_SCREEN: allow action in the login screen
  * @CINNAMON_ACTION_MODE_SYSTEM_MODAL: allow action when a system modal
  *     dialog (e.g. authentication or session dialogs) is open
  * @CINNAMON_ACTION_MODE_LOOKING_GLASS: allow action in looking glass
  * @CINNAMON_ACTION_MODE_POPUP: allow action while a shell menu is open
- * @CINNAMON_ACTION_MODE_EXPO: allow action while the expo is active
  * @CINNAMON_ACTION_MODE_ALL: always allow action
  *
  * Controls in which Cinnamon states an action (like keybindings and gestures)

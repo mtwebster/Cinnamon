@@ -2,6 +2,16 @@
 
 #include "config.h"
 
+/**
+ * SECTION:cinnamon-global
+ * @title: CinnamonGlobal
+ * @short_description: The global singleton object
+ *
+ * #CinnamonGlobal is a singleton providing access to global
+ * resources such as the Clutter stage, global scale, MetaDisplay,
+ * and window group actors.
+ */
+
 #include <fcntl.h>
 
 #include "cinnamon-global-private.h"

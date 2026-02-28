@@ -2,6 +2,7 @@
 
 /**
  * SECTION:cinnamon-slicer
+ * @title: CinnamonSlicer
  * @short_description: Display only part of another actor
  *
  * A #StBin that has 0 minimum size, and will clip its child
