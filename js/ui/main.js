@@ -779,6 +779,15 @@ function _removeWorkspace(workspace) {
     return true;
 }
 
+function reorderWorkspaceName(oldIndex, newIndex) {
+    _fillWorkspaceNames(oldIndex + 1);
+    let name = workspace_names[oldIndex] || '';
+    workspace_names.splice(oldIndex, 1);
+    workspace_names.splice(newIndex, 0, name);
+    _trimWorkspaceNames();
+    wmSettings.set_strv("workspace-names", workspace_names);
+}
+
 /**
  * moveWindowToNewWorkspace:
  * @metaWindow (Meta.Window): the window to be moved

@@ -305,6 +305,7 @@ ExpoWorkspaceThumbnail.prototype = {
     _init : function(metaWorkspace, box) {
         this.box = box;
         this.metaWorkspace = metaWorkspace;
+        this.isExpoWorkspaceThumbnail = true;
 
         this.overviewMode = false;
 
@@ -323,11 +324,45 @@ ExpoWorkspaceThumbnail.prototype = {
 
         let lastButtonPressTimeStamp = 0;
         let lastButtonPressActor = null;
+        // Connect button-press BEFORE makeDraggable so this handler fires first.
+        // Returning false lets the DnD handler also process the event.
         this.actor.connect('button-press-event', Lang.bind(this, function(actor, event) {
                 lastButtonPressTimeStamp = event.get_time();
                 lastButtonPressActor = actor;
-                return true;
+
+                // If the click originated from a window clone, inhibit workspace
+                // drag so the window clone's own DnD handles it instead.
+                let source = event.get_source();
+                let isOnWindowClone = this.windows.some(function(w) {
+                    return w.actor === source || w.actor.contains(source);
+                });
+                this._draggable.inhibit = isOnWindowClone;
+
+                return false;
             }));
+
+        this._draggable = DND.makeDraggable(this.actor);
+        this._draggable.connect('drag-begin', Lang.bind(this, function() {
+            this.inWorkspaceDrag = true;
+            // Hide and start-drag are deferred to getDragActor() which
+            // is called after drag-begin, ensuring the clone is created
+            // while the actor is still visible.
+        }));
+        this._draggable.connect('drag-end', Lang.bind(this, function() {
+            this.inWorkspaceDrag = false;
+            this.actor.show();
+            this.frame.show();
+            this.title.show();
+            this.box._endWorkspaceDrag();
+        }));
+        this._draggable.connect('drag-cancelled', Lang.bind(this, function() {
+            this.inWorkspaceDrag = false;
+            this.actor.show();
+            this.frame.show();
+            this.title.show();
+            this.box._endWorkspaceDrag();
+        }));
+
         this.actor.connect('button-release-event', Lang.bind(this,
             function(actor, event) {
                 if (lastButtonPressActor !== actor) {
@@ -960,8 +995,45 @@ ExpoWorkspaceThumbnail.prototype = {
         return indexOne - 1;
     },
 
+    // Draggable source interface
+    getDragActor: function() {
+        // Create clone while actor is still visible, then hide it.
+        // getDragActor is called after drag-begin, so we defer the
+        // hide here to ensure the clone captures the visible state.
+        let clone = new Clutter.Clone({ source: this.actor });
+        clone.set_size(this.actor.width * this.actor.scale_x,
+                       this.actor.height * this.actor.scale_y);
+
+        this.actor.hide();
+        this.frame.hide();
+        this.title.hide();
+        this.box._startWorkspaceDrag(this.box.thumbnails.indexOf(this));
+
+        return clone;
+    },
+
+    getDragActorSource: function() {
+        return this.actor;
+    },
+
     // Draggable target interface
     handleDragOver : function(source, actor, x, y, time) {
+        if (source.isExpoWorkspaceThumbnail) {
+            if (source === this) {
+                return DND.DragMotionResult.CONTINUE;
+            }
+
+            // Convert local coordinates to box-space using the actor's
+            // allocation and scale, then find the nearest grid slot.
+            let alloc = this.actor.get_allocation_box();
+            let scale = this.actor.get_scale()[0];
+            let boxX = alloc.x1 + x * scale;
+            let boxY = alloc.y1 + y * scale;
+            this.box._updateWorkspaceDragFromPosition(boxX, boxY);
+            this.emit('drag-over');
+            return DND.DragMotionResult.MOVE_DROP;
+        }
+
         this.emit('drag-over');
         if (!this.overviewMode) {
             this.overviewModeOn();
@@ -1033,6 +1105,16 @@ ExpoWorkspaceThumbnail.prototype = {
     },
 
     acceptDrop : function(source, actor, x, y, time) {
+        if (source.isExpoWorkspaceThumbnail) {
+            let sourceIndex = this.box._wsSourceIndex;
+            let dropIndex = this.box._wsDropIndex;
+            this.box._endWorkspaceDrag();
+            if (sourceIndex >= 0 && dropIndex >= 0 && sourceIndex !== dropIndex) {
+                this.box._reorderWorkspace(sourceIndex, dropIndex);
+            }
+            return true;
+        }
+
         if (this.handleDragOverOrDrop(false, source, actor, x, y, time) != DND.DragMotionResult.CONTINUE) {
             if (this.handleDragOverOrDrop(true, source, actor, x, y, time) != DND.DragMotionResult.CONTINUE) {
                 this.restack(true);
@@ -1041,6 +1123,10 @@ ExpoWorkspaceThumbnail.prototype = {
             }
         }
         return false;
+    },
+
+    handleDragOut : function() {
+        this.shade();
     }
 };
 
@@ -1070,12 +1156,29 @@ ExpoThumbnailsBox.prototype = {
         // for the border and padding of the background actor.
         this.background = new St.Bin({reactive:true});
         this.actor.add_actor(this.background);
-        this.background.handleDragOver = function(source, actor, x, y, time) {
+        this.background.handleDragOver = Lang.bind(this, function(source, actor, x, y, time) {
+            if (source.isExpoWorkspaceThumbnail) {
+                if (this._wsDropIndex < 0) {
+                    return DND.DragMotionResult.CONTINUE;
+                }
+                // Background coordinates are in box-space already
+                this._updateWorkspaceDragFromPosition(x, y);
+                return DND.DragMotionResult.MOVE_DROP;
+            }
             return source.metaWindow && !source.metaWindow.is_on_all_workspaces() ?
                 DND.DragMotionResult.MOVE_DROP : DND.DragMotionResult.CONTINUE;
-        };
+        });
         this.background.acceptDrop = Lang.bind(this, function(source, actor, x, y, time) {
-            if (this.background.handleDragOver.apply(this, arguments) ===  DND.DragMotionResult.MOVE_DROP) {
+            if (source.isExpoWorkspaceThumbnail) {
+                let sourceIndex = this._wsSourceIndex;
+                let dropIndex = this._wsDropIndex;
+                this._endWorkspaceDrag();
+                if (sourceIndex >= 0 && dropIndex >= 0 && sourceIndex !== dropIndex) {
+                    this._reorderWorkspace(sourceIndex, dropIndex);
+                }
+                return true;
+            }
+            if (this.background.handleDragOver(source, actor, x, y, time) === DND.DragMotionResult.MOVE_DROP) {
                 let draggable = source._draggable;
                 actor.get_parent().remove_actor(actor);
                 draggable._dragOrigParent.add_actor(actor);
@@ -1101,6 +1204,8 @@ ExpoThumbnailsBox.prototype = {
         this._scale = 0;
         this.pendingScaleUpdate = false;
         this.stateUpdateQueued = false;
+        this._wsSourceIndex = -1;
+        this._wsDropIndex = -1;
 
         this.stateCounts = {};
         for (let key in ThumbnailState)
@@ -1213,6 +1318,82 @@ ExpoThumbnailsBox.prototype = {
 
     removeSelectedWorkspace: function() {
         this.thumbnails[this.kbThumbnailIndex].remove();
+    },
+
+    _startWorkspaceDrag: function(sourceIndex) {
+        this._wsSourceIndex = sourceIndex;
+        this._wsDropIndex = sourceIndex;
+        this.button.hide();
+        this.actor.queue_relayout();
+    },
+
+    _updateWorkspaceDrag: function(sourceIndex, dropIndex) {
+        if (this._wsSourceIndex === sourceIndex && this._wsDropIndex === dropIndex) {
+            return;
+        }
+        this._wsSourceIndex = sourceIndex;
+        this._wsDropIndex = dropIndex;
+        this.actor.queue_relayout();
+    },
+
+    _updateWorkspaceDragFromPosition: function(boxX, boxY) {
+        if (!this._slotCenters || this._slotCenters.length === 0) {
+            return;
+        }
+
+        // Find the grid slot whose center is nearest to the pointer.
+        let minDist = Infinity;
+        let dropIndex = this._wsDropIndex;
+        for (let i = 0; i < this._slotCenters.length; i++) {
+            let dx = boxX - this._slotCenters[i].x;
+            let dy = boxY - this._slotCenters[i].y;
+            let dist = dx * dx + dy * dy;
+            if (dist < minDist) {
+                minDist = dist;
+                dropIndex = i;
+            }
+        }
+
+        this._updateWorkspaceDrag(this._wsSourceIndex, dropIndex);
+    },
+
+    _endWorkspaceDrag: function() {
+        this._wsSourceIndex = -1;
+        this._wsDropIndex = -1;
+        this.actor.queue_relayout();
+    },
+
+    _reorderWorkspace: function(oldIndex, newIndex) {
+        Main.reorderWorkspaceName(oldIndex, newIndex);
+
+        let workspace = this.thumbnails[oldIndex].metaWorkspace;
+        global.workspace_manager.reorder_workspace(workspace, newIndex);
+
+        let thumbnail = this.thumbnails.splice(oldIndex, 1)[0];
+        this.thumbnails.splice(newIndex, 0, thumbnail);
+
+        if (this.kbThumbnailIndex === oldIndex) {
+            this.kbThumbnailIndex = newIndex;
+        } else if (oldIndex < this.kbThumbnailIndex && newIndex >= this.kbThumbnailIndex) {
+            this.kbThumbnailIndex--;
+        } else if (oldIndex > this.kbThumbnailIndex && newIndex <= this.kbThumbnailIndex) {
+            this.kbThumbnailIndex++;
+        }
+
+        for (let i = 0; i < this.thumbnails.length; i++) {
+            this.thumbnails[i].refreshTitle();
+        }
+
+        let activeWorkspace = global.workspace_manager.get_active_workspace();
+        for (let i = 0; i < this.thumbnails.length; i++) {
+            let isActive = this.thumbnails[i].metaWorkspace === activeWorkspace;
+            this.thumbnails[i].setActive(isActive);
+            if (isActive) {
+                this.lastActiveWorkspace = this.thumbnails[i];
+            }
+        }
+
+        this.actor.queue_relayout();
     },
 
     // returns true if symbol was understood, false otherwise
@@ -1654,16 +1835,50 @@ ExpoThumbnailsBox.prototype = {
 
         this.background.allocate(childBox, flags);
 
+        // During a workspace drag, build a virtual display order:
+        // remove the source thumbnail and leave a gap at the drop position.
+        let displayOrder = [];
+        let isDragging = this._wsSourceIndex >= 0 && this._wsDropIndex >= 0;
+        if (isDragging) {
+            for (let i = 0; i < this.thumbnails.length; i++) {
+                if (i !== this._wsSourceIndex) {
+                    displayOrder.push(this.thumbnails[i]);
+                }
+            }
+            displayOrder.splice(this._wsDropIndex, 0, null); // null = gap
+        } else {
+            for (let i = 0; i < this.thumbnails.length; i++) {
+                displayOrder.push(this.thumbnails[i]);
+            }
+        }
+
+        if (isDragging) {
+            this._slotCenters = [];
+        }
+
         let x;
         let y = spacing + Math.floor((availY - nRows * thumbnailHeight) / 2);
-        for (let i = 0; i < this.thumbnails.length; i++) {
+        for (let i = 0; i < displayOrder.length; i++) {
             let column = i % nColumns;
             let row = Math.floor(i / nColumns);
-            let cItemsInRow = Math.min(this.thumbnails.length - (row * nColumns), nColumns);
+            let cItemsInRow = Math.min(displayOrder.length - (row * nColumns), nColumns);
             x = column > 0 ? x : calcPaddingX(cItemsInRow);
-            let rowMultiplier = row + 1;
 
-            let thumbnail = this.thumbnails[i];
+            if (isDragging) {
+                this._slotCenters.push({
+                    x: x + thumbnailWidth / 2,
+                    y: y + thumbnailHeight / 2
+                });
+            }
+
+            let thumbnail = displayOrder[i];
+
+            if (thumbnail === null) {
+                // Gap slot during drag — advance position but don't allocate anything
+                x += thumbnailWidth + spacing;
+                y += (i + 1) % nColumns > 0 ? 0 : thumbnailHeight + extraHeight + thTitleMargin;
+                continue;
+            }
 
             // We might end up with thumbnailHeight being something like 99.33
             // pixels. To make this work and not end up with a gap at the bottom,
@@ -1673,7 +1888,7 @@ ExpoThumbnailsBox.prototype = {
             let x2 = Math.round(x + thumbnailWidth);
 
             let y1, y2;
-            
+
             y1 = y;
             y2 = y1 + thumbnailHeight;
 
@@ -1686,7 +1901,7 @@ ExpoThumbnailsBox.prototype = {
 
             let scale = this._scale * (1 - thumbnail.slidePosition);
             thumbnail.actor.set_scale(scale, scale);
-            thumbnail.actor.allocate(childBox, flags);  
+            thumbnail.actor.allocate(childBox, flags);
 
             let framethemeNode = thumbnail.frame.get_theme_node();
             let borderWidth = framethemeNode.get_border_width(St.Side.BOTTOM);
