@@ -1,5 +1,13 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:workspacesView.js
+ * @short_description: Workspace layout container for the overview
+ *
+ * Manages the arrangement and display of workspace views within the
+ * overview, handling workspace switching animations and layout.
+ */
+
 const Clutter = imports.gi.Clutter;
 const Lang = imports.lang;
 const Cinnamon = imports.gi.Cinnamon;

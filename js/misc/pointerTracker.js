@@ -1,4 +1,15 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
+
+/**
+ * FILE:pointerTracker.js
+ * @short_description: Mouse pointer position polling
+ *
+ * Provides #PointerTracker, which polls the mouse pointer position
+ * at regular intervals and emits `position-changed` signals. Used
+ * by the magnifier and other features that need continuous pointer
+ * tracking.
+ */
+
 const Gio = imports.gi.Gio;
 const Main = imports.ui.main;
 const Clutter = imports.gi.Clutter;

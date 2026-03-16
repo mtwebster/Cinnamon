@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:keyboardManager.js
+ * @short_description: Keyboard layout and input source management
+ *
+ * Manages keyboard layouts and input sources (XKB, IBus, Fcitx).
+ * Tracks the active input source, handles layout switching, and
+ * provides the input source indicator for the panel.
+ */
+
 const { Clutter, Gio, GLib, GObject, IBus, Meta, Cinnamon, St, CinnamonDesktop } = imports.gi;
 
 const Gettext = imports.gettext;

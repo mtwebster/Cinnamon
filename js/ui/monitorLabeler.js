@@ -1,3 +1,12 @@
+/**
+ * FILE:monitorLabeler.js
+ * @short_description: On-screen monitor identification labels
+ *
+ * Displays numbered labels on each monitor to help users identify
+ * them during display configuration. Activated via DBus from
+ * cinnamon-settings.
+ */
+
 const St = imports.gi.St;
 const Main = imports.ui.main;
 const Gio = imports.gi.Gio;

@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:ripples.js
+ * @short_description: Expanding ripple animation effect
+ *
+ * Draws concentric circle animations that expand outward from a
+ * point, used by the pointer locator and hot corners for visual
+ * feedback.
+ */
+
 const { Clutter, St } = imports.gi;
 
 // Shamelessly copied from the layout "hotcorner" ripples implementation

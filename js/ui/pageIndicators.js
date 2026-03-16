@@ -1,6 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 /* exported PageIndicators, AnimatedPageIndicators */
 
+/**
+ * FILE:pageIndicators.js
+ * @short_description: Page indicator dots for paginated views
+ *
+ * Provides dot indicators that show which page is active in a
+ * paginated layout. Used by paginated icon grids and similar views.
+ */
+
 const { Clutter, GLib, Graphene, GObject, Meta, St } = imports.gi;
 
 const { ANIMATION_TIME_OUT, ANIMATION_MAX_DELAY_OUT_FOR_ITEM, AnimationDirection } = imports.ui.iconGrid;

@@ -1,5 +1,13 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:timers.js
+ * @short_description: Debug timing utilities
+ *
+ * Provides #DebugTimer for measuring elapsed time during development
+ * and debugging. Wraps GLib's timer functions with a simple
+ * start/stop/elapsed interface.
+ */
 
 function DebugTimer(name){
     this._init(name);

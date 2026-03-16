@@ -1,3 +1,12 @@
+/**
+ * FILE:fileDialog.js
+ * @short_description: File and folder chooser dialogs
+ *
+ * Provides convenience functions to open GTK file/folder chooser
+ * dialogs from within the shell via a helper subprocess, and return
+ * the selected path via callback.
+ */
+
 const Util = imports.misc.util;
 const GLib = imports.gi.GLib;
 

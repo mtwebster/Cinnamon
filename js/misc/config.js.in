@@ -1,5 +1,13 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:config.js
+ * @short_description: Build-time configuration constants
+ *
+ * Contains package name, version, and installation paths set at
+ * build time by Meson. This file is generated from config.js.in.
+ */
+
 /* The name of this package (not localized) */
 var PACKAGE_NAME = '@PACKAGE_NAME@';
 /* The version of this package */

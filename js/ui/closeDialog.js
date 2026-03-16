@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:closeDialog.js
+ * @short_description: Dialog for unresponsive windows
+ *
+ * Implements the #Meta.CloseDialog interface to show a "Force Quit"
+ * dialog when a window stops responding. The dialog is rendered
+ * directly on the frozen window's compositor actor.
+ */
+
 const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;

@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:gnomeSession.js
+ * @short_description: GNOME Session Manager DBus interface proxies
+ *
+ * Provides DBus proxy wrappers for the org.gnome.SessionManager
+ * interfaces, including Presence (idle tracking) and Inhibitor
+ * management.
+ */
+
 const Gio = imports.gi.Gio;
 
 var PresenceIface = '\

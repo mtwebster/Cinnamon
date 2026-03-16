@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:networkAgent.js
+ * @short_description: NetworkManager authentication agent
+ *
+ * Implements a polkit-style authentication agent for NetworkManager,
+ * displaying modal dialogs to prompt users for Wi-Fi passwords,
+ * VPN credentials, and other network authentication secrets.
+ */
+
 const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;

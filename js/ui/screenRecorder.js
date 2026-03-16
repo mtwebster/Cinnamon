@@ -1,5 +1,13 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:screenRecorder.js
+ * @short_description: Built-in screen recording support
+ *
+ * Provides screen recording functionality using the Cinnamon recorder
+ * and GStreamer pipeline. Can be toggled via keybinding or DBus.
+ */
+
 const Cinnamon = imports.gi.Cinnamon;
 const Meta = imports.gi.Meta;
 const Signals = imports.signals;

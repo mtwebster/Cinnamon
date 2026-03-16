@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:osdWindow.js
+ * @short_description: On-screen display popups
+ *
+ * Displays transient on-screen popups for volume, brightness,
+ * keyboard indicators, and other system feedback. Each monitor
+ * can show its own OSD.
+ */
+
 const Clutter = imports.gi.Clutter;
 const Gdk = imports.gi.Gdk;
 const Gio = imports.gi.Gio;

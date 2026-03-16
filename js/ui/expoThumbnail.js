@@ -1,5 +1,13 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:expoThumbnail.js
+ * @short_description: Workspace thumbnail actors for the Expo view
+ *
+ * Renders workspace thumbnails with live window previews, close buttons,
+ * and drag-and-drop support used by the Expo workspace overview.
+ */
+
 const Clutter = imports.gi.Clutter;
 const Lang = imports.lang;
 const Mainloop = imports.mainloop;

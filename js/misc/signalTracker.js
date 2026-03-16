@@ -1,3 +1,12 @@
+/**
+ * FILE:signalTracker.js
+ * @short_description: GObject signal tracking with automatic cleanup
+ *
+ * Provides signal tracking methods that can be mixed into GObject
+ * classes via #addObjectSignalMethods, enabling automatic signal
+ * disconnection on object destruction.
+ */
+
 /* exported addObjectSignalMethods */
 const GObject = imports.gi.GObject;
 

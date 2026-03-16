@@ -1,3 +1,12 @@
+/**
+ * FILE:dbusMenu.js
+ * @short_description: Implementation of the DBusMenu protocol
+ *
+ * Renders application menus exported via the com.canonical.dbusmenu
+ * interface (used by tray icons and application indicators) as
+ * native Cinnamon popup menus.
+ */
+
 // Copyright (C) 2011 Giovanni Campagna
 // Copyright (C) 2013-2014 Jonas Kummerlin <rgcjonas@gmail.com>
 //

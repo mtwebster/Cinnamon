@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:searchProviderManager.js
+ * @short_description: Search provider extension management
+ *
+ * Manages the lifecycle of search provider extensions, handling
+ * loading, enabling, disabling, and tracking search providers
+ * registered by third-party extensions.
+ */
+
 const Extension = imports.ui.extension;
 const GLib = imports.gi.GLib;
 

@@ -1,5 +1,13 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:accessibility.js
+ * @short_description: Accessibility support for the desktop
+ *
+ * Handles keyboard accessibility features (toggle keys OSD and sounds)
+ * and pointer accessibility (hover-click / dwell-click).
+ */
+
 const Main = imports.ui.main;
 const SignalManager = imports.misc.signalManager;
 const Gio = imports.gi.Gio;

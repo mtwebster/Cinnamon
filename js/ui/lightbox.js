@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:lightbox.js
+ * @short_description: Darkening overlay for modal effects
+ *
+ * Provides #Lightbox, a semi-transparent overlay that dims the
+ * area behind modal dialogs and the overview. Can optionally
+ * highlight a specific actor while dimming everything else.
+ */
+
 const Clutter = imports.gi.Clutter;
 const GObject = imports.gi.GObject;
 const Meta = imports.gi.Meta;

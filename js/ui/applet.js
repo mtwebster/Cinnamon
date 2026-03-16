@@ -1,3 +1,12 @@
+/**
+ * FILE:applet.js
+ * @short_description: Applet base classes and management
+ *
+ * Base classes for panel applets (#Applet, #IconApplet,
+ * #TextApplet, #TextIconApplet) and supporting infrastructure
+ * for the applet lifecycle, context menus, and panel integration.
+ */
+
 const St = imports.gi.St;
 const Lang = imports.lang;
 const Tooltips = imports.ui.tooltips;

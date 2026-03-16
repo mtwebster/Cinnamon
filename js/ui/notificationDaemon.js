@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:notificationDaemon.js
+ * @short_description: Desktop notification service (org.freedesktop.Notifications)
+ *
+ * Implements the freedesktop.org Notifications DBus specification,
+ * receiving notification requests from applications and routing them
+ * to the Cinnamon notification/message tray system.
+ */
+
 const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;

@@ -1,3 +1,11 @@
+/**
+ * FILE:windowUtils.js
+ * @short_description: Window-related utility functions
+ *
+ * Provides utility functions for working with Meta windows and
+ * window actors, including clone creation and window filtering.
+ */
+
 const Clutter = imports.gi.Clutter;
 const Cinnamon = imports.gi.Cinnamon;
 const Meta = imports.gi.Meta;

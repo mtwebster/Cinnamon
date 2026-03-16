@@ -1,5 +1,14 @@
 // -*- mode: js2; indent-tabs-mode: nil; js2-basic-offset: 4 -*-
 
+/**
+ * FILE:startupAnimation.js
+ * @short_description: Desktop startup fade-in animation
+ *
+ * Plays an animated transition when the desktop first loads,
+ * fading in or wiping from a static snapshot of the previous
+ * session to the live desktop.
+ */
+
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const Gtk = imports.gi.Gtk;

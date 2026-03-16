@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:placesManager.js
+ * @short_description: Bookmarked and special filesystem locations
+ *
+ * Tracks user bookmarks (from GTK bookmarks file), mounted volumes,
+ * and special directories (Home, Desktop, etc.) for use by the
+ * Places applet and other UI elements.
+ */
+
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
 const Cinnamon = imports.gi.Cinnamon;

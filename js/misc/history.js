@@ -1,5 +1,15 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:history.js
+ * @short_description: Input history manager with GSettings persistence
+ *
+ * Provides #HistoryManager for managing an input history stack
+ * (like command history in a terminal). Supports GSettings-backed
+ * persistence, configurable size limits, and keyboard navigation
+ * through previous entries.
+ */
+
 const Lang = imports.lang;
 const Signals = imports.signals;
 const Clutter = imports.gi.Clutter;

@@ -1,9 +1,35 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:barLevel.js
+ * @short_description: A horizontal level indicator widget
+ *
+ * A themed horizontal bar widget that displays a value within a range,
+ * commonly used for volume and brightness indicators. Supports an
+ * optional "amplify" zone (e.g. volume above 100%) rendered in a
+ * distinct color with a separator mark.
+ */
+
 const Clutter = imports.gi.Clutter;
 const GObject = imports.gi.GObject;
 const St = imports.gi.St;
 
+/**
+ * #BarLevel
+ * @short_description: Horizontal level bar with optional amplify zone
+ * @value (double): the current value (0 to maximum-value)
+ * @maximum-value (double): the maximum value (default 1)
+ * @amplify-start (double): the value at which the amplify zone begins
+ *
+ * A CSS-themeable horizontal bar indicator. Themed via the `barlevel`
+ * style class using custom CSS properties:
+ *
+ * - `-barlevel-height`: bar height in pixels
+ * - `-barlevel-background-color`: color of the unfilled portion
+ * - `-barlevel-active-background-color`: color of the filled portion
+ * - `-barlevel-amplify-color`: color of the amplified portion
+ * - `-barlevel-amplify-separator-width`: width of the amplify separator
+ */
 var BarLevel = GObject.registerClass({
     Properties: {
         'value': GObject.ParamSpec.double(

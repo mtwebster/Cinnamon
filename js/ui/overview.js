@@ -1,4 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
+
+/**
+ * FILE:overview.js
+ * @short_description: Scale view (window overview)
+ *
+ * The Overview (Scale view) shows all windows on the current workspace
+ * scaled down, allowing users to visually select and switch between
+ * windows.
+ */
+
 const Clutter = imports.gi.Clutter;
 const Gtk = imports.gi.Gtk;
 const Meta = imports.gi.Meta;

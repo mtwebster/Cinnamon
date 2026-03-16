@@ -1,5 +1,13 @@
 // -*- mode: js2; indent-tabs-mode: nil; js2-basic-offset: 4 -*-
-// Load shell theme from ~/.themes/name/gnome-shell
+
+/**
+ * FILE:themeManager.js
+ * @short_description: Cinnamon theme loading and switching
+ *
+ * Loads the Cinnamon shell theme CSS from the user's selected theme
+ * directory or falls back to the default theme. Handles theme
+ * changes triggered by GSettings.
+ */
 
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;

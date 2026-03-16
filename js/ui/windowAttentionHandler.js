@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:windowAttentionHandler.js
+ * @short_description: Handles windows requesting user attention
+ *
+ * Monitors windows that request attention (urgent hint) and
+ * provides visual notification to the user, typically via the
+ * window list applet.
+ */
+
 const Lang = imports.lang;
 const Cinnamon = imports.gi.Cinnamon;
 const St = imports.gi.St;

@@ -1,4 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
+
+/**
+ * FILE:polkitAuthenticationAgent.js
+ * @short_description: PolicyKit authentication dialog
+ *
+ * Implements the Polkit authentication agent, displaying a modal
+ * dialog that prompts users for their password when an application
+ * requests elevated privileges.
+ */
+
 /*
  * Copyright 2010 Red Hat, Inc
  *

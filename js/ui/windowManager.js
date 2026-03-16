@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:windowManager.js
+ * @short_description: Window management effects and workspace transitions
+ *
+ * Implements window open/close/minimize animations, workspace switch
+ * effects, window snapping/tiling, and other window management
+ * behaviors that layer on top of Muffin's core window manager.
+ */
+
 const Cinnamon = imports.gi.Cinnamon;
 const Clutter = imports.gi.Clutter;
 const Lang = imports.lang;

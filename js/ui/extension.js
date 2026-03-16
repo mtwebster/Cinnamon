@@ -1,5 +1,15 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:extension.js
+ * @short_description: Extension loading and lifecycle management
+ *
+ * Common infrastructure for loading, enabling, disabling, and
+ * reloading all Cinnamon extension types (applets, desklets,
+ * extensions, and search providers). Handles metadata parsing,
+ * versioning, error states, and settings schema installation.
+ */
+
 const ByteArray = imports.byteArray;
 
 const Gio = imports.gi.Gio;

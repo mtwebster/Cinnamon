@@ -1,6 +1,15 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*
 /* exported WindowMenuManager */
 
+/**
+ * FILE:windowMenu.js
+ * @short_description: Window titlebar context menu
+ *
+ * Implements the right-click context menu for window titlebars,
+ * providing options for minimize, maximize, move, resize, workspace
+ * management, and other window operations.
+ */
+
 const { Clutter, GLib, Meta, St, Gtk } = imports.gi;
 
 const Main = imports.ui.main;

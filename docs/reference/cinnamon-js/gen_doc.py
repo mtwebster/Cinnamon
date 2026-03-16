@@ -64,6 +64,15 @@ if len(sys.argv) > 2:
 JS_UI_DIR = os.path.join(ROOT_DIR, 'js/ui/')
 JS_MISC_DIR = os.path.join(ROOT_DIR, 'js/misc/')
 
+EXCLUDE_LIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'gen_doc_exclude.list')
+excluded_files = set()
+if os.path.exists(EXCLUDE_LIST_FILE):
+    with open(EXCLUDE_LIST_FILE, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#'):
+                excluded_files.add(line)
+
 # Allow types like "object/string"
 COMMENT_REGEX = re.compile(r'/\*([^*]|(\*[^/]))*\*+/')
 RETURNS_REGEX = re.compile(r'^Returns\s*\(?(\w*\.?\w+/?\w*\.?\w*)?\)?:(.*)')
@@ -109,6 +118,7 @@ for _file in _files:
     file_obj = open(_file, 'r', encoding="utf-8")
 
     curr_file = JSFile(parts[-2], parts[-1][:-3])
+    curr_file.filename = parts[-1]
 
     files.append(curr_file)
 
@@ -281,7 +291,9 @@ for _file in _files:
 ################################################################################
 ################################################################################
 
-write_chapters_file(files)
+output_files = [f for f in files if f.filename not in excluded_files]
+
+write_chapters_file(output_files)
 
 try:
     os.mkdir('ui')
@@ -294,6 +306,6 @@ except OSError:
     pass
 
 
-for _file in files:
+for _file in output_files:
     for obj in _file.objects:
         create_file(obj)

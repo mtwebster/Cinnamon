@@ -1,3 +1,12 @@
+/**
+ * FILE:keybindings.js
+ * @short_description: Keybinding management and custom shortcut handling
+ *
+ * Manages user-defined custom keybindings and media key handlers.
+ * Coordinates with cinnamon-settings-daemon and the Muffin keybinding
+ * system to register, update, and dispatch keyboard shortcuts.
+ */
+
 const Signals = imports.signals;
 const Main = imports.ui.main;
 const Gio = imports.gi.Gio;

@@ -1,5 +1,13 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:modalDialog.js
+ * @short_description: Modal dialog base class
+ *
+ * Provides #ModalDialog, a base class for modal dialogs with
+ * keyboard navigation, button rows, and lightbox overlay support.
+ */
+
 const Clutter = imports.gi.Clutter;
 const St = imports.gi.St;
 const Atk = imports.gi.Atk;

@@ -1,5 +1,13 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:fileUtils.js
+ * @short_description: File and directory utility functions
+ *
+ * Provides async directory listing, recursive child collection,
+ * and file deletion utilities for use throughout the shell.
+ */
+
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const ByteArray = imports.byteArray;

@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:search.js
+ * @short_description: Search provider interface
+ *
+ * Defines the #SearchProvider base class for search providers
+ * that integrate with the Cinnamon menu/search system. Includes
+ * support for OpenSearch-based web search providers.
+ */
+
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const Lang = imports.lang;

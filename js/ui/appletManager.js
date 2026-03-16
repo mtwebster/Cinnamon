@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:appletManager.js
+ * @short_description: Manager for applet lifecycle and panel placement
+ *
+ * Handles loading, unloading, and positioning of applets on panels.
+ * Manages the `enabled-applets` GSettings key and coordinates with
+ * the extension system to load applet code.
+ */
+
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
 const St = imports.gi.St;

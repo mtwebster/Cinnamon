@@ -1,0 +1,73 @@
+# Files to exclude from generated JavaScript API documentation.
+# One filename per line (e.g. endSessionDialog.js).
+# These files can still have inline doc comments for maintainability,
+# but won't appear in the public reference manual.
+
+# ui/ - Internal shell implementation
+accessibility.js
+audioDeviceSelection.js
+backgroundManager.js
+cinnamonDBus.js
+cinnamonEntry.js
+closeDialog.js
+dbusMenu.js
+dialog.js
+endSessionDialog.js
+environment.js
+expo.js
+expoThumbnail.js
+hotCorner.js
+ibusCandidatePopup.js
+keybindings.js
+keyboardManager.js
+keyringPrompt.js
+locatePointer.js
+lookingGlass.js
+magnifier.js
+magnifierDBus.js
+monitorLabeler.js
+networkAgent.js
+notificationDaemon.js
+osdWindow.js
+overrides.js
+overview.js
+pageIndicators.js
+placeholder.js
+placesManager.js
+polkitAuthenticationAgent.js
+ripples.js
+runDialog.js
+screenRecorder.js
+screenshot.js
+slideshowManager.js
+soundManager.js
+startupAnimation.js
+statusIconDispatcher.js
+systray.js
+userWidget.js
+virtualKeyboard.js
+windowAttentionHandler.js
+windowManager.js
+windowMenu.js
+wmGtkDialogs.js
+workspace.js
+workspaceOsd.js
+workspacesView.js
+xdndHandler.js
+
+# misc/ - Internal helpers
+authClient.js
+config.js.in
+gnomeSession.js
+gridNavigator.js
+ibusManager.js
+inputMethod.js
+interfaces.js
+loginManager.js
+modemManager.js
+mprisPlayer.js
+pointerTracker.js
+portalHandlers.js
+powerUtils.js
+screenSaver.js
+windowUtils.js

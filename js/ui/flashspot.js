@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:flashspot.js
+ * @short_description: Visual flash effect for screen regions
+ *
+ * Provides #Flashspot, a brief white flash animation over a screen
+ * area. Commonly used to provide visual feedback after taking a
+ * screenshot.
+ */
+
 const Clutter = imports.gi.Clutter;
 const GObject = imports.gi.GObject;
 const Lightbox = imports.ui.lightbox;

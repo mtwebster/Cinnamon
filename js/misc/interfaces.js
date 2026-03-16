@@ -1,5 +1,13 @@
 // -*- mode: js; js-indent-level: 4;
 
+/**
+ * FILE:interfaces.js
+ * @short_description: DBus interface XML definitions and proxy factories
+ *
+ * Contains DBus interface XML strings and proxy wrapper factories
+ * for various system services (XRANDR, power, screensaver, accounts).
+ */
+
 const Gio = imports.gi.Gio;
 
 const SETTINGS_DAEMON_XRANDR_NAME = "org.cinnamon.SettingsDaemon.XRANDR_2";

@@ -1,6 +1,15 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 /* exported KeyboardManager */
 
+/**
+ * FILE:virtualKeyboard.js
+ * @short_description: On-screen virtual keyboard
+ *
+ * Implements an on-screen keyboard for touch input and accessibility.
+ * Supports multiple layouts via Caribou keyboard definitions and
+ * integrates with the input method framework.
+ */
+
 const { Clutter, Gio, GLib, GObject, Meta, St } = imports.gi;
 const Signals = imports.signals;
 

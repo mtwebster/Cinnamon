@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:runDialog.js
+ * @short_description: Alt+F2 command dialog
+ *
+ * The run dialog activated by Alt+F2, providing a command entry
+ * with history and completion for launching applications and
+ * executing shell commands.
+ */
+
 const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;

@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:environment.js
+ * @short_description: Shell startup environment initialization
+ *
+ * Sets up GI library versions, monkey-patches GObject/Clutter/St
+ * prototypes with convenience methods, configures the global
+ * environment, and initializes GSettings before the shell UI loads.
+ */
+
 imports.gi.versions.Clutter = '0';
 imports.gi.versions.Gio = '2.0';
 imports.gi.versions.Gdk = '3.0';

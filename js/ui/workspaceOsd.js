@@ -1,5 +1,13 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:workspaceOsd.js
+ * @short_description: Workspace name on-screen display
+ *
+ * Displays a transient on-screen popup showing the workspace name
+ * when switching workspaces.
+ */
+
 const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;

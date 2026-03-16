@@ -1,5 +1,15 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:cinnamonDBus.js
+ * @short_description: DBus service for org.Cinnamon interface
+ *
+ * Implements the org.Cinnamon DBus interface, providing methods for
+ * screenshots, xlet management, workspace switching, monitor queries,
+ * input sources, and other shell operations accessible to external
+ * processes.
+ */
+
 const Lang = imports.lang;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;

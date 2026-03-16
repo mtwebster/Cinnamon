@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:params.js
+ * @short_description: Parameter validation and default merging
+ *
+ * Provides a `parse()` function to merge caller-supplied parameters
+ * with function-defined defaults, similar to Python's keyword
+ * arguments with defaults.
+ */
+
 // parse:
 // @params: caller-provided parameter object, or %null
 // @defaults: function-provided defaults object

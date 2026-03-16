@@ -1,6 +1,15 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 /* exported CandidatePopup */
 
+/**
+ * FILE:ibusCandidatePopup.js
+ * @short_description: IBus input method candidate popup
+ *
+ * Renders the candidate word/phrase selection popup for the IBus
+ * input method framework, displaying candidate lists and paging
+ * controls.
+ */
+
 const { Clutter, GObject, IBus, St } = imports.gi;
 
 const BoxPointer = imports.ui.boxpointer;

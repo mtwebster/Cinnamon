@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:xdndHandler.js
+ * @short_description: X11 drag-and-drop handler
+ *
+ * Handles drag-and-drop operations initiated from external X11
+ * applications (XDND protocol), allowing files and data to be
+ * dragged onto desktop shell elements.
+ */
+
 const Clutter = imports.gi.Clutter;
 const Lang = imports.lang;
 const Cinnamon = imports.gi.Cinnamon;

@@ -1,4 +1,13 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
+
+/**
+ * FILE:gridNavigator.js
+ * @short_description: Keyboard navigation helper for grid layouts
+ *
+ * Calculates the next focused item index when navigating a grid
+ * layout with arrow keys, handling row/column wrapping.
+ */
+
 const Lang = imports.lang;
 const Clutter = imports.gi.Clutter;
 

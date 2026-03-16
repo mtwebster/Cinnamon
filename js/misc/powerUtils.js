@@ -1,7 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
-//
-// powerUtils.js - Shared UPower utilities for Cinnamon
-//
+
+/**
+ * FILE:powerUtils.js
+ * @short_description: Shared UPower utilities for Cinnamon
+ *
+ * Common utility functions for working with UPower devices,
+ * battery state, and power supply information used by power
+ * management applets and system components.
+ */
+
 // Common utility functions for working with UPower devices,
 // used by both the power applet and screensaver power widget.
 //

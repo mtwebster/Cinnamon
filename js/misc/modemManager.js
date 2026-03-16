@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:modemManager.js
+ * @short_description: ModemManager DBus interface for mobile broadband
+ *
+ * Provides DBus proxy wrappers for ModemManager, used to display
+ * mobile broadband connection information and operator names in
+ * the network applet.
+ */
+
 const Gio = imports.gi.Gio;
 const Lang = imports.lang;
 const NMA = imports.gi.NMA;

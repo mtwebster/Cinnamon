@@ -1,3 +1,12 @@
+/**
+ * FILE:tooltips.js
+ * @short_description: Tooltip classes for the Cinnamon shell
+ *
+ * Provides tooltip classes including #Tooltip for general-purpose
+ * tooltips, #PanelItemTooltip for panel applets, and
+ * #TooltipBase for custom tooltip implementations.
+ */
+
 const Lang = imports.lang;
 const Mainloop = imports.mainloop;
 const St = imports.gi.St;

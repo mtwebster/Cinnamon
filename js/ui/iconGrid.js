@@ -1,6 +1,15 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 /* exported BaseIcon, IconGrid, PaginatedIconGrid */
 
+/**
+ * FILE:iconGrid.js
+ * @short_description: Grid layout for icon collections
+ *
+ * Provides #IconGrid, a flow-layout container that arranges icons in
+ * a grid with configurable spacing and sizing, and #BaseIcon, a
+ * standard icon-with-label widget. Used by the overview and app grid.
+ */
+
 const { Clutter, GLib, GObject, Graphene, Meta, St } = imports.gi;
 
 const Params = imports.misc.params;

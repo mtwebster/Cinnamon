@@ -1,6 +1,15 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 /* exported getIBusManager */
 
+/**
+ * FILE:ibusManager.js
+ * @short_description: IBus input method framework manager
+ *
+ * Manages the connection to the IBus daemon, tracking available
+ * input engines and handling engine switching. Provides the
+ * singleton via #getIBusManager.
+ */
+
 const { Gio, GLib, IBus, Meta } = imports.gi;
 const Signals = imports.signals;
 

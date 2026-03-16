@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:endSessionDialog.js
+ * @short_description: Logout, shutdown, and restart confirmation dialogs
+ *
+ * Provides the modal dialog shown when the user requests logout,
+ * shutdown, or restart. Includes a countdown timer and communicates
+ * with cinnamon-session via DBus.
+ */
+
 const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;

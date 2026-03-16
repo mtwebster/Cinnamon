@@ -1,3 +1,12 @@
+/**
+ * FILE:desklet.js
+ * @short_description: Desklet base class and management
+ *
+ * Base class for desktop desklets (#Desklet) with support for
+ * drag-and-drop positioning, decoration, context menus, and
+ * popup menus on the desktop.
+ */
+
 //-*- indent-tabs-mode: nil-*-
 const Cinnamon = imports.gi.Cinnamon;
 const Clutter = imports.gi.Clutter;

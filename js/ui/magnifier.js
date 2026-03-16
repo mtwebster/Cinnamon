@@ -1,5 +1,15 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:magnifier.js
+ * @short_description: Screen magnification for accessibility
+ *
+ * Implements a screen magnifier that can zoom in on portions of the
+ * desktop for visually impaired users. Supports multiple zoom regions
+ * with configurable tracking modes (mouse, caret, focus) and lens/
+ * full-screen display.
+ */
+
 const Clutter = imports.gi.Clutter;
 const GObject = imports.gi.GObject;
 const Meta = imports.gi.Meta;

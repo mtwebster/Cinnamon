@@ -1,4 +1,14 @@
 // -*- indent-tabs-mode: nil -*-
+
+/**
+ * FILE:deskletManager.js
+ * @short_description: Manager for desklet lifecycle and desktop placement
+ *
+ * Handles loading, unloading, and positioning of desklets on the desktop.
+ * Manages the `enabled-desklets` GSettings key and coordinates with the
+ * extension system to load desklet code.
+ */
+
 const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;

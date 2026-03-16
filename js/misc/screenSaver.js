@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:screenSaver.js
+ * @short_description: Screensaver DBus interface
+ *
+ * Provides a DBus proxy for the org.cinnamon.ScreenSaver interface,
+ * allowing the shell to activate/deactivate the screensaver lock
+ * and query its active state.
+ */
+
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const Main = imports.ui.main;

@@ -1,3 +1,12 @@
+/**
+ * FILE:systray.js
+ * @short_description: System tray icon manager
+ *
+ * Manages the lifecycle of system tray (status notifier) icons,
+ * coordinating between the StatusIconDispatcher and the panel's
+ * tray area.
+ */
+
 const Signals = imports.signals;
 
 

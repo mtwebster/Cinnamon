@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:dialog.js
+ * @short_description: Low-level dialog and message content widgets
+ *
+ * Provides #Dialog, a base container for in-shell dialogs rendered
+ * directly on a parent actor (used by #CloseDialog), and
+ * #MessageDialogContent for standard title/description dialog layouts.
+ */
+
 const Clutter = imports.gi.Clutter;
 const St = imports.gi.St;
 const GLib = imports.gi.GLib;

@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:dnd.js
+ * @short_description: Drag and drop framework
+ *
+ * Provides drag-and-drop support for Clutter actors. Call
+ * `makeDraggable()` on an actor to enable dragging, and implement
+ * `handleDragOver()` and `acceptDrop()` on target actors to handle drops.
+ */
+
 const Clutter = imports.gi.Clutter;
 const GLib = imports.gi.GLib;
 const Gtk = imports.gi.Gtk;

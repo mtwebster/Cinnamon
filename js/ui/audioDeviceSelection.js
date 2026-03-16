@@ -1,3 +1,11 @@
+/**
+ * FILE:audioDeviceSelection.js
+ * @short_description: Audio device selection dialog
+ *
+ * Provides a DBus-activated dialog for choosing between audio output
+ * devices (headphones, headset, microphone) when multiple are detected.
+ */
+
 const Cinnamon = imports.gi.Cinnamon;
 const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;

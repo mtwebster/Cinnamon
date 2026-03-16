@@ -1,3 +1,12 @@
+/**
+ * FILE:keyringPrompt.js
+ * @short_description: GNOME Keyring unlock prompt
+ *
+ * Implements the modal dialog for unlocking the GNOME Keyring,
+ * prompting the user for a password or confirmation when
+ * keyring access is requested.
+ */
+
 const Cinnamon = imports.gi.Cinnamon;
 const Clutter = imports.gi.Clutter;
 const St = imports.gi.St;

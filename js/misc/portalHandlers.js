@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:portalHandlers.js
+ * @short_description: XDG Desktop Portal request handlers
+ *
+ * Implements handlers for XDG Desktop Portal requests, such as
+ * the Access portal for permission dialogs and other portal
+ * interfaces that require shell UI interaction.
+ */
+
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const Cinnamon = imports.gi.Cinnamon;

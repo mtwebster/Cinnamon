@@ -32,6 +32,27 @@ function isPopupMetaWindow(actor) {
     }
 }
 
+/**
+ * #MonitorConstraint
+ * @short_description: A Clutter constraint that sizes an actor to a monitor
+ *
+ * A Clutter constraint that keeps an actor's allocation matched to
+ * a specific monitor's geometry. Can track the primary monitor,
+ * a monitor by index, or use the work area (excluding panels).
+ *
+ * Automatically updates when monitors change or work areas are
+ * recalculated.
+ *
+ * @primary (boolean): If %true, track the primary monitor. Setting
+ * this clears any explicit index.
+ *
+ * @index (int): Track a specific monitor by index. Set to -1 to
+ * disable. Setting this clears the primary flag.
+ *
+ * @work-area (boolean): If %true, constrain to the monitor's work
+ * area (excluding strut reservations from panels) rather than the
+ * full monitor geometry. Also accounts for auto-hide panels.
+ */
 var MonitorConstraint = GObject.registerClass({
     Properties: {
         'primary': GObject.ParamSpec.boolean(
@@ -178,6 +199,24 @@ var MonitorConstraint = GObject.registerClass({
     }
 });
 
+/**
+ * #Monitor
+ * @short_description: Represents a physical display monitor
+ *
+ * A simple data class representing a physical monitor and its
+ * geometry. Instances are created by #LayoutManager and stored
+ * in its `monitors` array, accessible via
+ * `Main.layoutManager.monitors[index]`.
+ *
+ * @index (number): The monitor index from Meta.Display.
+ * @x (number): X position of the monitor in global stage coordinates.
+ * @y (number): Y position of the monitor in global stage coordinates.
+ * @width (number): Width of the monitor in pixels.
+ * @height (number): Height of the monitor in pixels.
+ * @name (string): The monitor's connector name (e.g. "HDMI-1").
+ * @inFullscreen (boolean): Whether a fullscreen window is active
+ * on this monitor (read-only).
+ */
 class Monitor {
     constructor(index, geometry, name) {
         this.index = index;
@@ -361,6 +400,15 @@ var LayoutManager = GObject.registerClass({
         this.emit('monitors-changed');
     }
 
+    /**
+     * focusIndex:
+     *
+     * The index of the monitor that currently has keyboard focus,
+     * determined by the focused stage actor or focused window.
+     * Falls back to monitor 0 if nothing is focused.
+     *
+     * Returns (number): the focused monitor index
+     */
     get focusIndex() {
         let i = 0;
         if (global.stage.key_focus != null)
@@ -370,10 +418,24 @@ var LayoutManager = GObject.registerClass({
         return i;
     }
 
+    /**
+     * focusMonitor:
+     *
+     * The #Monitor that currently has keyboard focus.
+     *
+     * Returns (Layout.Monitor): the focused monitor
+     */
     get focusMonitor() {
         return this.monitors[this.focusIndex];
     }
 
+    /**
+     * currentMonitor:
+     *
+     * The #Monitor that the mouse pointer is currently on.
+     *
+     * Returns (Layout.Monitor): the monitor under the pointer
+     */
     get currentMonitor() {
         let index = global.display.get_current_monitor();
         return Main.layoutManager.monitors[index];
@@ -463,6 +525,13 @@ var LayoutManager = GObject.registerClass({
         this.keyboardBox.set_size(kb_width, kb_height);
     }
 
+    /**
+     * keyboardMonitor:
+     *
+     * The #Monitor where the on-screen keyboard is displayed.
+     *
+     * Returns (Layout.Monitor): the keyboard monitor
+     */
     get keyboardMonitor() {
         return this.monitors[this.keyboardIndex];
     }
@@ -633,6 +702,15 @@ var LayoutManager = GObject.registerClass({
         return this._chrome.findMonitorIndexForActor(actor);
     }
 
+    /**
+     * findMonitorIndexAt:
+     * @x (number): x coordinate in global stage space
+     * @y (number): y coordinate in global stage space
+     *
+     * Finds the index of the monitor at the given coordinates.
+     *
+     * Returns (number): the monitor index
+     */
     findMonitorIndexAt(x, y) {
         let [index, monitor] = this._chrome._findMonitorForRect(x, y, 1, 1)
         return index;

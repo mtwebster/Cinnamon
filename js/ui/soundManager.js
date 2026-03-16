@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:soundManager.js
+ * @short_description: Desktop event sound playback
+ *
+ * Manages playback of desktop event sounds (login, logout, switch,
+ * notifications, etc.) using libcanberra, with per-event volume
+ * and enable/disable controls from GSettings.
+ */
+
 const Lang = imports.lang;
 const Gio = imports.gi.Gio;
 const Main = imports.ui.main;

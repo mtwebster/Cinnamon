@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:overrides.js
+ * @short_description: GSettings overrides manager
+ *
+ * Applies and reverts Cinnamon's default GSettings overrides on
+ * startup. Ensures settings like button-layout and dynamic-workspaces
+ * have sane defaults without overwriting user customizations.
+ */
+
 const Gio = imports.gi.Gio
 const Lang = imports.lang;
 const Mainloop = imports.mainloop;

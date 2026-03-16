@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:wmGtkDialogs.js
+ * @short_description: GTK-based helper dialogs for the window manager
+ *
+ * Provides GTK dialog windows for accessibility features (hover-click
+ * helper) and other window manager functions that need to run as
+ * separate processes outside the compositor.
+ */
+
 const Gio = imports.gi.Gio;
 
 const SIGTERM = 15;

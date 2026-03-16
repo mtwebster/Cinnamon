@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:hotCorner.js
+ * @short_description: Hot corner activation zones
+ *
+ * Implements hot corners at screen edges that trigger configurable
+ * actions (overview, expo, desktop toggle, etc.) when the pointer
+ * enters or dwells in the corner region.
+ */
+
 const Clutter = imports.gi.Clutter;
 const GLib = imports.gi.GLib;
 const GObject = imports.gi.GObject;

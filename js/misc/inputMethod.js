@@ -1,5 +1,15 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 /* exported InputMethod */
+
+/**
+ * FILE:inputMethod.js
+ * @short_description: Clutter input method integration with IBus
+ *
+ * Bridges the Clutter input method framework with IBus, translating
+ * IBus events into Clutter input method operations for text input
+ * in shell UI elements.
+ */
+
 const { Clutter, GLib, Gio, GObject, IBus } = imports.gi;
 
 const KeyboardManager = imports.ui.keyboardManager;

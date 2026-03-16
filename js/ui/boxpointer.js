@@ -1,10 +1,29 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 /* exported BoxPointer */
 
+/**
+ * FILE:boxpointer.js
+ * @short_description: A container widget with an arrow pointer
+ *
+ * Provides #BoxPointer, a widget that draws a bordered box with a
+ * triangular arrow pointing toward a source actor. Used as the
+ * underlying container for popup menus and tooltips. The arrow
+ * side can flip automatically to keep the box within the monitor.
+ */
+
 const { Clutter, GObject, Cinnamon, St } = imports.gi;
 
 const Main = imports.ui.main;
 
+/**
+ * ENUM:PopupAnimation
+ * @NONE: no animation
+ * @SLIDE: slide in from the arrow direction
+ * @FADE: fade in/out
+ * @FULL: all animations combined
+ *
+ * Flags controlling how a #BoxPointer animates when opened or closed.
+ */
 var PopupAnimation = {
     NONE:  0,
     SLIDE: 1 << 0,

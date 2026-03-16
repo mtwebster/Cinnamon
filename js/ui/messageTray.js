@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:messageTray.js
+ * @short_description: Notification system
+ *
+ * The notification system, providing #Notification and #Source
+ * classes for creating and managing desktop notifications,
+ * including urgency levels, actions, and resident notifications.
+ */
+
 const Clutter = imports.gi.Clutter;
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;

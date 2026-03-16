@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:extensionSystem.js
+ * @short_description: Manager for Cinnamon extensions
+ *
+ * Handles loading, unloading, and tracking of Cinnamon extensions
+ * (the `extension` xlet type, as opposed to applets and desklets).
+ * Coordinates with the extension system in extension.js.
+ */
+
 const Main = imports.ui.main;
 const Extension = imports.ui.extension;
 

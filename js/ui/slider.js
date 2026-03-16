@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:slider.js
+ * @short_description: A draggable slider control
+ *
+ * A horizontal slider widget for selecting a value within a range.
+ * Commonly used for volume and brightness controls. Supports mouse
+ * dragging, scroll wheel, and keyboard input.
+ */
+
 const Cairo = imports.cairo;
 const Clutter = imports.gi.Clutter;
 const Lang = imports.lang;

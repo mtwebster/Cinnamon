@@ -1,5 +1,15 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:popupMenu.js
+ * @short_description: Popup menu system
+ *
+ * A comprehensive popup menu framework providing #PopupMenuBase,
+ * #PopupMenu, #PopupSubMenu, and various menu item classes
+ * (#PopupMenuItem, #PopupSwitchMenuItem, #PopupSliderMenuItem, etc.)
+ * used throughout the Cinnamon shell for context menus and panel menus.
+ */
+
 const Cairo = imports.cairo;
 const Mainloop = imports.mainloop;
 const Clutter = imports.gi.Clutter;

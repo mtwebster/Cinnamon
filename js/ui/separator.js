@@ -1,5 +1,13 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:separator.js
+ * @short_description: A horizontal or vertical separator line
+ *
+ * A simple themed separator widget drawn as a line. Uses the
+ * `separator` style class and can be used in any container.
+ */
+
 const Cairo = imports.cairo;
 const GObject = imports.gi.GObject;
 const St = imports.gi.St;

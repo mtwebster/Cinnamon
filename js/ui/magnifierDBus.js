@@ -1,5 +1,13 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:magnifierDBus.js
+ * @short_description: DBus interface for the screen magnifier
+ *
+ * Exports the org.gnome.Magnifier DBus interface, allowing external
+ * AT-SPI clients and accessibility tools to control the magnifier.
+ */
+
 const Gio = imports.gi.Gio;
 const Main = imports.ui.main;
 

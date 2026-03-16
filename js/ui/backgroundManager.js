@@ -1,5 +1,14 @@
 // -*- mode: js2; indent-tabs-mode: nil; js2-basic-offset: 4 -*-
 
+/**
+ * FILE:backgroundManager.js
+ * @short_description: Synchronizes GNOME and Cinnamon background settings
+ *
+ * Monitors the GNOME desktop background GSettings schema and mirrors
+ * changes to the Cinnamon desktop background schema, providing
+ * compatibility for applications that set the background via GNOME settings.
+ */
+
 const Gio = imports.gi.Gio;
 const Meta = imports.gi.Meta;
 

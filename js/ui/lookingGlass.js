@@ -1,5 +1,15 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:lookingGlass.js
+ * @short_description: Interactive JavaScript debugger and inspector
+ *
+ * Implements Looking Glass, Cinnamon's built-in interactive debugger.
+ * Provides a JavaScript console, object inspector, window picker,
+ * and extension/log viewers. Activated via Alt+F2 "lg" or the
+ * melange tool.
+ */
+
 const Cinnamon = imports.gi.Cinnamon;
 const Clutter = imports.gi.Clutter;
 const Cogl = imports.gi.Cogl;

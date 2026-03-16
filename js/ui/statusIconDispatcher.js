@@ -1,5 +1,13 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:statusIconDispatcher.js
+ * @short_description: Legacy status icon (system tray) dispatcher
+ *
+ * Receives XEmbed-based status icons from the system tray manager
+ * and dispatches them for display in the panel's system tray area.
+ */
+
 const Lang = imports.lang;
 const Cinnamon = imports.gi.Cinnamon;
 const Signals = imports.signals;

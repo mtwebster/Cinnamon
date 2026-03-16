@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:screenshot.js
+ * @short_description: Screenshot capture service
+ *
+ * Implements the org.cinnamon.Screenshot DBus interface for capturing
+ * screenshots of the screen, windows, or selected areas, with
+ * optional cursor inclusion and flash feedback.
+ */
+
 const Lang = imports.lang;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;

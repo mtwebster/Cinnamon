@@ -1,5 +1,13 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:authClient.js
+ * @short_description: PAM authentication client via helper process
+ *
+ * Communicates with the cinnamon-screensaver-pam-helper process to
+ * perform PAM authentication for the screensaver unlock dialog.
+ */
+
 const ByteArray = imports.byteArray;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;

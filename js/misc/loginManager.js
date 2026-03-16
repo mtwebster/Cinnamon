@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:loginManager.js
+ * @short_description: Login1 (systemd-logind) DBus interface
+ *
+ * Provides a wrapper around the systemd-logind DBus interface for
+ * session management operations like suspend, hibernate, shutdown,
+ * and session/seat tracking.
+ */
+
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const Signals = imports.signals;

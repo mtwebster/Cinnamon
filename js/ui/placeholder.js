@@ -1,5 +1,13 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:placeholder.js
+ * @short_description: Placeholder widget for empty states
+ *
+ * A widget that displays a centered icon and message, used to
+ * indicate empty states (e.g. "No items to display").
+ */
+
 const { Clutter, GObject, Pango, St } = imports.gi;
 
 var Placeholder = GObject.registerClass({

@@ -1,3 +1,11 @@
+/**
+ * FILE:cinnamonEntry.js
+ * @short_description: Context menu and helpers for St.Entry widgets
+ *
+ * Provides a right-click context menu (copy/paste, show/hide password)
+ * for #St.Entry widgets, and a #CapsLockWarning label for password fields.
+ */
+
 const Clutter = imports.gi.Clutter;
 const Cinnamon = imports.gi.Cinnamon;
 const GObject = imports.gi.GObject;

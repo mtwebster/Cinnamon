@@ -1,5 +1,15 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:mprisPlayer.js
+ * @short_description: MPRIS2 media player DBus client
+ *
+ * Provides a client for the MPRIS2 (Media Player Remote Interfacing
+ * Specification) DBus interface, allowing the shell to query and
+ * control media players for playback status, track info, and
+ * transport controls.
+ */
+
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const Signals = imports.signals;

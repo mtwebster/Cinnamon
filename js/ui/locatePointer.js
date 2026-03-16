@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:locatePointer.js
+ * @short_description: Visual pointer location indicator
+ *
+ * Shows an animated ripple effect at the mouse pointer location
+ * when the Ctrl key is pressed, helping users locate the cursor
+ * on large or multi-monitor displays.
+ */
+
 const { Clutter, Gio } = imports.gi;
 const Ripples = imports.ui.ripples;
 const Main = imports.ui.main;

@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:expo.js
+ * @short_description: Workspace expo view
+ *
+ * The Expo is a full-screen workspace overview that shows all workspaces
+ * as thumbnails, allowing users to switch, reorder, add, and remove
+ * workspaces.
+ */
+
 const Clutter = imports.gi.Clutter;
 const Meta = imports.gi.Meta;
 const Signals = imports.signals;

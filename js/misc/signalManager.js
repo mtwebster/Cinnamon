@@ -1,3 +1,12 @@
+/**
+ * FILE:signalManager.js
+ * @short_description: GObject signal lifecycle management
+ *
+ * Provides #SignalManager for connecting, tracking, and
+ * automatically disconnecting GObject signals, ensuring
+ * proper cleanup when objects are destroyed.
+ */
+
 const GObject = imports.gi.GObject;
 const Lang = imports.lang;
 

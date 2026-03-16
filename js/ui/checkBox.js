@@ -1,8 +1,25 @@
+/**
+ * FILE:checkBox.js
+ * @short_description: A check box widget
+ *
+ * A toggle button styled as a check box with an optional label.
+ * Uses the `check-box` style class.
+ */
+
 const Clutter = imports.gi.Clutter;
 const GObject = imports.gi.GObject;
 const Pango = imports.gi.Pango;
 const St = imports.gi.St;
 
+/**
+ * #CheckBox
+ * @short_description: A labelled check box toggle button
+ *
+ * A #St.Button in toggle mode styled as a check box. The checked state
+ * is available via the inherited `checked` property.
+ *
+ * Inherits: St.Button
+ */
 var CheckBox = GObject.registerClass(
 class CheckBox extends St.Button {
     _init(label) {

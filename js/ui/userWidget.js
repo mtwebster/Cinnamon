@@ -1,7 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
-//
-// A widget showing the user avatar and name
 /* exported UserWidget */
+
+/**
+ * FILE:userWidget.js
+ * @short_description: User avatar and name display widget
+ *
+ * Provides widgets for displaying the current user's avatar image
+ * and real name, used in the end-session dialog and other UI
+ * elements.
+ */
 
 const Atk = imports.gi.Atk;
 const Clutter = imports.gi.Clutter;

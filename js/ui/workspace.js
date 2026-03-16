@@ -1,5 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+/**
+ * FILE:workspace.js
+ * @short_description: Window layout for the overview
+ *
+ * Implements the workspace view shown in the Scale (overview) mode,
+ * arranging window clones in an organized layout and handling
+ * interaction (click to activate, drag to reorder).
+ */
+
 const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;
 const Mainloop = imports.mainloop;

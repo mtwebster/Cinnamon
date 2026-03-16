@@ -1,3 +1,12 @@
+/**
+ * FILE:radioButton.js
+ * @short_description: A radio button widget
+ *
+ * A toggle button styled as a radio button with a label. Use in
+ * groups where only one option should be selected at a time.
+ * Uses the `radio-button` style class.
+ */
+
 const Clutter = imports.gi.Clutter;
 const GObject = imports.gi.GObject;
 const Pango = imports.gi.Pango;
