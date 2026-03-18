@@ -1,15 +1,13 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
 const Clutter = imports.gi.Clutter;
+const GObject = imports.gi.GObject;
 const Meta = imports.gi.Meta;
-const Signals = imports.signals;
-const Lang = imports.lang;
 const St = imports.gi.St;
 const Cinnamon = imports.gi.Cinnamon;
 
 const DND = imports.ui.dnd;
 const Main = imports.ui.main;
-const Tweener = imports.ui.tweener;
 const ExpoThumbnail = imports.ui.expoThumbnail;
 
 // ***************
@@ -19,20 +17,24 @@ const ExpoThumbnail = imports.ui.expoThumbnail;
 // Time for initial animation going into Overview mode
 const ANIMATION_TIME = 200;
 
-function Expo() {
-    this._init.apply(this, arguments);
-}
-
-Expo.prototype = {
-    _init : function() {
+var Expo = GObject.registerClass({
+    Signals: {
+        'showing': {},
+        'shown': {},
+        'hiding': {},
+        'hidden': {},
+    },
+}, class Expo extends GObject.Object {
+    _init() {
+        super._init();
         this.visible = false;           // animating to overview, in overview, animating out
         this._shown = false;            // show() and not hide()
         this._modal = false;            // have a modal grab
 
-        Main.layoutManager.connect('monitors-changed', Lang.bind(this, this._relayout));
-    },
+        Main.layoutManager.connect('monitors-changed', this._relayout.bind(this));
+    }
 
-    beforeShow: function() {
+    beforeShow() {
         // The main BackgroundActor is inside global.window_group which is
         // hidden when displaying the overview, so we create a new
         // one. Instances of this class share a single CoglTexture behind the
@@ -47,15 +49,14 @@ Expo.prototype = {
         this._group = new St.Widget({ name: 'expo',
                                       reactive: true });
         this._group._delegate = this;
-        this._group.connect('style-changed',
-            Lang.bind(this, function() {
-                let node = this._group.get_theme_node();
-                let spacing = node.get_length('spacing');
-                if (spacing != this._spacing) {
-                    this._spacing = spacing;
-                    this._relayout();
-                }
-            }));
+        this._group.connect('style-changed', () => {
+            let node = this._group.get_theme_node();
+            let spacing = node.get_length('spacing');
+            if (spacing != this._spacing) {
+                this._spacing = spacing;
+                this._relayout();
+            }
+        });
 
         this.visible = false;           // animating to overview, in overview, animating out
         this._shown = false;            // show() and not hide()
@@ -73,11 +74,11 @@ Expo.prototype = {
         this._coverPane = new Clutter.Rectangle({ opacity: 0,
                                                   reactive: true });
         this._group.add_actor(this._coverPane);
-        this._coverPane.connect('event', Lang.bind(this, function (actor, event) { return true; }));
+        this._coverPane.connect('event', (actor, event) => { return true; });
 
         this._addWorkspaceButton = new St.Button({style_class: 'workspace-add-button'});
         this._group.add_actor(this._addWorkspaceButton);
-        this._addWorkspaceButton.connect('clicked', Lang.bind(this, function () { Main._addWorkspace();}));
+        this._addWorkspaceButton.connect('clicked', () => { Main._addWorkspace(); });
         this._addWorkspaceButton.handleDragOver = function(source, actor, x, y, time) {
                 return source.metaWindow ? DND.DragMotionResult.MOVE_DROP : DND.DragMotionResult.CONTINUE;
             };
@@ -121,69 +122,67 @@ Expo.prototype = {
         this._windowCloseArea.hide();
 
         let ctrlAltMask = Clutter.ModifierType.CONTROL_MASK | Clutter.ModifierType.MOD1_MASK;
-        this._group.connect('key-press-event',
-            Lang.bind(this, function(actor, event) {
-                if (this._shown) {
-                    if (this._expo.handleKeyPressEvent(actor, event)) {
-                        return true;
-                    }
-                    let symbol = event.get_key_symbol();
-                    if (symbol === Clutter.KEY_plus || symbol === Clutter.KEY_Insert) {
-                        this._workspaceOperationPending = true;
-                    }
-                    let modifiers = Cinnamon.get_event_state(event);
-                    if ((symbol === Clutter.KEY_Delete && (modifiers & ctrlAltMask) !== ctrlAltMask)
-                        || symbol === Clutter.KEY_w && modifiers & Clutter.ModifierType.CONTROL_MASK)
-                    {
-                        this._workspaceOperationPending = true;
-                    }
-                    if (symbol === Clutter.KEY_Escape) {
-                        if (!this._workspaceOperationPending) {
-                            this.hide();
-                        }
-                        this._workspaceOperationPending = false;
-                        return true;
-                    }
+        this._group.connect('key-press-event', (actor, event) => {
+            if (this._shown) {
+                if (this._expo.handleKeyPressEvent(actor, event)) {
+                    return true;
                 }
-                return false;
-            }));
-        this._group.connect('key-release-event',
-            Lang.bind(this, function(actor, event) {
-                if (this._shown) {
-                    let symbol = event.get_key_symbol();
-                    if (symbol === Clutter.KEY_plus || symbol === Clutter.KEY_Insert) {
-                        if (this._workspaceOperationPending) {
-                            this._workspaceOperationPending = false;
-                            Main._addWorkspace();
-                        }
-                        return true;
-                    }
-                    let modifiers = Cinnamon.get_event_state(event);
-                    if ((symbol === Clutter.KEY_Delete && (modifiers & ctrlAltMask) !== ctrlAltMask)
-                        || symbol === Clutter.KEY_w && modifiers & Clutter.ModifierType.CONTROL_MASK)
-                    {
-                        if (this._workspaceOperationPending) {
-                            this._workspaceOperationPending = false;
-                            this._expo.removeSelectedWorkspace();
-                        }
-                        return true;
-                    }
-                    if (symbol === Clutter.KEY_Super_L || symbol === Clutter.KEY_Super_R) {
+                let symbol = event.get_key_symbol();
+                if (symbol === Clutter.KEY_plus || symbol === Clutter.KEY_Insert) {
+                    this._workspaceOperationPending = true;
+                }
+                let modifiers = Cinnamon.get_event_state(event);
+                if ((symbol === Clutter.KEY_Delete && (modifiers & ctrlAltMask) !== ctrlAltMask)
+                    || symbol === Clutter.KEY_w && modifiers & Clutter.ModifierType.CONTROL_MASK)
+                {
+                    this._workspaceOperationPending = true;
+                }
+                if (symbol === Clutter.KEY_Escape) {
+                    if (!this._workspaceOperationPending) {
                         this.hide();
-                        return true;
                     }
+                    this._workspaceOperationPending = false;
+                    return true;
                 }
-                return false;
-            }));
+            }
+            return false;
+        });
+        this._group.connect('key-release-event', (actor, event) => {
+            if (this._shown) {
+                let symbol = event.get_key_symbol();
+                if (symbol === Clutter.KEY_plus || symbol === Clutter.KEY_Insert) {
+                    if (this._workspaceOperationPending) {
+                        this._workspaceOperationPending = false;
+                        Main._addWorkspace();
+                    }
+                    return true;
+                }
+                let modifiers = Cinnamon.get_event_state(event);
+                if ((symbol === Clutter.KEY_Delete && (modifiers & ctrlAltMask) !== ctrlAltMask)
+                    || symbol === Clutter.KEY_w && modifiers & Clutter.ModifierType.CONTROL_MASK)
+                {
+                    if (this._workspaceOperationPending) {
+                        this._workspaceOperationPending = false;
+                        this._expo.removeSelectedWorkspace();
+                    }
+                    return true;
+                }
+                if (symbol === Clutter.KEY_Super_L || symbol === Clutter.KEY_Super_R) {
+                    this.hide();
+                    return true;
+                }
+            }
+            return false;
+        });
         this._expo = new ExpoThumbnail.ExpoThumbnailsBox();
-        this._group.add_actor(this._expo.actor);
+        this._group.add_actor(this._expo);
         this._relayout();
-    },
+    }
 
-    init: function() {
-    },
+    init() {
+    }
 
-    _relayout: function () {
+    _relayout() {
         if (!this._expo) {
             // This function can be called as a response to the monitors-changed event,
             // when we're not showing.
@@ -222,8 +221,8 @@ Expo.prototype = {
         this._windowCloseArea.height = node.get_length('height');
         this._windowCloseArea.width = node.get_length('width');
 
-        this._expo.actor.set_position(0, 0);
-        this._expo.actor.set_size((monitorSetting.width - buttonWidth), monitorSetting.height);
+        this._expo.set_position(0, 0);
+        this._expo.set_size((monitorSetting.width - buttonWidth), monitorSetting.height);
 
         let buttonY = (monitorSetting.height - buttonHeight) / 2;
 
@@ -235,9 +234,9 @@ Expo.prototype = {
         this._windowCloseArea.set_position((monitorSetting.width - this._windowCloseArea.width) / 2 , monitorSetting.height);
         this._windowCloseArea.set_size(this._windowCloseArea.width, this._windowCloseArea.height);
         this._windowCloseArea.raise_top();
-    },
+    }
 
-    _showCloseArea : function() {
+    _showCloseArea() {
         let monitorSetting = global.settings.get_boolean('workspace-expo-primary-monitor') ? Main.layoutManager.primaryMonitor : Main.layoutManager.currentMonitor;
         this._windowCloseArea.show();
         this._windowCloseArea.ease({
@@ -245,23 +244,23 @@ Expo.prototype = {
             duration: Main.animations_enabled ? ANIMATION_TIME : 0,
             mode: Clutter.AnimationMode.EASE_OUT_QUAD
         });
-    },
+    }
 
-    _hideCloseArea : function() {
+    _hideCloseArea() {
         let monitorSetting = global.settings.get_boolean('workspace-expo-primary-monitor') ? Main.layoutManager.primaryMonitor : Main.layoutManager.currentMonitor;
         this._windowCloseArea.ease({
             y: monitorSetting.height,
             duration: Main.animations_enabled ? ANIMATION_TIME : 0,
             mode: Clutter.AnimationMode.EASE_OUT_QUAD
         });
-    },
+    }
 
     //// Public methods ////
 
     // show:
     //
     // Animates the overview visible and grabs mouse and keyboard input
-    show : function() {
+    show() {
         if (this._shown)
             return;
         this.beforeShow();
@@ -272,9 +271,9 @@ Expo.prototype = {
         this._animateVisible();
         this._shown = true;
 
-    },
+    }
 
-    _animateVisible: function() {
+    _animateVisible() {
         if (this.visible || this.animationInProgress)
             return;
 
@@ -297,15 +296,15 @@ Expo.prototype = {
         this._addWorkspaceButton.show();
         this._expo.show();
 
-        this._expo.connect('drag-begin', Lang.bind(this, this._showCloseArea));
-        this._expo.connect('drag-end', Lang.bind(this, this._hideCloseArea));
+        this._expo.connect('drag-begin', this._showCloseArea.bind(this));
+        this._expo.connect('drag-end', this._hideCloseArea.bind(this));
 
         let activeWorkspace = this._expo.lastActiveWorkspace;
-        let activeWorkspaceActor = activeWorkspace.actor;
+        let activeWorkspaceActor = activeWorkspace;
         let monitorSetting = global.settings.get_boolean('workspace-expo-primary-monitor') ? Main.layoutManager.primaryMonitor : Main.layoutManager.currentMonitor;
 
         //We need to allocate activeWorkspace before we begin its clone animation
-        let allocateID = this._expo.connect('allocated', Lang.bind(this, function() {
+        let allocateID = this._expo.connect('allocated', () => {
             this._expo.disconnect(allocateID);
 
             let clones = [];
@@ -340,7 +339,7 @@ Expo.prototype = {
                     }
                 });
             }, this);
-        }));
+        });
         this._gradient.show();
         Main.panelManager.disablePanels();
 
@@ -349,30 +348,30 @@ Expo.prototype = {
         this._coverPane.raise_top();
         this._coverPane.show();
         this.emit('showing');
-    },
+    }
 
     // hide:
     //
     // Reverses the effect of show()
-    hide: function(options) {
+    hide(options) {
         if (!this._shown)
             return;
 
         this._animateNotVisible(options);
         this._shown = false;
         this._syncInputMode();
-    },
+    }
 
-    toggle: function() {
+    toggle() {
         if (this._shown)
             this.hide();
         else
             this.show();
-    },
+    }
 
     //// Private methods ////
 
-    _syncInputMode: function() {
+    _syncInputMode() {
         // We delay input mode changes during animation so that when removing the
         // overview we don't have a problem with the release of a press/release
         // going to an application.
@@ -395,9 +394,9 @@ Expo.prototype = {
             else if (global.stage_input_mode == Cinnamon.StageInputMode.FULLSCREEN)
                 global.stage_input_mode = Cinnamon.StageInputMode.NORMAL;
         }
-    },
+    }
 
-    _animateNotVisible: function(options) {
+    _animateNotVisible(options) {
         if (!this.visible || this.animationInProgress)
             return;
 
@@ -420,7 +419,7 @@ Expo.prototype = {
         this.animationInProgress = true;
         this._hideInProgress = true;
 
-        let activeWorkspaceActor = activeWorkspace.actor;
+        let activeWorkspaceActor = activeWorkspace;
         let monitorSetting = global.settings.get_boolean('workspace-expo-primary-monitor') ? Main.layoutManager.primaryMonitor : Main.layoutManager.currentMonitor;
 
         Main.layoutManager.monitors.forEach(function(monitor,index) {
@@ -454,9 +453,9 @@ Expo.prototype = {
         }, this);
 
         this.emit('hiding');
-    },
+    }
 
-    _showDone: function() {
+    _showDone() {
         this.animationInProgress = false;
         this._coverPane.hide();
 
@@ -467,9 +466,9 @@ Expo.prototype = {
 
         this._syncInputMode();
         global.sync_pointer();
-    },
+    }
 
-    _hideDone: function() {
+    _hideDone() {
         // Re-enable unredirection
         Meta.enable_unredirect_for_display(global.display);
 
@@ -506,5 +505,4 @@ Expo.prototype = {
 
         Main.layoutManager._chrome.updateRegions();
     }
-};
-Signals.addSignalMethods(Expo.prototype);
+});

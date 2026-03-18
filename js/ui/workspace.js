@@ -1,13 +1,14 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
 const Clutter = imports.gi.Clutter;
+const GLib = imports.gi.GLib;
+const GObject = imports.gi.GObject;
 const Gio = imports.gi.Gio;
 const Mainloop = imports.mainloop;
 const Meta = imports.gi.Meta;
 const Pango = imports.gi.Pango;
 const Cinnamon = imports.gi.Cinnamon;
 const St = imports.gi.St;
-const Signals = imports.signals;
 
 const DND = imports.ui.dnd;
 const Main = imports.ui.main;
@@ -36,12 +37,17 @@ function closeContextMenu(requestor) {
     return requestorShowingMenu;
 }
 
-function WindowClone() {
-    this._init.apply(this, arguments);
-}
-
-WindowClone.prototype = {
-    _init : function(realWindow, myContainer) {
+var WindowClone = GObject.registerClass({
+    Signals: {
+        'workspace-changed': {},
+        'activated': { param_types: [GObject.TYPE_UINT] },
+        'context-menu-requested': {},
+        'size-changed': {},
+    },
+}, class WindowClone extends Clutter.Actor {
+    _init(realWindow, myContainer) {
+        super._init({ reactive: true });
+        this._delegate = this;
         this.myContainer = myContainer;
         this.realWindow = realWindow;
         this.metaWindow = realWindow.meta_window;
@@ -58,37 +64,29 @@ WindowClone.prototype = {
         // the invisible border; this is inconvenient; rather than trying
         // to compensate all over the place we insert a ClutterGroup into
         // the hierarchy that is sized to only the visible portion.
-        this.actor = new Clutter.Actor({ reactive: true });
         this.refreshClone(true);
-
-        this.actor._delegate = this;
 
         this._stackAbove = null;
 
-        let sizeChangedId = this.realWindow.connect('notify::size',
-                this._onRealWindowSizeChanged.bind(this));
-        let workspaceChangedId = this.metaWindow.connect('workspace-changed',
-                (w, oldws) => this.emit('workspace-changed', oldws));
-        let realWindowDestroyId = 0;
-        this._disconnectWindowSignals = function() {
-            this._disconnectWindowSignals = function() {};
-            this.metaWindow.disconnect(workspaceChangedId);
-            this.realWindow.disconnect(sizeChangedId);
-            this.realWindow.disconnect(realWindowDestroyId);
-        };
-        realWindowDestroyId = this.realWindow.connect('destroy',
-            this._disconnectWindowSignals.bind(this));
+        this.realWindow.connectObject(
+            'notify::size', this._onRealWindowSizeChanged.bind(this),
+            'destroy', () => {
+                this.realWindow.disconnectObject(this);
+                this.metaWindow.disconnectObject(this);
+            }, this);
+        this.metaWindow.connectObject(
+            'workspace-changed', () => this.emit('workspace-changed'), this);
 
-        this.actor.connect('button-release-event', this._onButtonRelease.bind(this));
-        this.actor.connect('button-press-event', this._onButtonPress.bind(this));
+        this.connect('button-release-event', this._onButtonRelease.bind(this));
+        this.connect('button-press-event', this._onButtonPress.bind(this));
 
-        this.actor.connect('destroy', this._onDestroy.bind(this));
+        this.connect('destroy', this._onDestroy.bind(this));
 
         this._selected = false;
-    },
+    }
 
-    refreshClone: function(withTransients) {
-        this.actor.destroy_all_children();
+    refreshClone(withTransients) {
+        this.destroy_all_children();
 
         let {x, y, width, height} = this.metaWindow.get_frame_rect();
         let clones = WindowUtils.createWindowClone(this.metaWindow, 0, 0, withTransients);
@@ -100,17 +98,17 @@ WindowClone.prototype = {
                 clone.actor.set_clip(leftGap, topGap, width, height);
             }
             clone.actor.set_position(-leftGap, -topGap);
-            this.actor.add_actor(clone.actor);
+            this.add_child(clone.actor);
         }
-        this.actor.set_size(width, height);
-        this.actor.set_position(x, y);
+        this.set_size(width, height);
+        this.set_position(x, y);
         this.origX = x;
         this.origY = y;
 
         this.realWindow.queue_redraw();
-    },
+    }
 
-    closeWindow: function() {
+    closeWindow() {
         let workspace = this.metaWindow.get_workspace();
 
         if (this._disconnectWindowAdded) {this._disconnectWindowAdded();}
@@ -120,7 +118,7 @@ WindowClone.prototype = {
                 // use an idle handler to avoid mapping problems -
                 // see comment in Workspace._windowAdded
                 Mainloop.idle_add(() => {
-                    this.emit('activated');
+                    this.emit('activated', global.get_current_time());
                     return false;
                 });
             }
@@ -134,45 +132,44 @@ WindowClone.prototype = {
         this.closedFromOverview = true;
 
         this.metaWindow.delete(global.get_current_time());
-    },
+    }
 
-    setStackAbove: function (actor) {
+    setStackAbove(actor) {
         this._stackAbove = actor;
         if (this._stackAbove == null)
-            this.actor.lower_bottom();
+            this.lower_bottom();
         else
-            this.actor.raise(this._stackAbove);
-    },
+            this.raise(this._stackAbove);
+    }
 
-    destroy: function () {
-        if (this.actor.is_finalized()) return;
+    destroy() {
+        if (this.is_finalized()) return;
 
-        this.actor.destroy();
-    },
+        super.destroy();
+    }
 
-    _onRealWindowSizeChanged: function() {
+    _onRealWindowSizeChanged() {
         this.refreshClone(true);
         this.emit('size-changed');
-    },
+    }
 
-    _onDestroy: function() {
-        this._disconnectWindowSignals();
+    _onDestroy() {
+        this.realWindow.disconnectObject(this);
+        this.metaWindow.disconnectObject(this);
         if (this._disconnectWindowAdded)
             this._disconnectWindowAdded();
 
         this.metaWindow._delegate = null;
-        this.actor._delegate = null;
+        this._delegate = null;
+    }
 
-        this.disconnectAll();
-    },
-
-    _onButtonPress: function(actor, event) {
+    _onButtonPress(actor, event) {
         // a button-press on a clone already showing a menu should
         // not open a new-menu, only close the current menu.
         this.menuCancelled = closeContextMenu(this);
-    },
+    }
 
-    _onButtonRelease: function(actor, event) {
+    _onButtonRelease(actor, event) {
         switch (event.get_button()) {
             case 1:
                 this._selected = true;
@@ -191,8 +188,7 @@ WindowClone.prototype = {
         }
         return false;
     }
-};
-Signals.addSignalMethods(WindowClone.prototype);
+});
 
 
 /**
@@ -200,12 +196,13 @@ Signals.addSignalMethods(WindowClone.prototype);
  * @parentActor: The actor which will be the parent of all overlay items
  *               such as app icon and window caption
  */
-function WindowOverlay(windowClone, parentActor) {
-    this._init(windowClone, parentActor);
-}
-
-WindowOverlay.prototype = {
-    _init : function(windowClone, parentActor) {
+var WindowOverlay = GObject.registerClass({
+    Signals: {
+        'selected': { param_types: [GObject.TYPE_UINT] },
+    },
+}, class WindowOverlay extends GObject.Object {
+    _init(windowClone, parentActor) {
+        super._init();
         let metaWindow = windowClone.metaWindow;
 
         this._windowClone = windowClone;
@@ -262,32 +259,29 @@ WindowOverlay.prototype = {
         button.connect('style-changed', styleChangedCallback);
 
         this._pointerTracker = new PointerTracker.PointerTracker();
-        windowClone.actor.connect('motion-event', this._onPointerMotion.bind(this));
-        windowClone.actor.connect('leave-event', this._onPointerLeave.bind(this));
+        windowClone.connect('motion-event', this._onPointerMotion.bind(this));
+        windowClone.connect('leave-event', this._onPointerLeave.bind(this));
 
         this._idleToggleCloseId = 0;
-        windowClone.actor.connect('destroy', this._onDestroy.bind(this));
+        windowClone.connect('destroy', this._onDestroy.bind(this));
 
         let demandsAttentionCallback = this._onWindowDemandsAttention.bind(this);
-        let attentionId = global.display.connect('window-demands-attention', demandsAttentionCallback);
-        let urgentId = global.display.connect('window-marked-urgent', demandsAttentionCallback);
-        this.disconnectAttentionSignals = function() {
-            global.display.disconnect(attentionId);
-            global.display.disconnect(urgentId);
-        };
+        global.display.connectObject(
+            'window-demands-attention', demandsAttentionCallback,
+            'window-marked-urgent', demandsAttentionCallback, this);
 
         // force a style change if we are already on a stage - otherwise
         // the signal will be emitted normally when we are added
         if (parentActor.get_stage())
             this._onStyleChanged();
-    },
+    }
 
-    _onWindowDemandsAttention: function(display, metaWindow) {
+    _onWindowDemandsAttention(display, metaWindow) {
         if (metaWindow === this._windowClone.metaWindow)
             this.caption.add_style_class_name(DEMANDS_ATTENTION_CLASS_NAME);
-    },
+    }
 
-    setSelected: function(selected, timeout) {
+    setSelected(selected, timeout) {
         if (this._isSelected === selected)
             return;
         this._isSelected = selected;
@@ -304,22 +298,22 @@ WindowOverlay.prototype = {
                 this._hideCloseButton();
             }
         }
-    },
+    }
 
-    hide: function() {
+    hide() {
         this._hidden = true;
         this._isSelected = false;
         this.caption.hide();
         this.border.hide();
         this.closeButton.hide();
-    },
+    }
 
-    show: function() {
+    show() {
         this._hidden = false;
         this.caption.show();
-    },
+    }
 
-    fadeIn: function() {
+    fadeIn() {
         if (!this._hidden) return;
         this.show();
         this._parentActor.raise_top();
@@ -329,23 +323,23 @@ WindowOverlay.prototype = {
             duration: CLOSE_BUTTON_FADE_TIME,
             mode: Clutter.AnimationMode.EASE_OUT_QUAD
         });
-    },
+    }
 
-    _idleHideCloseButton: function(timeout) {
+    _idleHideCloseButton(timeout) {
         if (this._idleToggleCloseId === 0)
             this._idleToggleCloseId = Mainloop.timeout_add(timeout, this._idleToggleCloseButton.bind(this));
-    },
+    }
 
-    _idleToggleCloseButton: function() {
+    _idleToggleCloseButton() {
         this._idleToggleCloseId = 0;
-        if (!this._windowClone.actor.has_pointer && !this.closeButton.has_pointer) {
+        if (!this._windowClone.has_pointer && !this.closeButton.has_pointer) {
             this._isSelected = false;
             this._hideCloseButton();
         }
         return false;
-    },
+    }
 
-    _hideCloseButton: function() {
+    _hideCloseButton() {
         if (this._idleToggleCloseId > 0) {
             Mainloop.source_remove(this._idleToggleCloseId);
             this._idleToggleCloseId = 0;
@@ -360,9 +354,9 @@ WindowOverlay.prototype = {
             });
         }
         this.caption.remove_style_pseudo_class('focus');
-    },
+    }
 
-    _showCloseButton: function() {
+    _showCloseButton() {
         this._parentActor.raise_top();
         for (let item of [this.closeButton, this.border]) {
             item.show();
@@ -374,19 +368,19 @@ WindowOverlay.prototype = {
             });
         }
         this.caption.add_style_pseudo_class('focus');
-    },
+    }
 
-    chromeWidths: function () {
+    chromeWidths() {
         /* Reserve space for the close button on both sides, because we don't
            know on which side it is. Also to horizontally center the window. */
         let close_buttn = Math.max(this.borderWidth, this.closeButton.width - this.closeButton._overlap)
         return [close_buttn, close_buttn];
-    },
+    }
 
-    chromeHeights: function () {
+    chromeHeights() {
         return [Math.max(this.closeButton.height - this.closeButton._overlap, this.borderWidth),
                this.caption.height + this.caption._spacing];
-    },
+    }
 
     /**
      * @cloneX: x position of windowClone
@@ -398,7 +392,7 @@ WindowOverlay.prototype = {
     // get_transformed_position() and get_transformed_size(),
     // as windowClone might be moving.
     // See Workspace._showWindowOverlay
-    updatePositions: function(cloneX, cloneY, cloneWidth, cloneHeight, maxWidth) {
+    updatePositions(cloneX, cloneY, cloneWidth, cloneHeight, maxWidth) {
         let border = this.border;
         let caption = this.caption;
         let button = this.closeButton;
@@ -432,24 +426,24 @@ WindowOverlay.prototype = {
         let captionY = cloneY + cloneHeight + caption._spacing;
         caption.set_position(Math.round(captionX), Math.round(captionY));
         caption.width = captionWidth;
-    },
+    }
 
-    _onDestroy: function() {
+    _onDestroy() {
         if (this._disconnectWindowAdded) {this._disconnectWindowAdded();}
         if (this._idleToggleCloseId > 0) {
             Mainloop.source_remove(this._idleToggleCloseId);
             this._idleToggleCloseId = 0;
         }
-        this.disconnectAttentionSignals();
+        global.display.disconnectObject(this);
         this._windowClone.metaWindow.disconnect(this._updateCaptionId);
 
         this.border.destroy();
         this.caption.destroy();
         this.closeButton.destroy();
         this.border = this.caption = this.closeButton = null;
-    },
+    }
 
-    _onPointerMotion: function() {
+    _onPointerMotion() {
         if (!this._pointerTracker.hasMoved()) {return;}
         // We might get motion events on the clone while the overlay is
         // hidden, e.g. during animations, we ignore these events,
@@ -457,15 +451,15 @@ WindowOverlay.prototype = {
         // are shown again
         if (this._hidden) return;
         this.emit('selected', global.get_current_time());
-    },
+    }
 
-    _onPointerLeave: function() {
+    _onPointerLeave() {
         if (!this._pointerTracker.hasMoved()) {return;}
 
         this.setSelected(false, 750);
-    },
+    }
 
-    _onStyleChanged: function() {
+    _onStyleChanged() {
         let titleNode = this.caption.get_theme_node();
         this.caption._spacing = titleNode.get_length('-cinnamon-caption-spacing');
 
@@ -477,20 +471,22 @@ WindowOverlay.prototype = {
 
         this._parentActor.queue_relayout();
     }
-};
-Signals.addSignalMethods(WindowOverlay.prototype);
+});
 
-const WindowPositionFlags = {
+var WindowPositionFlags = {
     INITIAL: 1 << 0,
     ANIMATE: 1 << 1
 };
 
-function WorkspaceMonitor() {
-    this._init.apply(this, arguments);
-}
-
-WorkspaceMonitor.prototype = {
-    _init : function(metaWorkspace, monitorIndex, workspace) {
+var WorkspaceMonitor = GObject.registerClass({
+    Signals: {
+        'focus-refresh-required': {},
+        'selection-changed': {},
+    },
+}, class WorkspaceMonitor extends Clutter.Actor {
+    _init(metaWorkspace, monitorIndex, workspace) {
+        super._init({ layout_manager: new Clutter.FixedLayout() });
+        this.set_size(0, 0);
         this._myWorkspace = workspace;
 
         this.metaWorkspace = metaWorkspace;
@@ -507,21 +503,19 @@ WorkspaceMonitor.prototype = {
         // Without this the drop area will be overlapped.
         this._windowOverlaysGroup.set_size(0, 0);
 
-        this.actor = new Clutter.Group();
-        this.actor.set_size(0, 0);
-
         this._dropRect = new Clutter.Rectangle({ opacity: 0 });
         this._dropRect._delegate = this;
 
-        this.actor.add_actor(this._dropRect);
-        this.actor.add_actor(this._windowOverlaysGroup);
+        this.add_child(this._dropRect);
+        this.add_child(this._windowOverlaysGroup);
 
-        this.actor.connect('destroy', this._onDestroy.bind(this));
+        this.connect('destroy', this._onDestroy.bind(this));
         Main.overview.connect('overview-background-button-press', closeContextMenu);
 
-        this.stickyCallbackId = workspace.myView.connect('sticky-detected', (box, metaWindow) => {
-            this._doAddWindow(metaWindow);
-        });
+        workspace.myView.connectObject(
+            'sticky-detected', (box, metaWindow) => {
+                this._doAddWindow(metaWindow);
+            }, this);
         let windows = global.get_window_actors().filter(this._isMyWindow, this);
 
         // Create clones for windows that should be
@@ -538,27 +532,25 @@ WorkspaceMonitor.prototype = {
             child: new St.Label({ text: _("No open windows") }),
             important: true
         });
-        this.actor.insert_child_below(this._emptyPlaceHolder, null);
+        this.insert_child_below(this._emptyPlaceHolder, null);
 
         // Track window changes
         if (this.metaWorkspace) {
-            this._windowAddedId = this.metaWorkspace.connect('window-added',
-                                                  this._windowAdded.bind(this));
-            this._windowRemovedId = this.metaWorkspace.connect('window-removed',
-                                                  this._windowRemoved.bind(this));
+            this.metaWorkspace.connectObject(
+                'window-added', this._windowAdded.bind(this),
+                'window-removed', this._windowRemoved.bind(this), this);
         }
-        this._windowEnteredMonitorId = global.display.connect('window-entered-monitor',
-                                              this._windowEnteredMonitor.bind(this));
-        this._windowLeftMonitorId = global.display.connect('window-left-monitor',
-                                              this._windowLeftMonitor.bind(this));
+        global.display.connectObject(
+            'window-entered-monitor', this._windowEnteredMonitor.bind(this),
+            'window-left-monitor', this._windowLeftMonitor.bind(this), this);
 
         this._animating = false; // Indicate if windows are being repositioned
         this.leavingOverview = false;
 
         this._kbWindowIndex = 0; // index of the current keyboard-selected window
-    },
+    }
 
-    selectAnotherWindow: function(symbol) {
+    selectAnotherWindow(symbol) {
         let numWindows = this._windows.length;
         if (numWindows === 0) {
             return false;
@@ -572,85 +564,85 @@ WorkspaceMonitor.prototype = {
 
         this.selectIndex(nextIndex);
         return true;
-    },
+    }
 
-    showActiveSelection: function() {
+    showActiveSelection() {
         this.selectIndex(this._kbWindowIndex);
-    },
+    }
 
-    selectIndex: function(index) {
+    selectIndex(index) {
         this._kbWindowIndex = index;
         let activeClone = null;
         if (index > -1 && index < this._windows.length) {
             activeClone = this._windows[this._kbWindowIndex];
         }
         this._myWorkspace.selectActiveClone(activeClone, this);
-    },
+    }
 
-    selectClone: function(clone) {
+    selectClone(clone) {
         this.selectIndex(this._windows.indexOf(clone));
-    },
+    }
 
-    _onCloneContextMenuRequested: function(clone) {
-        menuShowing = new WindowContextMenu(clone.actor, clone.metaWindow, () => {
+    _onCloneContextMenuRequested(clone) {
+        menuShowing = new WindowContextMenu(clone, clone.metaWindow, () => {
             menuShowing = null; menuClone = null;
             this._myWorkspace.emit('focus-refresh-required');
         });
         menuClone = clone;
         menuShowing.toggle();
-    },
+    }
 
-    showMenuForSelectedWindow: function() {
+    showMenuForSelectedWindow() {
         if (this._kbWindowIndex > -1 && this._kbWindowIndex < this._windows.length) {
             let window = this._windows[this._kbWindowIndex];
             this._onCloneContextMenuRequested(window);
         }
         return false;
-    },
+    }
 
-    activateSelectedWindow: function() {
+    activateSelectedWindow() {
         if (this._kbWindowIndex > -1 && this._kbWindowIndex < this._windows.length) {
             this._onCloneActivated(this._windows[this._kbWindowIndex], global.get_current_time());
             return true;
         }
         return false;
-    },
+    }
 
-    closeSelectedWindow: function() {
+    closeSelectedWindow() {
         if (this._kbWindowIndex > -1 && this._kbWindowIndex < this._windows.length) {
             this._windows[this._kbWindowIndex].closeWindow();
         }
-    },
+    }
 
-    moveSelectedWindowToNextMonitor: function() {
+    moveSelectedWindowToNextMonitor() {
         if (this._kbWindowIndex > -1 && this._kbWindowIndex < this._windows.length) {
             let monitorCount = Main.layoutManager.monitors.length;
             if (monitorCount < 2) return;
             let nextIndex = (this._windows[this._kbWindowIndex].metaWindow.get_monitor() + monitorCount + 1) % monitorCount;
             this._windows[this._kbWindowIndex].metaWindow.move_to_monitor(nextIndex);
         }
-    },
+    }
 
-    setGeometry: function(x, y, width, height, margin) {
+    setGeometry(x, y, width, height, margin) {
         this._x = x;
         this._y = y;
         this._width = width;
         this._height = height;
         this._margin = margin;
-    },
+    }
 
-    _lookupIndex: function (metaWindow) {
+    _lookupIndex(metaWindow) {
         for (let i = 0; i < this._windows.length; i++) {
             if (this._windows[i].metaWindow == metaWindow) {
                 return i;
             }
         }
         return -1;
-    },
+    }
 
-    isEmpty: function() {
+    isEmpty() {
         return this._windows.length === 0;
-    },
+    }
 
     /**
      * _getSlotGeometry:
@@ -659,7 +651,7 @@ WorkspaceMonitor.prototype = {
      * Returns: the screen-relative [x, y, width, height]
      * of a given window layout slot.
      */
-    _getSlotGeometry: function(slot) {
+    _getSlotGeometry(slot) {
         let [xCenter, yCenter, xFraction, yFraction] = slot;
 
         let width = (this._width - this._margin * 2) * xFraction;
@@ -669,7 +661,7 @@ WorkspaceMonitor.prototype = {
         let y = this._y + this._margin + yCenter * (this._height - this._margin * 2) - height / 2;
 
         return [x, y, width, height];
-    },
+    }
 
     /**
      * _computeWindowLayout:
@@ -680,7 +672,7 @@ WorkspaceMonitor.prototype = {
      * screen-relative [x, y, scale] where scale applies
      * to both X and Y directions.
      */
-    _computeWindowLayout: function(metaWindow, slot) {
+    _computeWindowLayout(metaWindow, slot) {
         let [x, y, width, height] = this._getSlotGeometry(slot);
         let rect = metaWindow.get_frame_rect();
         let topBorder = 0, bottomBorder = 0, leftBorder = 0, rightBorder = 0;
@@ -696,7 +688,7 @@ WorkspaceMonitor.prototype = {
         x = Math.floor(x + (width - scale * rect.width - rightBorder + leftBorder) / 2);
         y = Math.floor(y + (height - scale * rect.height - bottomBorder + topBorder) / 2);
         return [x, y, scale];
-    },
+    }
 
     /**
      * positionWindows:
@@ -704,7 +696,7 @@ WorkspaceMonitor.prototype = {
      *  INITIAL - this is the initial positioning of the windows.
      *  ANIMATE - Indicates that we need animate changing position.
      */
-    positionWindows : function(flags) {
+    positionWindows(flags) {
         if (Main.expo.visible)
             return;
 
@@ -739,28 +731,28 @@ WorkspaceMonitor.prototype = {
                      * therefore we need to resize them now so they
                      * can be scaled up later */
                     if (initialPositioning) {
-                        clone.actor.opacity = 0;
-                        clone.actor.scale_x = 0;
-                        clone.actor.scale_y = 0;
-                        clone.actor.x = this._width / 2;
-                        clone.actor.y = this._height / 2;
+                        clone.opacity = 0;
+                        clone.scale_x = 0;
+                        clone.scale_y = 0;
+                        clone.x = this._width / 2;
+                        clone.y = this._height / 2;
                     } else if (clone._is_new_window) {
-                        clone.actor.opacity = 0;
-                        clone.actor.scale_x = 0;
-                        clone.actor.scale_y = 0;
-                        clone.actor.x = x + clone.actor.width * scale / 2;
-                        clone.actor.y = y + clone.actor.height * scale / 2;
+                        clone.opacity = 0;
+                        clone.scale_x = 0;
+                        clone.scale_y = 0;
+                        clone.x = x + clone.width * scale / 2;
+                        clone.y = y + clone.height * scale / 2;
                     }
 
                     // Make the window slightly transparent to indicate it's hidden
-                    clone.actor.ease({
+                    clone.ease({
                         opacity: 255,
                         duration: Overview.ANIMATION_TIME,
                         mode: Clutter.AnimationMode.EASE_IN_QUAD
                     });
                 }
 
-                clone.actor.ease({
+                clone.ease({
                     x: x,
                     y: y,
                     scale_x: scale,
@@ -773,16 +765,16 @@ WorkspaceMonitor.prototype = {
                     }
                 });
             } else {
-                clone.actor.set_position(x, y);
-                clone.actor.set_scale(scale, scale);
+                clone.set_position(x, y);
+                clone.set_scale(scale, scale);
                 this._showWindowOverlay(clone, isOnCurrentWorkspace);
             }
 
             clone._is_new_window = false;
         }
-    },
+    }
 
-    syncStacking: function(stackIndices) {
+    syncStacking(stackIndices) {
         // Only on the first invocation do we want to affect the
         // permanent sort order. After that, we don't want major
         // upheavals to the sort order.
@@ -800,26 +792,20 @@ WorkspaceMonitor.prototype = {
         for (let i = clones.length - 1; i >= 0; i--) {
             let clone = clones[i];
             clone.setStackAbove(below);
-            below = clone.actor;
+            below = clone;
         }
-    },
+    }
 
-    _showWindowOverlay: function(clone, fade) {
+    _showWindowOverlay(clone, fade) {
         // Prevent showing overlay now. Sometimes called during animations
         if (this._animating)
             return;
 
         if (this._slotWidth) {
-            // This is a little messy and complicated because when we
-            // start the fade-in we may not have done the final positioning
-            // of the workspaces. (Tweener doesn't necessarily finish
-            // all animations before calling onComplete callbacks.)
-            // So we need to manually compute where the window will
-            // be after the workspace animation finishes.
-            let [cloneX, cloneY] = clone.actor.get_position();
-            let [cloneWidth, cloneHeight] = clone.actor.get_size();
-            cloneWidth = clone.actor.scale_x * cloneWidth;
-            cloneHeight = clone.actor.scale_y * cloneHeight;
+            let [cloneX, cloneY] = clone.get_position();
+            let [cloneWidth, cloneHeight] = clone.get_size();
+            cloneWidth = clone.scale_x * cloneWidth;
+            cloneHeight = clone.scale_y * cloneHeight;
 
             clone.overlay.updatePositions(cloneX, cloneY, cloneWidth, cloneHeight, this._slotWidth);
             if (fade)
@@ -828,29 +814,29 @@ WorkspaceMonitor.prototype = {
                 clone.overlay.show();
             this._myWorkspace.emit('focus-refresh-required');
         }
-    },
+    }
 
-    _showAllOverlays: function() {
+    _showAllOverlays() {
         let currentWorkspace = global.workspace_manager.get_active_workspace();
         let fade = this.metaWorkspace == null || this.metaWorkspace === currentWorkspace;
         for (let clone of this._windows) {
             this._showWindowOverlay(clone, fade);
         }
-    },
+    }
 
-    showWindowsOverlays: function() {
+    showWindowsOverlays() {
         if (this.leavingOverview || this._windowOverlaysGroup.is_finalized())
             return;
 
         this._windowOverlaysGroup.show();
         this._showAllOverlays();
-    },
+    }
 
-    hideWindowsOverlays: function() {
+    hideWindowsOverlays() {
         this._windowOverlaysGroup.hide();
-    },
+    }
 
-    _updateEmptyPlaceholder: function() {
+    _updateEmptyPlaceholder() {
         let placeholder = this._emptyPlaceHolder;
         if (this._windows.length > 0) {
             placeholder.hide();
@@ -860,9 +846,9 @@ WorkspaceMonitor.prototype = {
             placeholder.set_position(x, y);
             placeholder.show();
         }
-    },
+    }
 
-    _doRemoveWindow : function(metaWin) {
+    _doRemoveWindow(metaWin) {
         let win = metaWin.get_compositor_private();
 
         // find the position of the window in our list
@@ -898,9 +884,9 @@ WorkspaceMonitor.prototype = {
             this.positionWindows(animate ? WindowPositionFlags.ANIMATE : 0);
         }
 
-    },
+    }
 
-    _doAddWindow : function(metaWin) {
+    _doAddWindow(metaWin) {
         if (this.leavingOverview)
             return;
 
@@ -909,7 +895,7 @@ WorkspaceMonitor.prototype = {
             // Newly-created windows are added to a workspace before
             // the compositor finds out about them...
             Mainloop.idle_add(() => {
-                if (this.actor &&
+                if (!this.is_finalized() &&
                     metaWin.get_compositor_private() &&
                     metaWin.get_workspace() === this.metaWorkspace)
                     this._doAddWindow(metaWin);
@@ -931,35 +917,35 @@ WorkspaceMonitor.prototype = {
 
         this._updateEmptyPlaceholder();
 
-        if (this.actor.get_stage()) {
+        if (this.get_stage()) {
             clone._is_new_window = true;
             let animate = Main.animations_enabled;
             this.positionWindows(animate ? WindowPositionFlags.ANIMATE : 0);
         }
-    },
+    }
 
-    _windowAdded : function(metaWorkspace, metaWin) {
+    _windowAdded(metaWorkspace, metaWin) {
         this._doAddWindow(metaWin);
-    },
+    }
 
-    _windowRemoved : function(metaWorkspace, metaWin) {
+    _windowRemoved(metaWorkspace, metaWin) {
         this._doRemoveWindow(metaWin);
-    },
+    }
 
-    _windowEnteredMonitor : function(metaDisplay, monitorIndex, metaWin) {
+    _windowEnteredMonitor(metaDisplay, monitorIndex, metaWin) {
         if (monitorIndex === this.monitorIndex) {
             this._doAddWindow(metaWin);
         }
-    },
+    }
 
-    _windowLeftMonitor : function(metaDisplay, monitorIndex, metaWin) {
+    _windowLeftMonitor(metaDisplay, monitorIndex, metaWin) {
         if (monitorIndex === this.monitorIndex) {
             this._doRemoveWindow(metaWin);
         }
-    },
+    }
 
     // check for maximized windows on the workspace
-    hasMaximizedWindows: function() {
+    hasMaximizedWindows() {
         for (let i = 0; i < this._windows.length; i++) {
             let metaWindow = this._windows[i].metaWindow;
             if (metaWindow.showing_on_its_workspace() &&
@@ -968,10 +954,10 @@ WorkspaceMonitor.prototype = {
                 return true;
         }
         return false;
-    },
+    }
 
     // Animate the full-screen to Overview transition.
-    zoomToOverview : function() {
+    zoomToOverview() {
         let animate = Main.animations_enabled;
         // Position and scale the windows.
         if (Main.overview.animationInProgress && animate)
@@ -980,10 +966,10 @@ WorkspaceMonitor.prototype = {
             this.positionWindows(WindowPositionFlags.INITIAL);
 
         this._updateEmptyPlaceholder();
-    },
+    }
 
     // Animates the return from Overview mode
-    zoomFromOverview : function() {
+    zoomFromOverview() {
         let currentWorkspace = global.workspace_manager.get_active_workspace();
 
         this.leavingOverview = true;
@@ -1005,7 +991,7 @@ WorkspaceMonitor.prototype = {
             let clone = this._windows[i];
 
             if (clone.metaWindow.showing_on_its_workspace()) {
-                clone.actor.ease({
+                clone.ease({
                     x: clone.origX,
                     y: clone.origY,
                     scale_x: 1.0,
@@ -1016,7 +1002,7 @@ WorkspaceMonitor.prototype = {
                 });
             } else {
                 // The window is hidden, make it shrink and fade it out
-                clone.actor.ease({
+                clone.ease({
                     scale_x: 0,
                     scale_y: 0,
                     x: this._width / 2,
@@ -1035,27 +1021,19 @@ WorkspaceMonitor.prototype = {
                 mode: Clutter.AnimationMode.EASE_OUT_QUAD
             });
         }
-    },
+    }
 
-    destroy : function() {
-        this.actor.destroy();
-    },
+    destroy() {
+        super.destroy();
+    }
 
-    _onDestroy: function(actor) {
+    _onDestroy(actor) {
         closeContextMenu();
         if (this._overviewHiddenId) {
             Main.overview.disconnect(this._overviewHiddenId);
             this._overviewHiddenId = 0;
         }
         actor.remove_all_transitions();
-
-        this._myWorkspace.myView.disconnect(this.stickyCallbackId);
-        if (this.metaWorkspace) {
-            this.metaWorkspace.disconnect(this._windowAddedId);
-            this.metaWorkspace.disconnect(this._windowRemovedId);
-        }
-        global.display.disconnect(this._windowEnteredMonitorId);
-        global.display.disconnect(this._windowLeftMonitorId);
 
         // Usually, the windows will be destroyed automatically with
         // their parent (this.actor), but we might have a zoomed window
@@ -1064,26 +1042,26 @@ WorkspaceMonitor.prototype = {
         for (let w = 0; w < this._windows.length; w++)
             this._windows[w].destroy();
         this._windows = [];
-    },
+    }
 
     // Sets this.leavingOverview flag to false.
-    _doneLeavingOverview : function() {
+    _doneLeavingOverview() {
         this.leavingOverview = false;
-    },
+    }
 
     // Tests if @win belongs to this workspace
-    _isMyWindow : function (win) {
+    _isMyWindow(win) {
         return (this.metaWorkspace == null || Main.isWindowActorDisplayedOnWorkspace(win, this.metaWorkspace.index()) && (!win.get_meta_window() || win.get_meta_window().get_monitor() == this.monitorIndex));
-    },
+    }
 
     // Tests if @win should be shown in the Overview
-    _isOverviewWindow : function (win) {
+    _isOverviewWindow(win) {
         let tracker = Cinnamon.WindowTracker.get_default();
         return Main.isInteresting(win.get_meta_window());
-    },
+    }
 
     // Create a clone of a (non-desktop) window and add it to the window list
-    _addWindowClone : function(win) {
+    _addWindowClone(win) {
         let clone = new WindowClone(win, this);
         let overlay = new WindowOverlay(clone, this._windowOverlaysGroup);
 
@@ -1099,7 +1077,7 @@ WorkspaceMonitor.prototype = {
         clone.connect('context-menu-requested', this._onCloneContextMenuRequested.bind(this));
         clone.connect('size-changed', () => { this.positionWindows(0) });
 
-        this.actor.add_actor(clone.actor);
+        this.add_child(clone);
 
         overlay.connect('selected', this.selectClone.bind(this, clone));
 
@@ -1107,9 +1085,9 @@ WorkspaceMonitor.prototype = {
         clone.overlay = overlay;
 
         return clone;
-    },
+    }
 
-    _computeAllWindowSlots: function(numberOfWindows) {
+    _computeAllWindowSlots(numberOfWindows) {
         if (numberOfWindows <= 0) return [];
 
         let gridWidth = Math.ceil(Math.sqrt(numberOfWindows));
@@ -1135,27 +1113,19 @@ WorkspaceMonitor.prototype = {
         }
 
         return slots;
-    },
+    }
 
-    _onCloneActivated : function (clone, time) {
+    _onCloneActivated(clone, time) {
         let wsIndex = undefined;
         if (this.metaWorkspace)
             wsIndex = this.metaWorkspace.index();
         Main.activateWindow(clone.metaWindow, time, wsIndex);
     }
-};
+});
 
-Signals.addSignalMethods(WorkspaceMonitor.prototype);
-
-function WindowContextMenu(actor, metaWindow, onClose) {
-    this._init(actor, metaWindow, onClose);
-}
-
-WindowContextMenu.prototype = {
-    __proto__: PopupMenu.PopupComboMenu.prototype,
-
-    _init: function(actor, metaWindow, onClose) {
-        PopupMenu.PopupComboMenu.prototype._init.call(this, actor);
+var WindowContextMenu = class WindowContextMenu extends PopupMenu.PopupComboMenu {
+    constructor(actor, metaWindow, onClose) {
+        super(actor);
         this.name = 'scale-window-context-menu';
         Main.uiGroup.add_actor(this.actor);
         this.actor.hide();
@@ -1222,14 +1192,14 @@ WindowContextMenu.prototype = {
             this.addMenuItem(item);
         });
         this.setActiveItem(0);
-     },
+    }
 
-     _onToggled: function(actor, opening){
-         if (!opening) {
+    _onToggled(actor, opening) {
+        if (!opening) {
             this.onClose();
             this.destroy();
             return;
-         }
+        }
 
         if (this.metaWindow.is_on_all_workspaces()) {
             this.itemOnAllWorkspaces.label.set_text(_("Only on this workspace"));
@@ -1251,51 +1221,51 @@ WindowContextMenu.prototype = {
         }else{
             this.itemMaximizeWindow.label.set_text(_("Maximize"));
         }
-    },
+    }
 
-    _onCloseWindowActivate: function(actor, event){
+    _onCloseWindowActivate(actor, event) {
         this.metaWindow.delete(global.get_current_time());
-    },
+    }
 
-    _onMinimizeWindowActivate: function(actor, event){
+    _onMinimizeWindowActivate(actor, event) {
         if (this.metaWindow.minimized) {
             this.metaWindow.unminimize(global.get_current_time());
         }
         else {
             this.metaWindow.minimize(global.get_current_time());
         }
-    },
+    }
 
-    _onMaximizeWindowActivate: function(actor, event){
+    _onMaximizeWindowActivate(actor, event) {
         if (this.metaWindow.get_maximized()){
             this.metaWindow.unmaximize(Meta.MaximizeFlags.HORIZONTAL | Meta.MaximizeFlags.VERTICAL);
         }else{
             this.metaWindow.maximize(Meta.MaximizeFlags.HORIZONTAL | Meta.MaximizeFlags.VERTICAL);
         }
-    },
+    }
 
-    _onMoveToLeftWorkspace: function(actor, event){
+    _onMoveToLeftWorkspace(actor, event) {
         let workspace = this.metaWindow.get_workspace().get_neighbor(Meta.MotionDirection.LEFT);
         if (workspace) {
             this.metaWindow.change_workspace(workspace);
         }
-    },
+    }
 
-    _onMoveToRightWorkspace: function(actor, event){
+    _onMoveToRightWorkspace(actor, event) {
         let workspace = this.metaWindow.get_workspace().get_neighbor(Meta.MotionDirection.RIGHT);
         if (workspace) {
             this.metaWindow.change_workspace(workspace);
         }
-    },
+    }
 
-    _toggleOnAllWorkspaces: function(actor, event) {
+    _toggleOnAllWorkspaces(actor, event) {
         if (this.metaWindow.is_on_all_workspaces())
             this.metaWindow.unstick();
         else
             this.metaWindow.stick();
-    },
+    }
 
-    _onSourceKeyPress: function(actor, event) {
+    _onSourceKeyPress(actor, event) {
         let symbol = event.get_key_symbol();
         if (symbol === Clutter.KEY_space ||
             symbol === Clutter.KEY_Return ||
@@ -1313,19 +1283,18 @@ WindowContextMenu.prototype = {
         } else
             return false;
     }
-
 };
 
-function Workspace() {
-    this._init.apply(this, arguments);
-}
-
-Workspace.prototype = {
-    _init : function(metaWorkspace, view) {
+var Workspace = GObject.registerClass({
+    Signals: {
+        'focus-refresh-required': {},
+    },
+}, class Workspace extends Clutter.Actor {
+    _init(metaWorkspace, view) {
+        super._init({ layout_manager: new Clutter.FixedLayout() });
+        this.set_size(0, 0);
         this.metaWorkspace = metaWorkspace;
         this.myView = view;
-        this.actor = new Clutter.Group();
-        this.actor.set_size(0, 0);
         this._monitors = [];
         this._activeClone = null;
         this.currentMonitorIndex = Main.layoutManager.primaryIndex;
@@ -1333,14 +1302,14 @@ Workspace.prototype = {
             let m = new WorkspaceMonitor(metaWorkspace, ix, this);
             m.setGeometry(monitor.x, monitor.y, monitor.width, monitor.height, monitor.width * .01);
             this._monitors.push(m);
-            this.actor.add_actor(m.actor);
+            this.add_child(m);
         });
         this.connect('focus-refresh-required', () => {
             this.selectNextNonEmptyMonitor(this.currentMonitorIndex - 1, 1);
         });
-    },
+    }
 
-    findNextNonEmptyMonitor: function(start, increment) {
+    findNextNonEmptyMonitor(start, increment) {
         let pos = start;
         for (let i = 0; i < this._monitors.length; ++i) {
             pos = (this._monitors.length + pos + increment) % this._monitors.length;
@@ -1349,18 +1318,18 @@ Workspace.prototype = {
             }
         }
         return this.currentMonitorIndex || 0;
-    },
+    }
 
-    selectNextNonEmptyMonitor: function(start, increment) {
+    selectNextNonEmptyMonitor(start, increment) {
         this.selectMonitor(this.findNextNonEmptyMonitor(start || 0, increment));
-    },
+    }
 
-    selectMonitor: function(index) {
+    selectMonitor(index) {
         this.currentMonitorIndex = index;
         this._monitors[this.currentMonitorIndex].showActiveSelection();
-    },
+    }
 
-    selectActiveClone: function(clone, wsMonitor) {
+    selectActiveClone(clone, wsMonitor) {
         let current = this._activeClone;
         if (clone) {
             this.currentMonitorIndex = wsMonitor.monitorIndex;
@@ -1379,9 +1348,9 @@ Workspace.prototype = {
         if (this._activeClone) {
             this._activeClone.overlay.setSelected(true);
         }
-    },
+    }
 
-    _onKeyPress: function(actor, event) {
+    _onKeyPress(actor, event) {
         let modifiers = Cinnamon.get_event_state(event);
         let symbol = event.get_key_symbol();
         let keycode = event.get_key_code();
@@ -1429,51 +1398,50 @@ Workspace.prototype = {
             return false;
         }
         return activeMonitor.selectAnotherWindow(symbol);
-    },
+    }
 
-    destroy: function() {
+    destroy() {
         this._monitors.forEach(monitor => monitor.destroy());
-        this.actor.destroy();
-    },
+        super.destroy();
+    }
 
-    selectAnotherWindow: function(symbol) {
+    selectAnotherWindow(symbol) {
         this._monitors[this.currentMonitorIndex].selectAnotherWindow(symbol);
-    },
+    }
 
-    zoomFromOverview: function() {
+    zoomFromOverview() {
         this._monitors.forEach(monitor => monitor.zoomFromOverview());
-    },
+    }
 
-    zoomToOverview: function() {
+    zoomToOverview() {
         this._monitors.forEach(monitor => monitor.zoomToOverview());
-    },
+    }
 
-    hasMaximizedWindows: function() {
+    hasMaximizedWindows() {
         for(let monitor of this._monitors) {
             if (monitor.hasMaximizedWindows())
                 return true;
         }
         return false;
-    },
+    }
 
-    isEmpty: function() {
+    isEmpty() {
         for(let monitor of this._monitors) {
             if (!monitor.isEmpty())
                 return false;
         }
         return true;
-    },
+    }
 
-    showWindowsOverlays: function() {
+    showWindowsOverlays() {
         this._monitors.forEach(monitor => monitor.showWindowsOverlays());
-    },
+    }
 
-    hideWindowsOverlays: function() {
+    hideWindowsOverlays() {
         this._monitors.forEach(monitor =>  monitor.hideWindowsOverlays());
-    },
+    }
 
-    syncStacking: function(arg1) {
+    syncStacking(arg1) {
         this._monitors.forEach(monitor => monitor.syncStacking(arg1));
     }
-};
-Signals.addSignalMethods(Workspace.prototype);
+});
