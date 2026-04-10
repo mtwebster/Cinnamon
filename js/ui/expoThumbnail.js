@@ -295,6 +295,12 @@ const ThumbnailState = {
  * @metaWorkspace: a #Meta.Workspace
  */
 var ExpoWorkspaceThumbnail = GObject.registerClass({
+    Properties: {
+        'slide-position': GObject.ParamSpec.double(
+            'slide-position', 'slide-position', 'slide-position',
+            GObject.ParamFlags.READWRITE,
+            0, 1, 0),
+    },
     Signals: {
         'drag-over': {},
         'drag-end': {},
@@ -435,46 +441,19 @@ var ExpoWorkspaceThumbnail = GObject.registerClass({
         this.isActive = false;
         this.state = ThumbnailState.NORMAL;
         this.restack();
-        this._slidePosition = 0; // Fully slid in
-        this._slideTimeline = null;
         this.setOverviewMode(forceOverviewMode);
     }
 
-    set slidePosition(slidePosition) {
+    set slide_position(slidePosition) {
+        if (this._slidePosition === slidePosition)
+            return;
         this._slidePosition = slidePosition;
+        this.notify('slide-position');
         this.queue_relayout();
     }
 
-    get slidePosition() {
-        return this._slidePosition;
-    }
-
-    _animateSlidePosition(target, duration, mode, onComplete) {
-        if (this._slideTimeline) {
-            this._slideTimeline.stop();
-            this._slideTimeline.run_dispose();
-            this._slideTimeline = null;
-        }
-
-        let startValue = this._slidePosition;
-        if (startValue === target || duration === 0) {
-            this.slidePosition = target;
-            if (onComplete) onComplete();
-            return;
-        }
-
-        this._slideTimeline = new Clutter.Timeline({ duration });
-        this._slideTimeline.set_progress_mode(mode);
-        this._slideTimeline.connect('new-frame', () => {
-            let progress = this._slideTimeline.get_progress();
-            this.slidePosition = startValue + (target - startValue) * progress;
-        });
-        this._slideTimeline.connect('completed', () => {
-            this.slidePosition = target;
-            this._slideTimeline = null;
-            if (onComplete) onComplete();
-        });
-        this._slideTimeline.start();
+    get slide_position() {
+        return this._slidePosition || 0;
     }
 
     setOverviewMode(turnOn) {
@@ -678,15 +657,10 @@ var ExpoWorkspaceThumbnail = GObject.registerClass({
     }
 
     destroy() {
-        if (this._slideTimeline) {
-            this._slideTimeline.stop();
-            this._slideTimeline.run_dispose();
-            this._slideTimeline = null;
-        }
-        if (this._collapseTimeline) {
-            this._collapseTimeline.stop();
-            this._collapseTimeline.run_dispose();
-            this._collapseTimeline = null;
+        this.remove_all_transitions();
+        if (this._collapseId) {
+            GLib.source_remove(this._collapseId);
+            this._collapseId = 0;
         }
         super.destroy();
     }
@@ -1389,7 +1363,7 @@ var ExpoThumbnailsBox = GObject.registerClass({
 
             if (start > 0) { // not the initial fill
                 thumbnail.state = ThumbnailState.NEW;
-                thumbnail.slidePosition = 1; // start slid out
+                thumbnail.slide_position = 1; // start slid out
             } else {
                 thumbnail.state = ThumbnailState.NORMAL;
             }
@@ -1450,9 +1424,13 @@ var ExpoThumbnailsBox = GObject.registerClass({
                 thumbnail.title.hide();
                 this.setThumbnailState(thumbnail, ThumbnailState.ANIMATING_OUT);
 
-                thumbnail._animateSlidePosition(1, SLIDE_ANIMATION_TIME, Clutter.AnimationMode.LINEAR, () => {
-                    this.setThumbnailState(thumbnail, ThumbnailState.ANIMATED_OUT);
-                    this.queueUpdateStates();
+                thumbnail.ease_property('slide-position', 1, {
+                    duration: SLIDE_ANIMATION_TIME,
+                    mode: Clutter.AnimationMode.LINEAR,
+                    onComplete: () => {
+                        this.setThumbnailState(thumbnail, ThumbnailState.ANIMATED_OUT);
+                        this.queueUpdateStates();
+                    },
                 });
             });
 
@@ -1465,10 +1443,8 @@ var ExpoThumbnailsBox = GObject.registerClass({
             function(thumbnail) {
                 thumbnail.hide();
                 this.setThumbnailState(thumbnail, ThumbnailState.COLLAPSING);
-                thumbnail._collapseTimeline = new Clutter.Timeline({ duration: RESCALE_ANIMATION_TIME });
-                thumbnail._collapseTimeline.set_progress_mode(Clutter.AnimationMode.EASE_OUT_QUAD);
-                thumbnail._collapseTimeline.connect('completed', () => {
-                    thumbnail._collapseTimeline = null;
+                thumbnail._collapseId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, RESCALE_ANIMATION_TIME, () => {
+                    thumbnail._collapseId = 0;
                     this.stateCounts[thumbnail.state]--;
                     thumbnail.state = ThumbnailState.DESTROYED;
 
@@ -1484,8 +1460,8 @@ var ExpoThumbnailsBox = GObject.registerClass({
                     }
 
                     this.queueUpdateStates();
+                    return GLib.SOURCE_REMOVE;
                 });
-                thumbnail._collapseTimeline.start();
             });
 
         if (this.pendingScaleUpdate) {
@@ -1501,8 +1477,12 @@ var ExpoThumbnailsBox = GObject.registerClass({
         this.iterateStateThumbnails(ThumbnailState.NEW,
             function(thumbnail) {
                 this.setThumbnailState(thumbnail, ThumbnailState.ANIMATING_IN);
-                thumbnail._animateSlidePosition(0, SLIDE_ANIMATION_TIME, Clutter.AnimationMode.EASE_OUT_QUAD, () => {
-                    this.setThumbnailState(thumbnail, ThumbnailState.NORMAL);
+                thumbnail.ease_property('slide-position', 0, {
+                    duration: SLIDE_ANIMATION_TIME,
+                    mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                    onComplete: () => {
+                        this.setThumbnailState(thumbnail, ThumbnailState.NORMAL);
+                    },
                 });
             });
 
@@ -1688,7 +1668,7 @@ var ExpoThumbnailsBox = GObject.registerClass({
             // pixels. To make this work and not end up with a gap at the bottom,
             // we need some thumbnails to be 99 pixels and some 100 pixels height;
             // we compute an actual scale separately for each thumbnail.
-            let x1 = Math.round(x + (thumbnailWidth * thumbnail.slidePosition / 2));
+            let x1 = Math.round(x + (thumbnailWidth * thumbnail.slide_position / 2));
             let x2 = Math.round(x + thumbnailWidth);
 
             let y1, y2;
@@ -1703,7 +1683,7 @@ var ExpoThumbnailsBox = GObject.registerClass({
             childBox.y1 = y1;
             childBox.y2 = y1 + portholeHeight;
 
-            let scale = this.thumbnail_scale * (1 - thumbnail.slidePosition);
+            let scale = this.thumbnail_scale * (1 - thumbnail.slide_position);
             thumbnail.set_scale(scale, scale);
             thumbnail.allocate(childBox, flags);
 
@@ -1713,10 +1693,10 @@ var ExpoThumbnailsBox = GObject.registerClass({
             childBox.x2 = x2 + borderWidth;
             childBox.y1 = y1 - borderWidth;
             childBox.y2 = y2 + borderWidth;
-            thumbnail.frame.set_scale((1 - thumbnail.slidePosition), (1 - thumbnail.slidePosition));
+            thumbnail.frame.set_scale((1 - thumbnail.slide_position), (1 - thumbnail.slide_position));
             thumbnail.frame.allocate(childBox, flags);
 
-            let thumbnailx = Math.round(x + (thumbnailWidth * thumbnail.slidePosition / 2));
+            let thumbnailx = Math.round(x + (thumbnailWidth * thumbnail.slide_position / 2));
             childBox.x1 = Math.max(thumbnailx, thumbnailx + Math.round(thumbnailWidth/2) - Math.round(thumbnail.title.width/2));
             childBox.x2 = Math.min(thumbnailx + thumbnailWidth, childBox.x1 + thumbnail.title.width);
             childBox.y1 = y + thumbnailHeight + thTitleMargin;

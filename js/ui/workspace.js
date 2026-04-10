@@ -478,12 +478,8 @@ var WindowPositionFlags = {
     ANIMATE: 1 << 1
 };
 
-var WorkspaceMonitor = GObject.registerClass({
-    Signals: {
-        'focus-refresh-required': {},
-        'selection-changed': {},
-    },
-}, class WorkspaceMonitor extends Clutter.Actor {
+var WorkspaceMonitor = GObject.registerClass(
+class WorkspaceMonitor extends Clutter.Actor {
     _init(metaWorkspace, monitorIndex, workspace) {
         super._init({ layout_manager: new Clutter.FixedLayout() });
         this.set_size(0, 0);
@@ -1340,7 +1336,6 @@ var Workspace = GObject.registerClass({
             if (current) {
                 current.overlay.setSelected(false);
             }
-            wsMonitor.emit('selection-changed');
         }
 
         // We might have left the focused clone, hiding the overlay,
