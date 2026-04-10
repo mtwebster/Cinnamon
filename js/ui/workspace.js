@@ -506,7 +506,10 @@ class WorkspaceMonitor extends Clutter.Actor {
         this.add_child(this._windowOverlaysGroup);
 
         this.connect('destroy', this._onDestroy.bind(this));
-        Main.overview.connect('overview-background-button-press', closeContextMenu);
+
+        // TODO: Get rid of this, use push/popModal for the context menu.
+        Main.overview.connectObject(
+            'overview-background-button-press', closeContextMenu, this);
 
         workspace.myView.connectObject(
             'sticky-detected', (box, metaWindow) => {
