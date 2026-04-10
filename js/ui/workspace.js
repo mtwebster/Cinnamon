@@ -4,7 +4,7 @@ const Clutter = imports.gi.Clutter;
 const GLib = imports.gi.GLib;
 const GObject = imports.gi.GObject;
 const Gio = imports.gi.Gio;
-const Mainloop = imports.mainloop;
+
 const Meta = imports.gi.Meta;
 const Pango = imports.gi.Pango;
 const Cinnamon = imports.gi.Cinnamon;
@@ -117,9 +117,9 @@ var WindowClone = GObject.registerClass({
             if (win.get_transient_for() === this.metaWindow) {
                 // use an idle handler to avoid mapping problems -
                 // see comment in Workspace._windowAdded
-                Mainloop.idle_add(() => {
+                GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
                     this.emit('activated', global.get_current_time());
-                    return false;
+                    return GLib.SOURCE_REMOVE;
                 });
             }
         });
@@ -327,7 +327,7 @@ var WindowOverlay = GObject.registerClass({
 
     _idleHideCloseButton(timeout) {
         if (this._idleToggleCloseId === 0)
-            this._idleToggleCloseId = Mainloop.timeout_add(timeout, this._idleToggleCloseButton.bind(this));
+            this._idleToggleCloseId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, timeout, this._idleToggleCloseButton.bind(this));
     }
 
     _idleToggleCloseButton() {
@@ -336,12 +336,12 @@ var WindowOverlay = GObject.registerClass({
             this._isSelected = false;
             this._hideCloseButton();
         }
-        return false;
+        return GLib.SOURCE_REMOVE;
     }
 
     _hideCloseButton() {
         if (this._idleToggleCloseId > 0) {
-            Mainloop.source_remove(this._idleToggleCloseId);
+            GLib.source_remove(this._idleToggleCloseId);
             this._idleToggleCloseId = 0;
         }
         for (let item of [this.closeButton, this.border]) {
@@ -431,7 +431,7 @@ var WindowOverlay = GObject.registerClass({
     _onDestroy() {
         if (this._disconnectWindowAdded) {this._disconnectWindowAdded();}
         if (this._idleToggleCloseId > 0) {
-            Mainloop.source_remove(this._idleToggleCloseId);
+            GLib.source_remove(this._idleToggleCloseId);
             this._idleToggleCloseId = 0;
         }
         global.display.disconnectObject(this);
@@ -894,12 +894,12 @@ var WorkspaceMonitor = GObject.registerClass({
         if (!win) {
             // Newly-created windows are added to a workspace before
             // the compositor finds out about them...
-            Mainloop.idle_add(() => {
+            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
                 if (!this.is_finalized() &&
                     metaWin.get_compositor_private() &&
                     metaWin.get_workspace() === this.metaWorkspace)
                     this._doAddWindow(metaWin);
-                return false;
+                return GLib.SOURCE_REMOVE;
             });
             return;
         }
@@ -1270,15 +1270,15 @@ var WindowContextMenu = class WindowContextMenu extends PopupMenu.PopupComboMenu
         if (symbol === Clutter.KEY_space ||
             symbol === Clutter.KEY_Return ||
             symbol === Clutter.KEY_KP_Enter) {
-            this.menu.toggle();
+            this.toggle();
             return true;
-        } else if (symbol === Clutter.KEY_Escape && this.menu.isOpen) {
-            this.menu.close();
+        } else if (symbol === Clutter.KEY_Escape && this.isOpen) {
+            this.close();
             return true;
         } else if (symbol === Clutter.KEY_Down) {
-            if (!this.menu.isOpen)
-                this.menu.toggle();
-            this.menu.actor.navigate_focus(this.actor, Gtk.DirectionType.DOWN, false);
+            if (!this.isOpen)
+                this.toggle();
+            this.actor.navigate_focus(this.actor, Gtk.DirectionType.DOWN, false);
             return true;
         } else
             return false;

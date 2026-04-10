@@ -220,8 +220,8 @@ var ExpoWindowClone = GObject.registerClass({
 
     destroy() {
         this.killUrgencyTimeout();
-        super.destroy();
         this.icon = null;
+        super.destroy();
     }
 
     onPositionChanged() {
@@ -299,7 +299,6 @@ var ExpoWorkspaceThumbnail = GObject.registerClass({
         'drag-over': {},
         'drag-end': {},
         'drag-begin': {},
-        'remove-workspace': {},
     },
 }, class ExpoWorkspaceThumbnail extends St.Widget {
     _init(metaWorkspace, box) {
@@ -468,13 +467,11 @@ var ExpoWorkspaceThumbnail = GObject.registerClass({
         this._slideTimeline.set_progress_mode(mode);
         this._slideTimeline.connect('new-frame', () => {
             let progress = this._slideTimeline.get_progress();
-            this._slidePosition = startValue + (target - startValue) * progress;
-            if (this.box) this.box.queue_relayout();
+            this.slidePosition = startValue + (target - startValue) * progress;
         });
         this._slideTimeline.connect('completed', () => {
-            this._slidePosition = target;
+            this.slidePosition = target;
             this._slideTimeline = null;
-            if (this.box) this.box.queue_relayout();
             if (onComplete) onComplete();
         });
         this._slideTimeline.start();
@@ -686,8 +683,12 @@ var ExpoWorkspaceThumbnail = GObject.registerClass({
             this._slideTimeline.run_dispose();
             this._slideTimeline = null;
         }
+        if (this._collapseTimeline) {
+            this._collapseTimeline.stop();
+            this._collapseTimeline.run_dispose();
+            this._collapseTimeline = null;
+        }
         super.destroy();
-        this.frame.destroy();
     }
 
     onDestroy(actor) {
@@ -1076,7 +1077,7 @@ var ExpoThumbnailsBox = GObject.registerClass({
     },
     Signals: {
         'set-overview-mode': { param_types: [GObject.TYPE_BOOLEAN] },
-        'sticky-detected': {},
+        'sticky-detected': { param_types: [GObject.TYPE_OBJECT] },
         'allocated': {},
         'drag-begin': {},
         'drag-end': {},
@@ -1106,7 +1107,7 @@ var ExpoThumbnailsBox = GObject.registerClass({
                 DND.DragMotionResult.MOVE_DROP : DND.DragMotionResult.CONTINUE;
         };
         this.background.acceptDrop = (source, actor, x, y, time) => {
-            if (this.background.handleDragOver.apply(this, arguments) ===  DND.DragMotionResult.MOVE_DROP) {
+            if (this.background.handleDragOver(source, actor, x, y, time) ===  DND.DragMotionResult.MOVE_DROP) {
                 let draggable = source._draggable;
                 actor.get_parent().remove_actor(actor);
                 draggable._dragOrigParent.add_actor(actor);
@@ -1322,14 +1323,14 @@ var ExpoThumbnailsBox = GObject.registerClass({
                     overviewTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, timeout, func);
                 }
             };
-            thumbnail.connect('destroy', (actor) => {
+            thumbnail.connect('destroy', () => {
                 setOverviewTimeout(0, function() {
                     overviewTimeoutId = 0;
                 });
                 this.remove_child(thumbnail.title);
                 this.remove_child(thumbnail.frame);
-                this.remove_child(actor);
                 thumbnail.title.destroy();
+                thumbnail.frame.destroy();
             });
             this.add_child(thumbnail.title);
             this.add_child(thumbnail.frame);
@@ -1364,6 +1365,7 @@ var ExpoThumbnailsBox = GObject.registerClass({
                             thumbnail.overviewModeOn();
                         }
                         overviewTimeoutId = 0;
+                        return GLib.SOURCE_REMOVE;
                     });
                 }
             });
@@ -1380,6 +1382,7 @@ var ExpoThumbnailsBox = GObject.registerClass({
                             thumbnail.overviewModeOff();
                         }
                         overviewTimeoutId = 0;
+                        return GLib.SOURCE_REMOVE;
                     });
                 }
             });
@@ -1462,9 +1465,10 @@ var ExpoThumbnailsBox = GObject.registerClass({
             function(thumbnail) {
                 thumbnail.hide();
                 this.setThumbnailState(thumbnail, ThumbnailState.COLLAPSING);
-                let collapseTimeline = new Clutter.Timeline({ duration: RESCALE_ANIMATION_TIME });
-                collapseTimeline.set_progress_mode(Clutter.AnimationMode.EASE_OUT_QUAD);
-                collapseTimeline.connect('completed', () => {
+                thumbnail._collapseTimeline = new Clutter.Timeline({ duration: RESCALE_ANIMATION_TIME });
+                thumbnail._collapseTimeline.set_progress_mode(Clutter.AnimationMode.EASE_OUT_QUAD);
+                thumbnail._collapseTimeline.connect('completed', () => {
+                    thumbnail._collapseTimeline = null;
                     this.stateCounts[thumbnail.state]--;
                     thumbnail.state = ThumbnailState.DESTROYED;
 
@@ -1481,7 +1485,7 @@ var ExpoThumbnailsBox = GObject.registerClass({
 
                     this.queueUpdateStates();
                 });
-                collapseTimeline.start();
+                thumbnail._collapseTimeline.start();
             });
 
         if (this.pendingScaleUpdate) {

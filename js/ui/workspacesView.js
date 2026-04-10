@@ -24,7 +24,7 @@ var SwipeScrollResult = {
 
 var WorkspacesView = GObject.registerClass({
     Signals: {
-        'sticky-detected': {},
+        'sticky-detected': { param_types: [GObject.TYPE_OBJECT] },
     },
 }, class WorkspacesView extends St.Widget {
     _init(workspaces) {
