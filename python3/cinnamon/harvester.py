@@ -17,10 +17,8 @@ from PIL import Image
 import requests
 
 import gi
-gi.require_version('Gtk', '3.0')
-gi.require_version('Gdk', '3.0')
 gi.require_version('Gio', '2.0')
-from gi.repository import Gdk, GdkPixbuf, Gtk, Gio, GLib
+from gi.repository import Gio, GLib
 
 from . import logger
 from . import proxygsettings
@@ -38,8 +36,10 @@ except:
     pass
 
 home = os.path.expanduser("~")
-locale_inst = f'{home}/.local/share/locale'
+user_data_dir = GLib.get_user_data_dir()
+locale_inst = os.path.join(user_data_dir, 'locale')
 settings_dir = os.path.join(GLib.get_user_config_dir(), 'cinnamon', 'spices')
+old_settings_dir = f'{home}/.cinnamon/configs/'
 
 URL_SPICES_HOME = "https://cinnamon-spices.linuxmint.com"
 
@@ -48,34 +48,34 @@ SPICE_MAP = {
         "url": URL_SPICES_HOME + "/json/applets.json",
         "enabled-schema": "org.cinnamon",
         "enabled-key": "enabled-applets",
-        "install-folders": (os.path.join(home, ".local/share/cinnamon/applets"),)
+        "install-folders": (os.path.join(user_data_dir, "cinnamon/applets/"),)
     },
     "desklet": {
         "url": URL_SPICES_HOME + "/json/desklets.json",
         "enabled-schema": "org.cinnamon",
         "enabled-key": "enabled-desklets",
-        "install-folders": (os.path.join(home, ".local/share/cinnamon/desklets"),)
+        "install-folders": (os.path.join(user_data_dir, "cinnamon/desklets/"),)
     },
     "extension": {
         "url": URL_SPICES_HOME + "/json/extensions.json",
         "enabled-schema": "org.cinnamon",
         "enabled-key": "enabled-extensions",
-        "install-folders": (os.path.join(home, ".local/share/cinnamon/extensions"),)
+        "install-folders": (os.path.join(user_data_dir, "cinnamon/extensions/"),)
     },
     "action": {
         "url": URL_SPICES_HOME + "/json/actions.json",
         "enabled-schema": "org.nemo.plugins",
         "enabled-key": "disabled-actions",
-        "install-folders": (os.path.join(home, ".local/share/nemo/actions"),)
+        "install-folders": (os.path.join(user_data_dir, "nemo/actions/"),)
     },
     "theme": {
         "url": URL_SPICES_HOME + "/json/themes.json",
         "enabled-schema": "org.cinnamon.theme",
         "enabled-key": "name",
         "install-folders": (
-            os.path.join(home, ".themes"),
-            os.path.join(GLib.get_user_data_dir(), "themes"),
-            os.path.join(home, ".local/share/cinnamon/themes"),
+            os.path.join(home, ".themes/"),
+            os.path.join(user_data_dir, "themes/"),
+            os.path.join(user_data_dir, "cinnamon/themes/"),
         )
     }
 }
@@ -84,6 +84,22 @@ TIMEOUT_DOWNLOAD_JSON = 15
 TIMEOUT_DOWNLOAD_THUMB = 60
 TIMEOUT_DOWNLOAD_ZIP = 120
 
+
+def remove_empty_folders(path):
+    if not os.path.isdir(path):
+        return
+
+    for entry in os.listdir(path):
+        full = os.path.join(path, entry)
+        if os.path.isdir(full):
+            remove_empty_folders(full)
+
+    if not os.listdir(path):
+        debug(f"Removing empty folder: {path}")
+        try:
+            os.rmdir(path)
+        except OSError:
+            pass
 
 activity_logger = logger.ActivityLogger()
 
@@ -174,8 +190,22 @@ class Harvester:
 
         self.index_file = os.path.join(self.cache_folder, "index.json")
 
-        self.spices_directories = SPICE_MAP[self.spice_type]["install-folders"]
-        self.install_folder = self.spices_directories[0]
+        # User-writable install destinations from SPICE_MAP. Index 0 is the
+        # canonical location for new installs; later entries are alternative
+        # paths a spice may already live in (e.g. legacy theme dirs).
+        self.install_folders = SPICE_MAP[self.spice_type]["install-folders"]
+        self.install_folder = self.install_folders[0]
+
+        # Full scan list = install_folders + read-only system locations. The
+        # system entries surface system-installed spices in meta_map for the
+        # cs_settings UI listing but are never written to.
+        if self.actions:
+            sys_dirs = tuple(os.path.join(d, 'nemo/actions/') for d in GLib.get_system_data_dirs())
+        elif self.themes:
+            sys_dirs = ()
+        else:
+            sys_dirs = (f'/usr/share/cinnamon/{self.spice_type}s/',)
+        self.spices_directories = self.install_folders + sys_dirs
 
         self.disabled = not self.anything_installed()
 
@@ -200,11 +230,8 @@ class Harvester:
         debug(f"No additional {self.spice_type}s installed")
         return False
 
-    def refresh(self, full):
+    def refresh(self, full, progress_callback=None):
         self.disabled = not self.anything_installed()
-
-        if self.disabled:
-            return
 
         debug(f"Cache stamp: {get_current_timestamp()}")
 
@@ -212,16 +239,26 @@ class Harvester:
         self._update_local_json()
 
         if full:
-            self._update_local_thumbs()
+            self._update_local_thumbs(progress_callback=progress_callback)
 
         self._load_metadata()
         self._clean_old_thumbs()
 
+    def reload(self):
+        self._load_metadata()
+        return self._generate_update_list()
+
     def get_updates(self):
         return self._generate_update_list()
 
-    def install(self, uuid):
-        self._install_by_uuid(uuid)
+    def has_update(self, uuid):
+        return self._spice_has_update(uuid)
+
+    def install(self, uuid, progress_callback=None):
+        self._install_by_uuid(uuid, progress_callback=progress_callback)
+
+    def uninstall(self, uuid):
+        self._uninstall_by_uuid(uuid)
 
     def get_enabled(self, uuid):
         settings = Gio.Settings(schema_id=SPICE_MAP[self.spice_type]["enabled-schema"])
@@ -268,77 +305,157 @@ class Harvester:
 
         self._load_cache()
 
-    def _update_local_thumbs(self):
+    def _update_local_thumbs(self, progress_callback=None):
         # This uses threads for the downloads, but this function blocks until
-        # all are downloaded.
-        with ThreadPoolExecutor(max_workers=10) as tpe:
-            def thumb_job(uuid, item):
-                self._download_thumb(uuid, item)
+        # all are downloaded. Per-thumb progress is reported on the calling
+        # thread as each future completes.
+        with self.cache_lock:
+            items = list(self.index_cache.items())
 
-            with self.cache_lock:
-                for uuid, item in self.index_cache.items():
-                    debug(f"Submitting thumb_job for {uuid}")
-                    tpe.submit(thumb_job, copy.copy(uuid), copy.deepcopy(item))
+        total = len(items)
+        if total == 0:
+            return
+
+        with ThreadPoolExecutor(max_workers=10) as tpe:
+            futures = []
+            for uuid, item in items:
+                debug(f"Submitting thumb_job for {uuid}")
+                futures.append(tpe.submit(self._download_thumb, copy.copy(uuid), copy.deepcopy(item)))
+
+            for done, future in enumerate(futures, start=1):
+                future.result()
+                if progress_callback is not None:
+                    progress_callback(done, 1, total)
 
     def _download_thumb(self, uuid, item):
         paths = SpicePathSet(item, spice_type=self.spice_type)
-        if not os.path.isfile(paths.thumb_local_path) or self._is_bad_image(paths.thumb_local_path) or self._spice_has_update(uuid):
-            debug(f"Downloading thumbnail for {uuid}: {paths.thumb_download_url}")
+        needs_download = (not os.path.isfile(paths.thumb_local_path)
+                          or self._is_bad_image(paths.thumb_local_path)
+                          or self._spice_has_update(uuid))
+        if not needs_download:
+            return
 
-            try:
-                r = requests.get(paths.thumb_download_url,
-                                 timeout=TIMEOUT_DOWNLOAD_THUMB,
-                                 proxies=self.proxy_info,
-                                 params={"time": get_current_timestamp()})
-                r.raise_for_status()
-            except Exception as e:
-                debug(f"Could not get thumbnail for {uuid}: {e}")
-                return
+        debug(f"Downloading thumbnail for {uuid}: {paths.thumb_download_url}")
 
-            with open(paths.thumb_local_path, "wb", encoding="utf-8") as f:
-                f.write(r.content)
+        try:
+            r = requests.get(paths.thumb_download_url,
+                             timeout=TIMEOUT_DOWNLOAD_THUMB,
+                             proxies=self.proxy_info,
+                             params={"time": get_current_timestamp()})
+            r.raise_for_status()
+        except Exception as e:
+            debug(f"Could not get thumbnail for {uuid}: {e}")
+            return
+
+        with open(paths.thumb_local_path, "wb") as f:
+            f.write(r.content)
 
     def _load_metadata(self):
+        self.disabled = not self.anything_installed()
+        self.meta_map = {}
+
         if self.disabled:
             return
 
         debug(f"harvester: Loading metadata on installed {self.spice_type}s")
-        self.meta_map = {}
 
         for directory in self.spices_directories:
-            try:
-                extensions = os.listdir(directory)
-
-                for uuid in extensions:
-                    subdirectory = os.path.join(directory, uuid)
-                    if uuid.endswith('.nemo_action'):
-                        continue
-                    if uuid in self.meta_map:
-                        continue
-                    # For actions, ignore any other normal files, an action may place other support scripts in here.
-                    if self.actions and not os.path.isdir(subdirectory):
-                        continue
+            if not os.path.isdir(directory):
+                if directory == self.install_folder:
                     try:
-                        with open(os.path.join(subdirectory, "metadata.json"), "r", encoding="utf-8") as f:
-                            metadata = json.load(f)
+                        os.makedirs(directory, mode=0o755, exist_ok=True)
+                    except Exception:
+                        pass
+                continue
 
-                            metadata['path'] = subdirectory
-                            metadata['writable'] = os.access(subdirectory, os.W_OK)
-                            self.meta_map[uuid] = metadata
-                    except Exception as detail:
-                        debug(detail)
-                        debug(f"Skipping {uuid}: there was a problem trying to read metadata.json")
-            except FileNotFoundError:
-                # debug("%s does not exist! Creating it now." % directory)
+            for entry in os.listdir(directory):
+                full_path = os.path.join(directory, entry)
+
+                if self.actions:
+                    if entry == 'sample.nemo_action':
+                        continue
+                    if entry.endswith('.nemo_action'):
+                        sibling_dir = full_path[:-len('.nemo_action')]
+                        if os.path.isdir(sibling_dir):
+                            # Spice-installed action: handled via the sibling dir below.
+                            continue
+                        uuid = entry[:-len('.nemo_action')]
+                        if uuid in self.meta_map:
+                            continue
+                        self._load_keyfile_action(full_path, entry)
+                        continue
+                    if not os.path.isdir(full_path):
+                        # Other top-level files (helper scripts, etc.)
+                        continue
+
+                if not os.path.isdir(full_path):
+                    continue
+
+                # First-wins: spices_directories iterates user install_folders
+                # before system paths, so the user-installed copy of a uuid
+                # masks any system copy and a just-installed upgrade isn't
+                # shadowed by an orphan in another user-level path.
+                if entry in self.meta_map:
+                    continue
+
                 try:
-                    os.makedirs(directory, mode=0o755, exist_ok=True)
-                except Exception:
-                    pass
+                    with open(os.path.join(full_path, "metadata.json"), "r", encoding="utf-8") as f:
+                        metadata = json.load(f)
+                        metadata['path'] = full_path
+                        metadata['writable'] = os.access(full_path, os.W_OK)
+                        self.meta_map[entry] = metadata
+                except FileNotFoundError:
+                    if not self.themes:
+                        debug(f"Skipping {entry}: no metadata.json")
+                except Exception as detail:
+                    debug(detail)
+                    debug(f"Skipping {entry}: there was a problem trying to read metadata.json")
 
-    def _load_cache(self):
-        if self.disabled:
+    def _load_keyfile_action(self, full_path, entry):
+        metadata = {}
+        keyfile = GLib.KeyFile.new()
+
+        try:
+            keyfile.load_from_file(full_path, GLib.KeyFileFlags.KEEP_TRANSLATIONS)
+        except GLib.Error as e:
+            debug(f"Could not read action file '{full_path}': {e.message}")
             return
 
+        try:
+            # Skip actions explicitly marked Active=false (Active is optional).
+            if not keyfile.get_boolean('Nemo Action', 'Active'):
+                return
+        except GLib.Error as e:
+            if e.code != GLib.KeyFileError.NOT_FOUND:
+                pass
+
+        try:
+            name = keyfile.get_locale_string('Nemo Action', 'Name')
+            metadata['name'] = name.replace("_", "")
+        except GLib.Error as e:
+            debug(f"Could not read Name field for action. Skipping '{full_path}': {e.message}")
+            return
+
+        try:
+            metadata['description'] = keyfile.get_locale_string('Nemo Action', 'Comment')
+        except GLib.Error as e:
+            if e.code != GLib.KeyFileError.NOT_FOUND:
+                pass
+
+        try:
+            metadata['icon'] = keyfile.get_string('Nemo Action', 'Icon-Name')
+        except GLib.Error as e:
+            if e.code != GLib.KeyFileError.NOT_FOUND:
+                pass
+
+        uuid = entry[:-len('.nemo_action')]
+        metadata['path'] = full_path
+        metadata['writable'] = False
+        metadata['disable_about'] = True
+        metadata['uuid'] = uuid
+        self.meta_map[uuid] = metadata
+
+    def _load_cache(self):
         debug(f"harvester: Loading local {self.spice_type} cache")
         self.index_cache = {}
 
@@ -376,16 +493,17 @@ class Harvester:
         return self.updates
 
     def _spice_has_update(self, uuid):
+        # System-installed xlets ship without a `last-edited` field, so the
+        # int() lookup below raises and we naturally answer False. Spice-installed
+        # copies (in any user dir) get the timestamp written during install.
         try:
             return int(self.meta_map[uuid]["last-edited"]) < self.index_cache[uuid]["last_edited"]
         except Exception:
             return False
 
-    def _install_by_uuid(self, uuid):
+    def _install_by_uuid(self, uuid, progress_callback=None):
         action = "upgrade" if uuid in self.meta_map else "install"
 
-        error_message = None
-        uuid = uuid
         try:
             item = self.index_cache[uuid]
         except KeyError:
@@ -394,34 +512,92 @@ class Harvester:
 
         paths = SpicePathSet(item, spice_type=self.spice_type)
 
+        tmp_name = None
         try:
-            r = requests.get(paths.zip_download_url,
-                             timeout=TIMEOUT_DOWNLOAD_ZIP,
-                             proxies=self.proxy_info,
-                             params={"time": get_current_timestamp()})
-            r.raise_for_status()
-        except Exception as e:
-            debug(f"Could not download zip for {uuid}: {e}")
-            raise
-
-        try:
-            tmp_name = None
-            with tempfile.NamedTemporaryFile(delete=False) as f:
-                tmp_name = f.name
-                f.write(r.content)
+            with tempfile.NamedTemporaryFile(delete=False) as tmp:
+                tmp_name = tmp.name
+                self._download_zip(paths.zip_download_url, tmp, progress_callback)
 
             with zipfile.ZipFile(tmp_name) as _zip:
-                os.remove(tmp_name)
-
                 with tempfile.TemporaryDirectory() as d:
                     _zip.extractall(d)
                     self._install_from_folder(os.path.join(d, uuid), d, uuid, from_spices=True)
                     self.write_to_log(uuid, action)
 
-                self._load_metadata()
+            self._load_metadata()
         except Exception as e:
             debug(f"couldn't install: {e}")
             raise
+        finally:
+            if tmp_name is not None:
+                try:
+                    os.remove(tmp_name)
+                except FileNotFoundError:
+                    pass
+
+    def _download_zip(self, url, out_file, progress_callback):
+        block_size = 16 * 1024
+
+        try:
+            r = requests.get(url,
+                             timeout=TIMEOUT_DOWNLOAD_ZIP,
+                             proxies=self.proxy_info,
+                             params={"time": get_current_timestamp()},
+                             stream=True)
+            r.raise_for_status()
+        except Exception as e:
+            debug(f"Could not start zip download: {e}")
+            raise
+
+        try:
+            try:
+                total_size = int(r.headers.get("content-length", 0))
+            except (TypeError, ValueError):
+                total_size = 0
+
+            count = 0
+            for chunk in r.iter_content(chunk_size=block_size):
+                if not chunk:
+                    continue
+                out_file.write(chunk)
+                count += 1
+                if progress_callback is not None:
+                    progress_callback(count, block_size, total_size)
+        finally:
+            r.close()
+
+    def _uninstall_by_uuid(self, uuid):
+        try:
+            if not self.themes:
+                if os.path.exists(locale_inst):
+                    for i19_folder in os.listdir(locale_inst):
+                        mo_path = os.path.join(locale_inst, i19_folder, 'LC_MESSAGES', f'{uuid}.mo')
+                        if os.path.isfile(mo_path):
+                            os.remove(mo_path)
+                        remove_empty_folders(os.path.join(locale_inst, i19_folder))
+
+                for cfg in (settings_dir, old_settings_dir):
+                    cfg_path = os.path.join(cfg, uuid)
+                    if os.path.exists(cfg_path):
+                        shutil.rmtree(cfg_path)
+
+            self._remove_spice_from_all_directories(uuid)
+
+            if self.actions:
+                settings = Gio.Settings(schema_id=SPICE_MAP[self.spice_type]["enabled-schema"])
+                key = SPICE_MAP[self.spice_type]["enabled-key"]
+                disabled_list = settings.get_strv(key)
+                uuid_name = f"{uuid}.nemo_action"
+                if uuid_name in disabled_list:
+                    disabled_list.remove(uuid_name)
+                    settings.set_strv(key, disabled_list)
+
+            self.write_to_log(uuid, "remove")
+        except Exception as e:
+            debug(f"couldn't uninstall {uuid}: {e}")
+            raise
+        finally:
+            self._load_metadata()
 
     def _install_from_folder(self, folder, base_folder, uuid, from_spices=False):
         contents = os.listdir(folder)
@@ -442,6 +618,9 @@ class Harvester:
 
         os.makedirs(self.install_folder, mode=0o755, exist_ok=True)
 
+        # Clear prior copies from every user-writable location, not just
+        # install_folder, so an upgrade across a path change doesn't leave
+        # an orphan that the first-wins scan would surface as the active copy.
         self._remove_spice_from_all_directories(uuid)
 
         dest = os.path.join(self.install_folder, uuid)
@@ -473,7 +652,9 @@ class Harvester:
             json.dump(md, f, indent=4)
 
     def _remove_spice_from_all_directories(self, uuid):
-        for directory in self.spices_directories:
+        # Iterates user-writable install_folders only — system spices are
+        # package-managed and not ours to delete from /usr/share/.
+        for directory in self.install_folders:
             dest = os.path.join(directory, uuid)
             if os.path.isdir(dest):
                 shutil.rmtree(dest, ignore_errors=True)
@@ -504,27 +685,6 @@ class Harvester:
 
         log_timestamp = datetime.datetime.now().strftime("%F %T")
         activity_logger.log(f"{log_timestamp} {self.spice_type} {action} {uuid} {old_version} {new_version}")
-
-    def get_icon_surface(self, uuid, ui_scale):
-        """ gets the icon for a given uuid"""
-        try:
-            pixbuf = None
-
-            paths = SpicePathSet(self.index_cache[uuid], spice_type=self.spice_type)
-
-            if self.themes:
-                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(paths.thumb_local_path, 100 * ui_scale, -1, True)
-            else:
-                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(paths.thumb_local_path, 24 * ui_scale, 24 * ui_scale, True)
-
-            if pixbuf is None:
-                raise Exception
-
-            surf = Gdk.cairo_surface_create_from_pixbuf(pixbuf, ui_scale, None)
-            return Gtk.Image.new_from_surface(surf)
-        except Exception:
-            debug("There was an error processing one of the images. Try refreshing the cache.")
-            return Gtk.Image.new_from_icon_name('image-missing', Gtk.IconSize.LARGE_TOOLBAR)
 
     def _is_bad_image(self, path):
         try:
