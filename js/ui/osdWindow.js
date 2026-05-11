@@ -171,7 +171,7 @@ var OsdWindowManager = class {
         Main.layoutManager.connect('monitors-changed', this._layoutChanged.bind(this));
         this._osdSettings = new Gio.Settings({ schema_id: "org.cinnamon" });
         this._osdSettings.connect("changed::show-media-keys-osd", this._layoutChanged.bind(this));
-
+        let x = Gdk.Screen.get_default();
         this._layoutChanged();
     }
 
