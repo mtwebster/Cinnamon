@@ -11,6 +11,7 @@ INCLUDE_POINTER_KEY = 'include-pointer'
 INCLUDE_SHADOW_KEY = 'include-shadow'
 SAVE_DIRECTORY_KEY = 'save-directory'
 DEFAULT_FILE_TYPE_KEY = 'default-file-type'
+LAUNCH_FILE_MANAGER_KEY = 'launch-file-manager-after-save'
 
 settings = Gio.Settings.new(SCHEMA_ID)
 if not settings.get_string(SAVE_DIRECTORY_KEY):
@@ -55,6 +56,9 @@ def get_default_file_type():
 def set_default_file_type(value):
     settings.set_string(DEFAULT_FILE_TYPE_KEY, value)
 
+def get_launch_file_manager():
+    return settings.get_boolean(LAUNCH_FILE_MANAGER_KEY)
+
 _current_window = None
 
 
@@ -68,7 +72,7 @@ def open_preferences(parent):
 
 class PreferencesWindow:
     def __init__(self, parent):
-        from xapp.GSettingsWidgets import GSettingsComboBox, GSettingsFileChooser
+        from xapp.GSettingsWidgets import GSettingsComboBox, GSettingsFileChooser, GSettingsSwitch
         from xapp.SettingsWidgets import SettingsPage
 
         self.window = Gtk.Window(title=_('Preferences'))
@@ -99,6 +103,10 @@ class PreferencesWindow:
             ],
             valtype=str,
             size_group=size_group,
+        ))
+        section.add_row(GSettingsSwitch(
+            _('Launch file manager after saving'),
+            SCHEMA_ID, LAUNCH_FILE_MANAGER_KEY,
         ))
 
         self.window.show_all()

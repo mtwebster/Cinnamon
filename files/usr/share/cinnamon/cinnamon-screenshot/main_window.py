@@ -167,6 +167,10 @@ class MainWindow:
         self.builder.get_object('cancel_button').connect('clicked', self._on_cancel)
 
         menu = Gtk.Menu()
+        open_folder_item = Gtk.MenuItem(label=_('Open save folder'))
+        open_folder_item.connect('activate', self._on_open_save_folder)
+        menu.append(open_folder_item)
+        menu.append(Gtk.SeparatorMenuItem())
         prefs_item = Gtk.MenuItem(label=_('Preferences'))
         prefs_item.connect('activate', self._on_preferences)
         menu.append(prefs_item)
@@ -424,8 +428,17 @@ class MainWindow:
             err.destroy()
             return
 
+        if prefs.get_launch_file_manager():
+            util.show_in_file_manager(Gio.File.new_for_path(path).get_uri())
+
         self.window.destroy()
         self.app.quit()
+
+    def _on_open_save_folder(self, _item):
+        uri = prefs.get_save_directory_uri()
+        if not uri:
+            uri = Gio.File.new_for_path(prefs.get_save_directory()).get_uri()
+        util.show_in_file_manager(uri)
 
     def _on_preferences(self, _item):
         prefs.open_preferences(self.window)

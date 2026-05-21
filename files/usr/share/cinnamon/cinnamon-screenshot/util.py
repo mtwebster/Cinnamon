@@ -1,8 +1,13 @@
 import os
+import sys
 
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gdk, GLib, Gtk
+from gi.repository import Gdk, Gio, GLib, Gtk
+
+
+_FILE_MANAGER1_BUS = 'org.freedesktop.FileManager1'
+_FILE_MANAGER1_PATH = '/org/freedesktop/FileManager1'
 
 _PIXBUF_FORMAT_FOR_EXT = {
     '.png':  ('png',  []),
@@ -62,3 +67,38 @@ def build_filename(directory, file_type='png'):
     Caller is responsible for passing an existing directory."""
     timestamp = GLib.DateTime.new_now_local().format('%Y-%m-%d %H-%M-%S.%f')[:-3]
     return os.path.join(directory, f'Screenshot {timestamp}.{file_type}')
+
+def show_in_file_manager(uri):
+    """Reveal `uri` in the user's file manager. Files are pre-selected in
+    their parent folder; folders are opened directly. Uses the
+    org.freedesktop.FileManager1 DBus interface's ShowItems method when
+    available; falls back to Gio's default URI handler for the target
+    folder."""
+    f = Gio.File.new_for_uri(uri)
+    is_dir = False
+    try:
+        info = f.query_info(Gio.FILE_ATTRIBUTE_STANDARD_TYPE,
+                            Gio.FileQueryInfoFlags.NONE, None)
+        is_dir = info.get_file_type() == Gio.FileType.DIRECTORY
+    except GLib.Error:
+        pass
+
+    if not is_dir:
+        try:
+            bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+            bus.call_sync(
+                _FILE_MANAGER1_BUS, _FILE_MANAGER1_PATH, _FILE_MANAGER1_BUS,
+                'ShowItems',
+                GLib.Variant('(ass)', ([uri], '')),
+                None, Gio.DBusCallFlags.NONE, -1, None,
+            )
+            return
+        except GLib.Error:
+            pass
+
+    target = uri if is_dir else (f.get_parent() or f).get_uri()
+    try:
+        Gio.AppInfo.launch_default_for_uri(target, None)
+    except GLib.Error as exc:
+        print(f'cinnamon-screenshot: failed to open file manager: {exc.message}',
+              file=sys.stderr)
