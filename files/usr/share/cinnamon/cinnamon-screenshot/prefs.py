@@ -33,9 +33,6 @@ def set_include_pointer(value):
 def get_include_shadow():
     return settings.get_boolean(INCLUDE_SHADOW_KEY)
 
-def set_include_shadow(value):
-    settings.set_boolean(INCLUDE_SHADOW_KEY, value)
-
 def get_save_directory_uri():
     return settings.get_string(SAVE_DIRECTORY_KEY)
 
@@ -71,7 +68,7 @@ def open_preferences(parent):
 
 class PreferencesWindow:
     def __init__(self, parent):
-        from xapp.GSettingsWidgets import GSettingsComboBox, GSettingsFileChooser, GSettingsSwitch
+        from xapp.GSettingsWidgets import GSettingsComboBox, GSettingsFileChooser
         from xapp.SettingsWidgets import SettingsPage
 
         self.window = Gtk.Window(title=_('Preferences'))
@@ -82,12 +79,6 @@ class PreferencesWindow:
 
         page = SettingsPage()
         self.window.add(page)
-
-        section = page.add_section(_('Window screenshots'))
-        section.add_row(GSettingsSwitch(
-            _('Include shadow'),
-            SCHEMA_ID, INCLUDE_SHADOW_KEY,
-        ))
 
         section = page.add_section(_('Saving'))
 

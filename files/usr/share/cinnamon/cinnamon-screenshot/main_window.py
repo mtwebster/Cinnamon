@@ -46,7 +46,9 @@ class MainWindow:
         self.mode_monitor = self.builder.get_object('mode_monitor')
         self.mode_window = self.builder.get_object('mode_window')
         self.mode_area = self.builder.get_object('mode_area')
-        self.pointer_button = self.builder.get_object('pointer_button')
+        self.options_button = self.builder.get_object('options_button')
+        self.pointer_switch = self.builder.get_object('pointer_switch')
+        self.shadow_switch = self.builder.get_object('shadow_switch')
         self.delay_radios = {v: self.builder.get_object(f'delay_{v}') for v in DELAY_VALUES}
         self.take_button = self.builder.get_object('take_button')
 
@@ -96,7 +98,9 @@ class MainWindow:
         saved_delay = prefs.get_delay()
         if saved_delay in self.delay_radios:
             self.delay_radios[saved_delay].set_active(True)
-        self.pointer_button.set_active(args.include_pointer or prefs.get_include_pointer())
+        self.pointer_switch.set_active(args.include_pointer or prefs.get_include_pointer())
+        prefs.settings.bind(prefs.INCLUDE_SHADOW_KEY, self.shadow_switch, 'active',
+                            Gio.SettingsBindFlags.DEFAULT)
         if args.window:
             self.mode_window.set_active(True)
         elif args.area:
@@ -178,7 +182,7 @@ class MainWindow:
     # ------------------------------------------------------------------
 
     def _on_mode_toggled(self, _radio):
-        self.pointer_button.set_sensitive(not self.mode_area.get_active())
+        self.pointer_switch.set_sensitive(not self.mode_area.get_active())
 
     def _selected_delay(self):
         for v, radio in self.delay_radios.items():
@@ -198,7 +202,7 @@ class MainWindow:
             mode = 'monitor'
         else:
             mode = 'screen'
-        include_pointer = self.pointer_button.get_active() and mode != 'area'
+        include_pointer = self.pointer_switch.get_active() and mode != 'area'
 
         area_rect = None
         if mode == 'monitor':
@@ -214,7 +218,7 @@ class MainWindow:
         else:
             delay = self._selected_delay()
             prefs.set_delay(delay)
-            prefs.set_include_pointer(self.pointer_button.get_active())
+            prefs.set_include_pointer(self.pointer_switch.get_active())
 
         def done(pixbuf):
             self._set_preview(pixbuf)
