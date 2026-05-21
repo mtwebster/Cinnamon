@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.40.0
+<!-- Generated with glade 3.40.0 
 
 Copyright (C) 2026 Linux Mint
 
@@ -41,6 +41,16 @@ along with Cinnamon Screenshot.  If not, see <http://www.gnu.org/licenses/>.
             <property name="can-focus">False</property>
             <property name="message-type">warning</property>
             <property name="revealed">False</property>
+            <child internal-child="action_area">
+              <object class="GtkButtonBox">
+                <property name="can-focus">False</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
             <child internal-child="content_area">
               <object class="GtkBox">
                 <property name="visible">True</property>
@@ -50,7 +60,7 @@ along with Cinnamon Screenshot.  If not, see <http://www.gnu.org/licenses/>.
                   <object class="GtkLabel" id="service_infobar_label">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="label" translatable="yes">The screenshot service is not available.</property>
+                    <property name="label" translatable="yes">The Cinnamon screenshot service is unavailable. Only full-desktop captures can be taken.</property>
                     <property name="wrap">True</property>
                     <property name="xalign">0</property>
                   </object>
@@ -61,6 +71,11 @@ along with Cinnamon Screenshot.  If not, see <http://www.gnu.org/licenses/>.
                   </packing>
                 </child>
               </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">0</property>
+              </packing>
             </child>
           </object>
           <packing>
@@ -75,7 +90,6 @@ along with Cinnamon Screenshot.  If not, see <http://www.gnu.org/licenses/>.
             <property name="can-focus">False</property>
             <property name="margin-start">6</property>
             <property name="margin-end">6</property>
-            <property name="margin-top">6</property>
             <property name="homogeneous">True</property>
             <child>
               <object class="GtkRadioButton" id="mode_screen">

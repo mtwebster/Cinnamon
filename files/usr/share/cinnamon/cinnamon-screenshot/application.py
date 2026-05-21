@@ -20,7 +20,7 @@ class ScreenshotApplication(Gtk.Application):
             flags=Gio.ApplicationFlags.NON_UNIQUE,
         )
         self.args = args
-        self.backend = screenshot_backend.CinnamonBackend()
+        self.backend = screenshot_backend.Backend()
         self._exit_code = 0
 
     def do_activate(self):

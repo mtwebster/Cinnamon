@@ -146,8 +146,17 @@ class MainWindow:
         self._update_service_state(online)
 
     def _update_service_state(self, online):
+        # When the cinnamon screenshot service is unowned, the X11 fallback
+        # backend can still capture the full desktop but not individual
+        # windows, monitors, or arbitrary regions. Restrict the mode picker
+        # accordingly and surface a hint in the infobar.
         self.service_infobar.set_revealed(not online)
-        self.take_button.set_sensitive(online)
+        multi_monitor = Gdk.Display.get_default().get_n_monitors() > 1
+        self.mode_monitor.set_sensitive(online and multi_monitor)
+        self.mode_window.set_sensitive(online)
+        self.mode_area.set_sensitive(online)
+        if not online:
+            self.mode_screen.set_active(True)
 
     def _init_actions(self):
         self.save_button.connect('clicked', self._on_save)
