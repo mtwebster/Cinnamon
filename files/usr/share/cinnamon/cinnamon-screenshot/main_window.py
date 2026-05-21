@@ -50,6 +50,7 @@ class MainWindow:
         self.pointer_switch = self.builder.get_object('pointer_switch')
         self.shadow_switch = self.builder.get_object('shadow_switch')
         self.delay_radios = {v: self.builder.get_object(f'delay_{v}') for v in DELAY_VALUES}
+        self.delay_label = self.builder.get_object('delay_label')
         self.take_button = self.builder.get_object('take_button')
 
         self.preview_stack = self.builder.get_object('preview_stack')
@@ -110,8 +111,11 @@ class MainWindow:
 
         for radio in (self.mode_screen, self.mode_monitor, self.mode_window, self.mode_area):
             radio.connect('toggled', self._on_mode_toggled)
+        for radio in self.delay_radios.values():
+            radio.connect('toggled', self._on_delay_toggled)
         self.take_button.connect('clicked', self._on_take_clicked)
         self._on_mode_toggled(None)
+        self._on_delay_toggled(None)
 
     def _init_preview(self):
         self.preview_area.add_events(
@@ -187,6 +191,9 @@ class MainWindow:
 
     def _on_mode_toggled(self, _radio):
         self.pointer_switch.set_sensitive(not self.mode_area.get_active())
+
+    def _on_delay_toggled(self, _radio):
+        self.delay_label.set_label(f'{self._selected_delay()}s')
 
     def _selected_delay(self):
         for v, radio in self.delay_radios.items():

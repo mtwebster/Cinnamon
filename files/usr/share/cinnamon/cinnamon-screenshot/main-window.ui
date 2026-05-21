@@ -500,6 +500,18 @@ along with Cinnamon Screenshot.  If not, see <http://www.gnu.org/licenses/>.
                       </packing>
                     </child>
                     <child>
+                      <object class="GtkLabel" id="delay_label">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">2s</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                    <child>
                       <object class="GtkSeparator">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
@@ -507,7 +519,7 @@ along with Cinnamon Screenshot.  If not, see <http://www.gnu.org/licenses/>.
                       <packing>
                         <property name="expand">False</property>
                         <property name="fill">True</property>
-                        <property name="position">1</property>
+                        <property name="position">2</property>
                       </packing>
                     </child>
                     <child>
@@ -519,7 +531,7 @@ along with Cinnamon Screenshot.  If not, see <http://www.gnu.org/licenses/>.
                       <packing>
                         <property name="expand">False</property>
                         <property name="fill">True</property>
-                        <property name="position">2</property>
+                        <property name="position">3</property>
                       </packing>
                     </child>
                   </object>
