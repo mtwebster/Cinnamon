@@ -58,6 +58,8 @@ class MainWindow:
         self.copy_button = self.builder.get_object('copy_button')
         self.save_button = self.builder.get_object('save_button')
 
+        self.service_infobar = self.builder.get_object('service_infobar')
+
         self._pixbuf = None
         self._undo_stack = []
         self._suggested_path = None
@@ -67,6 +69,7 @@ class MainWindow:
         self._init_options()
         self._init_preview()
         self._init_actions()
+        self._init_service_monitor()
         self._update_action_sensitivity()
 
     def _apply_custom_icons(self):
@@ -134,6 +137,17 @@ class MainWindow:
         widget.get_window().set_cursor(
             Gdk.Cursor.new_for_display(
                 Gdk.Display.get_default(), Gdk.CursorType.CROSSHAIR))
+
+    def _init_service_monitor(self):
+        self.app.backend.connect('online-changed', self._on_service_online_changed)
+        self._update_service_state(self.app.backend.is_available())
+
+    def _on_service_online_changed(self, _backend, online):
+        self._update_service_state(online)
+
+    def _update_service_state(self, online):
+        self.service_infobar.set_revealed(not online)
+        self.take_button.set_sensitive(online)
 
     def _init_actions(self):
         self.save_button.connect('clicked', self._on_save)
