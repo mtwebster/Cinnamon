@@ -458,6 +458,54 @@ along with Cinnamon Screenshot.  If not, see <http://www.gnu.org/licenses/>.
                 <property name="position">3</property>
               </packing>
             </child>
+            <child>
+              <object class="GtkRadioButton" id="mode_video">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="receives-default">False</property>
+                <property name="tooltip-text" translatable="yes">Record a video clip</property>
+                <property name="draw-indicator">False</property>
+                <property name="group">mode_screen</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">6</property>
+                    <child>
+                      <object class="GtkImage" id="mode_video_icon">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="pixel-size">20</property>
+                        <property name="icon-name">media-record-symbolic</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Recording</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">4</property>
+              </packing>
+            </child>
             <style>
               <class name="linked"/>
             </style>

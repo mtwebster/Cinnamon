@@ -1,10 +1,13 @@
 import os
 
+import cairo
+
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gdk, Gio, GLib, Gtk
 
 import prefs
+import recorder
 import util
 
 
@@ -40,12 +43,18 @@ class MainWindow:
         self.window = self.builder.get_object('window')
         self.window.set_application(app)
 
+        screen = self.window.get_screen()
+        visual = screen.get_rgba_visual()
+        if visual is not None and screen.is_composited():
+            self.window.set_visual(visual)
+
         self._apply_custom_icons()
 
         self.mode_screen = self.builder.get_object('mode_screen')
         self.mode_monitor = self.builder.get_object('mode_monitor')
         self.mode_window = self.builder.get_object('mode_window')
         self.mode_area = self.builder.get_object('mode_area')
+        self.mode_video = self.builder.get_object('mode_video')
         self.options_button = self.builder.get_object('options_button')
         self.pointer_switch = self.builder.get_object('pointer_switch')
         self.shadow_switch = self.builder.get_object('shadow_switch')
@@ -69,11 +78,16 @@ class MainWindow:
         self._crop = _CropState()
         self._render_rect = (0, 0, 0, 0, 1.0)
 
+        self._recorder = recorder.Recorder()
+        self._recorder.connect('finished', self._on_recorder_finished)
+        self._recorder.connect('error', self._on_recorder_error)
+
         self._init_options()
         self._init_preview()
         self._init_actions()
         self._init_service_monitor()
         self._update_action_sensitivity()
+        self._update_video_ui()
 
     def _apply_custom_icons(self):
         for widget_id, filename in _CUSTOM_ICONS.items():
@@ -109,7 +123,7 @@ class MainWindow:
         elif args.monitor is not None and self.mode_monitor.get_sensitive():
             self.mode_monitor.set_active(True)
 
-        for radio in (self.mode_screen, self.mode_monitor, self.mode_window, self.mode_area):
+        for radio in (self.mode_screen, self.mode_monitor, self.mode_window, self.mode_area, self.mode_video):
             radio.connect('toggled', self._on_mode_toggled)
         for radio in self.delay_radios.values():
             radio.connect('toggled', self._on_delay_toggled)
@@ -118,6 +132,7 @@ class MainWindow:
         self._on_delay_toggled(None)
 
     def _init_preview(self):
+        self.preview_area.set_app_paintable(True)
         self.preview_area.add_events(
             Gdk.EventMask.BUTTON_PRESS_MASK
             | Gdk.EventMask.BUTTON_RELEASE_MASK
@@ -163,7 +178,7 @@ class MainWindow:
         self.mode_monitor.set_sensitive(online and multi_monitor)
         self.mode_window.set_sensitive(online)
         self.mode_area.set_sensitive(online)
-        if not online:
+        if not online and not self.mode_video.get_active():
             self.mode_screen.set_active(True)
 
     def _init_actions(self):
@@ -191,9 +206,23 @@ class MainWindow:
 
     def _on_mode_toggled(self, _radio):
         self.pointer_switch.set_sensitive(not self.mode_area.get_active())
+        self._update_video_ui()
 
     def _on_delay_toggled(self, _radio):
         self.delay_label.set_label(f'{self._selected_delay()}s')
+
+    def _update_video_ui(self):
+        # Called on mode toggle and at start/stop of a recording. Keeps the
+        # take button label in sync and forces a redraw so the preview area
+        # transitions between "transparent framing hole" and normal previews.
+        video_mode = self.mode_video.get_active()
+        recording = self._recorder.is_recording
+        if video_mode:
+            self.take_button.set_label(_('Stop Recording') if recording else _('Start Recording'))
+        else:
+            self.take_button.set_label(_('Take Screenshot'))
+        self._update_action_sensitivity()
+        self.preview_area.queue_draw()
 
     def _selected_delay(self):
         for v, radio in self.delay_radios.items():
@@ -202,9 +231,17 @@ class MainWindow:
         return 0
 
     def _on_take_clicked(self, _b):
+        if self.mode_video.get_active():
+            if self._recorder.is_recording:
+                self._stop_recording()
+            else:
+                self._start_recording()
+            return
         self._capture()
 
     def _capture(self, initial=False):
+        if self.mode_video.get_active():
+            return
         if self.mode_window.get_active():
             mode = 'window'
         elif self.mode_area.get_active():
@@ -245,6 +282,88 @@ class MainWindow:
         else:
             start_capture()
 
+    # ------------------------------------------------------------------
+    # video recording
+    # ------------------------------------------------------------------
+
+    def _preview_screen_rect(self):
+        """Translates the preview area's allocation into screen-root coords
+        so the GStreamer pipeline can be pointed at it."""
+        alloc = self.preview_area.get_allocation()
+        if alloc.width <= 0 or alloc.height <= 0:
+            return None
+        gdk_window = self.preview_area.get_window()
+        if gdk_window is None:
+            return None
+        root_x, root_y = gdk_window.get_root_coords(alloc.x, alloc.y)
+        return (root_x, root_y, alloc.width, alloc.height)
+
+    def _draw_recording_frame(self, cr, alloc):
+        if self._recorder.is_recording:
+            cr.set_source_rgba(1.0, 0.2, 0.2, 0.95)
+        else:
+            cr.set_source_rgba(0.5, 0.5, 0.5, 0.7)
+        cr.set_line_width(2.0)
+        cr.rectangle(1, 1, alloc.width - 2, alloc.height - 2)
+        cr.stroke()
+
+    def _start_recording(self):
+        rect = self._preview_screen_rect()
+        if rect is None:
+            return
+        path = util.build_filename(prefs.get_save_directory(),
+                                   file_type='webm',
+                                   name_prefix='Recording')
+        if not self._recorder.start(*((path,) + rect),
+                                    show_pointer=self.pointer_switch.get_active()):
+            return
+        # Lock the window position/size and the mode picker while recording
+        # so the captured rect can't drift out from under us.
+        self.window.set_resizable(False)
+        self._set_mode_picker_sensitive(False)
+        self.options_button.set_sensitive(False)
+        self._update_video_ui()
+
+    def _stop_recording(self):
+        self.take_button.set_sensitive(False)
+        self.take_button.set_label(_('Saving…'))
+        self._recorder.stop()
+
+    def _on_recorder_finished(self, _r, path):
+        self._after_recording()
+        if prefs.get_launch_file_manager():
+            util.show_in_file_manager(Gio.File.new_for_path(path).get_uri())
+
+    def _on_recorder_error(self, _r, message):
+        self._after_recording()
+        err = Gtk.MessageDialog(
+            transient_for=self.window,
+            modal=True,
+            message_type=Gtk.MessageType.ERROR,
+            buttons=Gtk.ButtonsType.CLOSE,
+            text=_('Recording failed'),
+            secondary_text=message,
+        )
+        err.run()
+        err.destroy()
+
+    def _after_recording(self):
+        self.window.set_resizable(True)
+        self._set_mode_picker_sensitive(True)
+        self.options_button.set_sensitive(True)
+        self.take_button.set_sensitive(True)
+        self._update_video_ui()
+
+    def _set_mode_picker_sensitive(self, sensitive):
+        # Honors the current online/multi-monitor gating when re-enabling.
+        online = self.app.backend.is_available()
+        multi_monitor = Gdk.Display.get_default().get_n_monitors() > 1
+        self.mode_screen.set_sensitive(sensitive)
+        self.mode_monitor.set_sensitive(sensitive and online and multi_monitor)
+        self.mode_window.set_sensitive(sensitive and online)
+        self.mode_area.set_sensitive(sensitive and online)
+        self.mode_video.set_sensitive(sensitive)
+
     def _set_preview(self, pixbuf):
         if pixbuf is None:
             self._update_action_sensitivity()
@@ -262,19 +381,30 @@ class MainWindow:
         self.preview_area.queue_draw()
 
     def _update_action_sensitivity(self):
+        video_mode = self.mode_video.get_active()
         has_preview = self._pixbuf is not None
         has_selection = self._current_selection_widget_coords() is not None
-        self.preview_stack.set_visible_child_name('preview' if has_preview else 'placeholder')
-        self.crop_button.set_sensitive(has_preview and has_selection)
-        self.copy_button.set_sensitive(has_preview)
-        self.save_button.set_sensitive(has_preview)
-        self.undo_button.set_sensitive(has_preview and bool(self._undo_stack))
+        if video_mode:
+            self.preview_stack.set_visible_child_name('preview')
+        else:
+            self.preview_stack.set_visible_child_name('preview' if has_preview else 'placeholder')
+        self.crop_button.set_sensitive(has_preview and has_selection and not video_mode)
+        self.copy_button.set_sensitive(has_preview and not video_mode)
+        self.save_button.set_sensitive(has_preview and not video_mode)
+        self.undo_button.set_sensitive(has_preview and bool(self._undo_stack) and not video_mode)
 
     # ------------------------------------------------------------------
     # preview rendering
     # ------------------------------------------------------------------
 
     def _on_draw(self, widget, cr):
+        if self.mode_video.get_active():
+            cr.save()
+            cr.set_operator(cairo.OPERATOR_CLEAR)
+            cr.paint()
+            cr.restore()
+            self._draw_recording_frame(cr, widget.get_allocation())
+            return False
         if self._pixbuf is None:
             return False
         alloc = widget.get_allocation()
@@ -330,7 +460,7 @@ class MainWindow:
     # ------------------------------------------------------------------
 
     def _on_press(self, _w, event):
-        if self._pixbuf is None or event.button != 1:
+        if self._pixbuf is None or event.button != 1 or self.mode_video.get_active():
             return False
         self._crop.start = (event.x, event.y)
         self._crop.current = (event.x, event.y)
@@ -390,6 +520,8 @@ class MainWindow:
     # ------------------------------------------------------------------
 
     def _on_cancel(self, _b):
+        if self._recorder.is_recording:
+            return
         self.window.destroy()
         self.app.quit()
 

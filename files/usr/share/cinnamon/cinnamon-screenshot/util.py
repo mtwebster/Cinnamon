@@ -62,11 +62,11 @@ def monitor_rect_for_window(gdk_window):
     geom = monitor.get_geometry()
     return (geom.x, geom.y, geom.width, geom.height)
 
-def build_filename(directory, file_type='png'):
-    """Build a 'Screenshot <iso-timestamp>.<ext>' path inside directory.
+def build_filename(directory, file_type='png', name_prefix='Screenshot'):
+    """Build a '<prefix> <iso-timestamp>.<ext>' path inside directory.
     Caller is responsible for passing an existing directory."""
     timestamp = GLib.DateTime.new_now_local().format('%Y-%m-%d %H-%M-%S.%f')[:-3]
-    return os.path.join(directory, f'Screenshot {timestamp}.{file_type}')
+    return os.path.join(directory, f'{name_prefix} {timestamp}.{file_type}')
 
 def show_in_file_manager(uri):
     """Reveal `uri` in the user's file manager. Files are pre-selected in
