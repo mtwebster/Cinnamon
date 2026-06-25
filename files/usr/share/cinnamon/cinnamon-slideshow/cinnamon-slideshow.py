@@ -315,19 +315,47 @@ class CinnamonSlideshowApplication(Gio.Application):
                 self.loop_counter = self.loop_counter + 1
                 self.update_id = GLib.timeout_add_seconds(60, self.start_mainloop)
 
+    def get_monitor_count(self):
+        try:
+            gi.require_version("Gdk", "3.0")
+            from gi.repository import Gdk
+            display = Gdk.Display.get_default()
+            if display is not None:
+                n = display.get_n_monitors()
+                if n > 0:
+                    return n
+        except Exception as e:
+            print("slideshow: could not determine monitor count: %s" % e)
+        return 1
+
+    def next_image_recycling(self):
+        if len(self.image_playlist) == 0:
+            self.move_used_images_to_original_playlist()
+        return self.get_next_image_from_list()
+
     def update_background(self):
         if self.update_in_progress:
             return
 
         self.update_in_progress = True
 
-        if len(self.image_playlist) == 0:
-            self.move_used_images_to_original_playlist()
-
-        next_image = self.get_next_image_from_list()
-        if next_image is not None:
-            self.background_settings.set_string("picture-uri", next_image)
-            self.current_image = next_image
+        if self.slideshow_settings.get_boolean("per-monitor"):
+            images = []
+            for i in range(self.get_monitor_count()):
+                image = self.next_image_recycling()
+                if image is None:
+                    break
+                images.append(image)
+            if images:
+                # picture-uri-list is only consulted while picture-uri is empty.
+                self.background_settings.set_strv("picture-uri-list", images)
+                self.background_settings.set_string("picture-uri", "")
+                self.current_image = ""
+        else:
+            next_image = self.next_image_recycling()
+            if next_image is not None:
+                self.background_settings.set_string("picture-uri", next_image)
+                self.current_image = next_image
 
         self.update_in_progress = False
 

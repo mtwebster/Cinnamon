@@ -299,6 +299,9 @@ class Module:
             widget = GSettingsSwitch(_("Play images in random order"), "org.cinnamon.desktop.background.slideshow", "random-order")
             settings.add_reveal_row(widget, "org.cinnamon.desktop.background.slideshow", "slideshow-enabled")
 
+            widget = GSettingsSwitch(_("Use a different wallpaper for each monitor"), "org.cinnamon.desktop.background.slideshow", "per-monitor")
+            settings.add_reveal_row(widget, "org.cinnamon.desktop.background.slideshow", "slideshow-enabled")
+
             widget = GSettingsComboBox(_("Picture aspect"), "org.cinnamon.desktop.background", "picture-options", BACKGROUND_PICTURE_OPTIONS, size_group=size_group)
             settings.add_row(widget)
 
