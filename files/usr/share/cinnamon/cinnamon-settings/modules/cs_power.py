@@ -45,6 +45,38 @@ SLEEP_DELAY_OPTIONS = [
     (0, _("Never"))
 ]
 
+LOW_TIME_OPTIONS = [
+    (300, _("5 minutes")),
+    (600, _("10 minutes")),
+    (900, _("15 minutes")),
+    (1200, _("20 minutes")),
+    (1800, _("30 minutes")),
+    (2700, _("45 minutes")),
+    (3600, _("1 hour"))
+]
+
+CRITICAL_TIME_OPTIONS = [
+    (120, _("2 minutes")),
+    (300, _("5 minutes")),
+    (420, _("7 minutes")),
+    (600, _("10 minutes")),
+    (900, _("15 minutes"))
+]
+
+ACTION_TIME_OPTIONS = [
+    (60, _("1 minute")),
+    (120, _("2 minutes")),
+    (180, _("3 minutes")),
+    (240, _("4 minutes")),
+    (300, _("5 minutes")),
+    (600, _("10 minutes"))
+]
+
+POLICY_OPTIONS = [
+    (False, _("Battery percentage")),
+    (True, _("Estimated time remaining"))
+]
+
 POWER_PROFILES = {
     "power-saver": _("Power Saver"),
     "balanced": _("Balanced"),
@@ -149,6 +181,7 @@ class Module:
         section = power_page.add_section(_("Power options"))
 
         lid_options, button_power_options, critical_options, can_suspend, can_hybrid_sleep, can_hibernate = get_available_options()
+        self.critical_options = critical_options
 
         size_group = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.HORIZONTAL)
 
@@ -370,6 +403,9 @@ class Module:
                 else:
                     have_other = True
 
+        if primary_settings is not None:
+            self.add_warning_section()
+
         if have_keyboard or have_mouse or have_other:
             notification_settings = self.battery_page.add_section(_("Low battery notifications"))
             if have_keyboard or have_other:
@@ -383,6 +419,36 @@ class Module:
         visible = self.battery_page.get_visible()
         self.battery_page.show_all()
         self.battery_page.set_visible(visible)
+
+    def add_warning_section(self):
+        section = self.battery_page.add_section(_("Low battery warnings"))
+        size_group = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.HORIZONTAL)
+
+        policy_combo = GSettingsComboBox(_("Base low-battery thresholds on"), CSD_SCHEMA, "use-time-for-policy", POLICY_OPTIONS, valtype=bool, size_group=size_group)
+        policy_combo.set_tooltip_text(_("Whether low-battery warnings are triggered by remaining battery percentage or by estimated time remaining."))
+        section.add_row(policy_combo)
+
+        section.add_reveal_row(
+            GSettingsSpinButton(_("Warn about low battery at"), CSD_SCHEMA, "percentage-low", units=_("%"), mini=3, maxi=50, size_group=size_group),
+            CSD_SCHEMA, "use-time-for-policy", values=[False])
+        section.add_reveal_row(
+            GSettingsSpinButton(_("Warn again at"), CSD_SCHEMA, "percentage-critical", units=_("%"), mini=1, maxi=25, size_group=size_group),
+            CSD_SCHEMA, "use-time-for-policy", values=[False])
+        section.add_reveal_row(
+            GSettingsSpinButton(_("Take action when battery reaches"), CSD_SCHEMA, "percentage-action", units=_("%"), mini=0, maxi=20, size_group=size_group),
+            CSD_SCHEMA, "use-time-for-policy", values=[False])
+
+        section.add_reveal_row(
+            GSettingsComboBox(_("Low battery threshold"), CSD_SCHEMA, "time-low", LOW_TIME_OPTIONS, valtype=int, size_group=size_group),
+            CSD_SCHEMA, "use-time-for-policy", values=[True])
+        section.add_reveal_row(
+            GSettingsComboBox(_("Critical battery threshold"), CSD_SCHEMA, "time-critical", CRITICAL_TIME_OPTIONS, valtype=int, size_group=size_group),
+            CSD_SCHEMA, "use-time-for-policy", values=[True])
+        section.add_reveal_row(
+            GSettingsComboBox(_("Take action when time remaining reaches"), CSD_SCHEMA, "time-action", ACTION_TIME_OPTIONS, valtype=int, size_group=size_group),
+            CSD_SCHEMA, "use-time-for-policy", values=[True])
+
+        section.add_row(GSettingsComboBox(_("When the battery is critically low"), CSD_SCHEMA, "critical-battery-action", self.critical_options, size_group=size_group))
 
     def set_device_ups_primary(self, device):
         device_id = device[UP_ID]
