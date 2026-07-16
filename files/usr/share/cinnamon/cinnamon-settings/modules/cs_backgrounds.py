@@ -16,7 +16,8 @@ from xml.etree import ElementTree
 from PIL import Image
 import gi
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gio, Gtk, Gdk, GdkPixbuf, Pango, GLib
+gi.require_version("CinnamonBg", "1.0")
+from gi.repository import Gio, Gtk, Gdk, GdkPixbuf, Pango, GLib, CinnamonBg
 
 from bin.SettingsWidgets import SidePage
 from xapp.GSettingsWidgets import *
@@ -35,11 +36,27 @@ BACKGROUND_PICTURE_OPTIONS = [
     ("centered", _("Centered")),
     ("scaled", _("Scaled")),
     ("stretched", _("Stretched")),
-    ("zoom", _("Zoom")),
-    ("spanned", _("Spanned"))
+    ("zoom", _("Zoom"))
 ]
 
 BACKGROUND_ICONS_SIZE = 100
+
+PLACEMENT_BY_NICK = {
+    "none": CinnamonBg.Placement.NONE,
+    "wallpaper": CinnamonBg.Placement.WALLPAPER,
+    "centered": CinnamonBg.Placement.CENTERED,
+    "scaled": CinnamonBg.Placement.SCALED,
+    "stretched": CinnamonBg.Placement.STRETCHED,
+    "zoom": CinnamonBg.Placement.ZOOM,
+}
+NICK_BY_PLACEMENT = {int(v): k for k, v in PLACEMENT_BY_NICK.items()}
+
+SHADING_BY_NICK = {
+    "solid": CinnamonBg.Shading.SOLID,
+    "horizontal": CinnamonBg.Shading.HORIZONTAL,
+    "vertical": CinnamonBg.Shading.VERTICAL,
+}
+NICK_BY_SHADING = {int(v): k for k, v in SHADING_BY_NICK.items()}
 
 BACKGROUND_COLLECTION_TYPE_DIRECTORY = "directory"
 BACKGROUND_COLLECTION_TYPE_XML = "xml"
@@ -98,67 +115,195 @@ def apply_orientation(im):
     return im
 
 
-class ColorsWidget(SettingsWidget):
-    def __init__(self, size_group):
-        super(ColorsWidget, self).__init__(dep_key=None)
+class AspectWidget(SettingsWidget):
+    def __init__(self, size_group, module):
+        super(AspectWidget, self).__init__(dep_key=None)
+        self.module = module
+        self._updating = False
 
-        #gsettings
-        self.settings = Gio.Settings("org.cinnamon.desktop.background")
-
-        # settings widgets
-        combo = Gtk.ComboBox()
-        key = 'color-shading-type'
-        value = self.settings.get_string(key)
+        self.combo = Gtk.ComboBox()
         renderer_text = Gtk.CellRendererText()
-        combo.pack_start(renderer_text, True)
-        combo.add_attribute(renderer_text, "text", 1)
+        self.combo.pack_start(renderer_text, True)
+        self.combo.add_attribute(renderer_text, "text", 1)
         model = Gtk.ListStore(str, str)
-        combo.set_model(model)
-        combo.set_id_column(0)
-        for option in BACKGROUND_COLOR_SHADING_TYPES:
-            iter = model.append([option[0], option[1]])
-            if value == option[0]:
-                combo.set_active_iter(iter)
-        combo.connect('changed', self.on_combo_changed, key)
+        self.combo.set_model(model)
+        self.combo.set_id_column(0)
+        for option in BACKGROUND_PICTURE_OPTIONS:
+            model.append([option[0], option[1]])
+        self.combo.connect('changed', self.on_combo_changed)
 
         self.content_widget = Gtk.Box(valign=Gtk.Align.CENTER)
-        self.content_widget.pack_start(combo, False, False, 2)
+        self.content_widget.pack_start(self.combo, False, False, 2)
+        self.add_to_size_group(size_group)
+        self.label = SettingsLabel(_("Picture aspect"))
+        self.pack_start(self.label, False, False, 0)
+        self.pack_end(self.content_widget, False, False, 0)
+        self.show_all()
+        self.set_no_show_all(True)
+        self.refresh()
 
-        # Primary color
+    def refresh(self):
+        # Aspect is per-monitor scaling; it's meaningless when one image spans
+        # the whole desktop, so hide the row in spanned mode.
+        spanned = self.module.mode() == "spanned"
+        self.set_visible(not spanned)
+        if spanned:
+            return
+        item = self.module.effective_item()
+        nick = NICK_BY_PLACEMENT.get(int(item.get_picture_options()), "zoom")
+        self._updating = True
+        for i, row in enumerate(self.combo.get_model()):
+            if row[0] == nick:
+                self.combo.set_active(i)
+                break
+        self._updating = False
+
+    def on_combo_changed(self, widget):
+        if self._updating:
+            return
+        tree_iter = widget.get_active_iter()
+        if tree_iter is not None:
+            self.module.write_placement(widget.get_model()[tree_iter][0])
+
+
+class ColorsWidget(SettingsWidget):
+    def __init__(self, size_group, module):
+        super(ColorsWidget, self).__init__(dep_key=None)
+        self.module = module
+        self._updating = False
+
+        self.combo = Gtk.ComboBox()
+        renderer_text = Gtk.CellRendererText()
+        self.combo.pack_start(renderer_text, True)
+        self.combo.add_attribute(renderer_text, "text", 1)
+        model = Gtk.ListStore(str, str)
+        self.combo.set_model(model)
+        self.combo.set_id_column(0)
+        for option in BACKGROUND_COLOR_SHADING_TYPES:
+            model.append([option[0], option[1]])
+        self.combo.connect('changed', self.on_combo_changed)
+
+        self.content_widget = Gtk.Box(valign=Gtk.Align.CENTER)
+        self.content_widget.pack_start(self.combo, False, False, 2)
+
+        self.color_buttons = {}
         for key in ['primary-color', 'secondary-color']:
             color_button = Gtk.ColorButton()
             color_button.set_use_alpha(True)
-            rgba = Gdk.RGBA()
-            rgba.parse(self.settings.get_string(key))
-            color_button.set_rgba(rgba)
             color_button.connect('color-set', self.on_color_changed, key)
             self.content_widget.pack_start(color_button, False, False, 2)
+            self.color_buttons[key] = color_button
 
         # Keep a ref on the second color button (so we can hide/show it when appropriate)
-        self.color2_button = color_button
+        self.color2_button = self.color_buttons['secondary-color']
         self.color2_button.set_no_show_all(True)
-        self.show_or_hide_color2(value)
         self.add_to_size_group(size_group)
         self.label = SettingsLabel(_("Background color"))
         self.pack_start(self.label, False, False, 0)
         self.pack_end(self.content_widget, False, False, 0)
+        self.refresh()
+
+    def refresh(self):
+        item = self.module.effective_item()
+        shading = NICK_BY_SHADING.get(int(item.get_color_shading_type()), "solid")
+        self._updating = True
+        for i, row in enumerate(self.combo.get_model()):
+            if row[0] == shading:
+                self.combo.set_active(i)
+                break
+        for key, value in (('primary-color', item.get_primary_color()),
+                           ('secondary-color', item.get_secondary_color())):
+            rgba = Gdk.RGBA()
+            rgba.parse(value)
+            self.color_buttons[key].set_rgba(rgba)
+        self._updating = False
+        self.show_or_hide_color2(shading)
 
     def on_color_changed(self, widget, key):
-        color_string = widget.get_color().to_string()
-        self.settings.set_string(key, color_string)
+        if self._updating:
+            return
+        self.module.write_color(key, widget.get_rgba().to_string())
 
-    def on_combo_changed(self, widget, key):
+    def on_combo_changed(self, widget):
+        if self._updating:
+            return
         tree_iter = widget.get_active_iter()
         if tree_iter is not None:
-            value = widget.get_model()[tree_iter][0]
-            self.settings.set_string(key, value)
-            self.show_or_hide_color2(value)
+            nick = widget.get_model()[tree_iter][0]
+            self.module.write_shading(nick)
+            self.show_or_hide_color2(nick)
 
     def show_or_hide_color2(self, value):
         if value == 'solid':
             self.color2_button.hide()
         else:
             self.color2_button.show()
+
+
+class SlideshowSwitch(SettingsWidget):
+    def __init__(self, module):
+        super(SlideshowSwitch, self).__init__(dep_key=None)
+        self.module = module
+        self._updating = False
+        self.content_widget = Gtk.Switch(valign=Gtk.Align.CENTER)
+        self.content_widget.connect("notify::active", self.on_toggled)
+        self.label = SettingsLabel(_("Slideshow"))
+        self.pack_start(self.label, False, False, 0)
+        self.pack_end(self.content_widget, False, False, 0)
+        self.refresh()
+
+    def refresh(self):
+        self._updating = True
+        self.content_widget.set_active(self.module.effective_item().get_slideshow())
+        self._updating = False
+
+    def on_toggled(self, widget, param):
+        if self._updating:
+            return
+        self.module.write_slideshow(widget.get_active())
+
+
+class FramedSection(Gtk.Frame):
+    """A framed 'view' box that groups the monitor switcher, the folder/thumbnail
+    picker and the appearance rows. Content packs from the top; a widget packed
+    with expand=True fills the leftover space, while a hidden child takes none —
+    so hiding the picker leaves the appearance rows top-aligned rather than
+    centered. Rolled locally to avoid depending on xapp SettingsSection internals."""
+
+    def __init__(self):
+        super().__init__(shadow_type=Gtk.ShadowType.IN)
+        self.get_style_context().add_class("view")
+        self.box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.add(self.box)
+
+    def pack(self, widget, expand=False, fill=False):
+        self.box.pack_start(widget, expand, fill, 0)
+
+    def _row_box(self, widget, separator):
+        box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        if separator:
+            box.pack_start(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL), False, False, 0)
+        list_box = Gtk.ListBox()
+        list_box.set_selection_mode(Gtk.SelectionMode.NONE)
+        row = Gtk.ListBoxRow(can_focus=False)
+        row.add(widget)
+        list_box.add(row)
+        box.pack_start(list_box, False, False, 0)
+        return box
+
+    def add_row(self, widget, separator=True):
+        self.box.pack_start(self._row_box(widget, separator), False, False, 0)
+
+    def add_reveal_row(self, widget, separator=True):
+        # Like add_row, but the row (and its separator) live in a revealer so the
+        # whole thing slides away when hidden. Caller drives it via set_reveal_child.
+        revealer = Gtk.Revealer()
+        revealer.set_transition_type(Gtk.RevealerTransitionType.SLIDE_DOWN)
+        revealer.set_transition_duration(150)
+        revealer.add(self._row_box(widget, separator))
+        self.box.pack_start(revealer, False, False, 0)
+        return revealer
+
 
 class Module:
     name = "backgrounds"
@@ -179,8 +324,16 @@ class Module:
             self.shown_collection = None  # Which collection is displayed in the UI
 
             self._background_schema = Gio.Settings(schema="org.cinnamon.desktop.background")
-            self._slideshow_schema = Gio.Settings(schema="org.cinnamon.desktop.background.slideshow")
-            self._slideshow_schema.connect("changed::slideshow-enabled", self.on_slideshow_enabled_changed)
+
+            self.bg_list = CinnamonBg.List.new()
+            self.bg_monitors = CinnamonBg.Monitors.new()
+            # DisplayConfig is queried asynchronously, so the monitor list can be
+            # empty at build time and arrive (or change on hotplug) later.
+            self.bg_monitors.connect("changed", self.on_monitors_changed)
+            self.current_connector = None
+            # Guards the folder/grid handlers while we point the picker at a
+            # monitor's stored source, so refreshing doesn't write back.
+            self._loading = False
             self.add_folder_dialog = Gtk.FileChooserDialog(title=_("Add Folder"),
                                                            action=Gtk.FileChooserAction.SELECT_FOLDER,
                                                            buttons=(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
@@ -200,8 +353,6 @@ class Module:
             mainbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 2)
             mainbox.expand = True
             mainbox.set_border_width(8)
-
-            self.sidePage.stack.add_titled(mainbox, "images", _("Images"))
 
             left_vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
             right_vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
@@ -280,41 +431,330 @@ class Module:
 
             self.get_initial_path()
 
-            # Settings
+            # The Images page: mode selector + monitor row, then the folder/
+            # thumbnail picker, with the per-image appearance controls beneath it.
+            images_page = Gtk.Box.new(Gtk.Orientation.VERTICAL, 12)
+            images_page.set_border_width(15)
 
-            page = SettingsPage()
+            # Section 1: background mode (no heading — the setting is self-explanatory).
+            mode_section = SettingsSection()
+            mode_combo = GSettingsComboBox(_("Background mode"), "org.cinnamon.desktop.background",
+                                           "background-mode",
+                                           [("independent", _("Different per monitor")),
+                                            ("mirror", _("Same on all monitors")),
+                                            ("spanned", _("Spanned across monitors"))])
+            mode_section.add_row(mode_combo)
+            images_page.pack_start(mode_section, False, False, 0)
 
-            settings = page.add_section(_("Background Settings"))
+            # Section 2: the monitor switcher, the folder/thumbnail picker and the
+            # appearance controls, visually grouped in one framed section.
+            picker_section = FramedSection()
+
+            self.monitor_revealer = Gtk.Revealer()
+            self.monitor_stack = Gtk.Stack()
+            self.monitor_stack.connect("notify::visible-child-name", self.on_monitor_switched)
+            self.monitor_switcher = Gtk.StackSwitcher(homogeneous=True, halign=Gtk.Align.FILL)
+            self.monitor_switcher.set_stack(self.monitor_stack)
+            switcher_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+            switcher_box.set_border_width(6)
+            switcher_box.pack_start(self.monitor_switcher, False, False, 0)
+            switcher_box.pack_start(self.monitor_stack, False, False, 0)
+            self.monitor_revealer.add(switcher_box)
+            self.build_monitor_switcher()
+            self.monitor_revealer.set_reveal_child(self.mode() == "independent")
+            self._background_schema.connect("changed::background-mode", self.on_background_mode_changed)
+
+            # The picker fills the leftover space; it's hidden for a colour-only
+            # ('no picture') monitor, where an invisible child takes no room, so
+            # the appearance rows stay top-aligned. Show its subtree once now,
+            # then gate it with no-show-all so a later show_all can't re-reveal it.
+            self.mainbox = mainbox
+            self.mainbox.show_all()
+            self.mainbox.set_no_show_all(True)
+
+            picker_section.pack(self.monitor_revealer, False, False)
+            picker_section.pack(self.mainbox, True, True)
 
             size_group = Gtk.SizeGroup.new(Gtk.SizeGroupMode.HORIZONTAL)
+            self._aspect_widget = AspectWidget(size_group, self)
+            picker_section.add_row(self._aspect_widget)
+            self._colors_widget = ColorsWidget(size_group, self)
+            picker_section.add_row(self._colors_widget)
+            self._slideshow_switch = SlideshowSwitch(self)
+            self._slideshow_revealer = picker_section.add_reveal_row(self._slideshow_switch)
+
+            images_page.pack_start(picker_section, True, True, 0)
+            self.sidePage.stack.add_titled(images_page, "images", _("Images"))
+
+            # The Settings page: slideshow controls only (these are global).
+            page = SettingsPage()
+
+            slideshow = page.add_section(_("Slideshow"))
 
             self.sidePage.stack.add_titled(page, "settings", _("Settings"))
 
-            widget = GSettingsSwitch(_("Play backgrounds as a slideshow"), "org.cinnamon.desktop.background.slideshow", "slideshow-enabled")
-            settings.add_row(widget)
-
             widget = GSettingsSpinButton(_("Delay"), "org.cinnamon.desktop.background.slideshow", "delay", _("minutes"), 1, 1440)
-            settings.add_reveal_row(widget, "org.cinnamon.desktop.background.slideshow", "slideshow-enabled")
+            slideshow.add_row(widget)
 
             widget = GSettingsSwitch(_("Play images in random order"), "org.cinnamon.desktop.background.slideshow", "random-order")
-            settings.add_reveal_row(widget, "org.cinnamon.desktop.background.slideshow", "slideshow-enabled")
+            slideshow.add_row(widget)
 
-            widget = GSettingsComboBox(_("Picture aspect"), "org.cinnamon.desktop.background", "picture-options", BACKGROUND_PICTURE_OPTIONS, size_group=size_group)
-            settings.add_row(widget)
+            # Point the picker at the current target and highlight its picture.
+            if self.mode() == "independent":
+                self.refresh_picker()
+            else:
+                self.icon_view.set_pending_selection(self.current_uri())
+            self.update_picker_visibility()
 
-            widget = ColorsWidget(size_group)
-            settings.add_row(widget)
+    def mode(self):
+        return self._background_schema.get_string("background-mode")
+
+    def on_background_mode_changed(self, settings, key):
+        # A pure behaviour switch: no data reshaping. Only the monitor switcher
+        # (independent) and the appearance widgets need to react.
+        self.monitor_revealer.set_reveal_child(self.mode() == "independent")
+        self.refresh_appearance()
+        self.refresh_picker()
+
+    def _resolved_all(self):
+        # FULL-set resolve (required invariant): exactly what csd-background
+        # renders for every monitor. Returns (connectors, indices, GListModel).
+        connectors, indices = self._monitor_layout()
+        return connectors, indices, self.bg_list.resolve(connectors, indices)
+
+    def _resolved_for(self, connector):
+        connectors, indices, resolved = self._resolved_all()
+        if connector in connectors:
+            return resolved.get_item(connectors.index(connector))
+        return resolved.get_item(0) if resolved.get_n_items() > 0 else CinnamonBg.Item.new()
+
+    def _monitor_layout(self):
+        # (connectors, indices) left-to-right by x.
+        model = self.bg_monitors.get_monitors()
+        infos = [model.get_item(i) for i in range(model.get_n_items())]
+        infos.sort(key=lambda mi: mi.get_property("x"))
+        pairs = [(mi.get_property("connector"), mi.get_property("index")) for mi in infos]
+        pairs = [(c, idx) for (c, idx) in pairs if c]
+        return [c for (c, idx) in pairs], [idx for (c, idx) in pairs]
+
+    def _index_for(self, connector):
+        # The current session's logical-monitor index for a connector (-1 if
+        # unknown), stored so the layout survives connector renames next session.
+        model = self.bg_monitors.get_monitors()
+        for i in range(model.get_n_items()):
+            mi = model.get_item(i)
+            if mi.get_property("connector") == connector:
+                return mi.get_property("index")
+        return -1
+
+    def effective_item(self):
+        # Read-only item the appearance widgets DISPLAY: the selected monitor's
+        # full-set-resolved entry in independent mode, else the representative
+        # (list[0], which mirror/spanned fan to every monitor).
+        if self.mode() == "independent" and self.current_connector:
+            return self._resolved_for(self.current_connector)
+        return self.bg_list.get_single()
+
+    def _ensure_entry(self, connector):
+        # The live list entry for connector, materialized (seeded from its
+        # resolved/displayed value, never blank) if it doesn't exist yet.
+        items = self.bg_list.get_items()
+        for i in range(items.get_n_items()):
+            item = items.get_item(i)
+            if item.get_connector() == connector:
+                item.set_property("index", self._index_for(connector))
+                return item
+        seed = self._resolved_for(connector)
+        item = CinnamonBg.Item.new()
+        item.set_property("connector", connector)
+        item.set_property("index", self._index_for(connector))
+        for prop in ("picture-uri", "picture-options", "slideshow-source",
+                     "slideshow", "color-shading-type", "primary-color", "secondary-color"):
+            item.set_property(prop, seed.get_property(prop))
+        items.append(item)
+        return item
+
+    def _single_entry(self):
+        items = self.bg_list.get_items()
+        if items.get_n_items() > 0:
+            return items.get_item(0)
+        item = CinnamonBg.Item.new()
+        items.append(item)
+        return item
+
+    def edit_targets(self):
+        # Which entries a write applies to. independent: the selected monitor's
+        # (materialized) entry. mirror/spanned: the single representative
+        # (list[0]) — the library fans it to every monitor and the renderer only
+        # ever paints it, so this is the same entry effective_item() reads.
+        if self.mode() == "independent":
+            if not self.current_connector:
+                return []
+            return [self._ensure_entry(self.current_connector)]
+        return [self._single_entry()]
+
+    def write_property(self, key, value):
+        # The single write path: set key on every edit target, persist the list
+        # only (never background-mode — the mode combo owns that), then refresh.
+        for item in self.edit_targets():
+            item.set_property(key, value)
+        self.bg_list.save_pictures()
+        self.refresh_appearance()
+
+    def write_placement(self, nick):
+        self.write_property("picture-options", PLACEMENT_BY_NICK.get(nick, CinnamonBg.Placement.ZOOM))
+        # Reveal/hide the picker and point it at this target's source. Coming
+        # from 'no picture' with no folder yet, select a default so the revealed
+        # picker isn't empty.
+        self.update_picker_visibility()
+        if nick != "none" and not self.current_source():
+            self.select_default_source()
+        else:
+            self.refresh_picker()
+
+    def write_slideshow(self, enabled):
+        self.write_property("slideshow", enabled)
+        # Enabling with no folder yet: pick a default so there's something to rotate.
+        if enabled and not self.current_source():
+            self.select_default_source()
+        self.update_grid_sensitivity()
+
+    def update_grid_sensitivity(self):
+        # While a target is slideshowing, its picture is daemon-driven, so the
+        # thumbnail grid is not directly selectable.
+        slideshow = self.effective_item().get_slideshow()
+        self.icon_view.set_sensitive(not slideshow)
+        self.icon_view.set_selection_mode(Gtk.SelectionMode.NONE if slideshow
+                                          else Gtk.SelectionMode.SINGLE)
+
+    def write_shading(self, nick):
+        self.write_property("color-shading-type", SHADING_BY_NICK.get(nick, CinnamonBg.Shading.SOLID))
+
+    def write_color(self, key, color_str):
+        self.write_property(key, color_str)
+
+    def refresh_appearance(self):
+        if hasattr(self, "_aspect_widget"):
+            self._slideshow_switch.refresh()
+            self._aspect_widget.refresh()
+            self._colors_widget.refresh()
+        self.update_picker_visibility()
+        if hasattr(self, "icon_view"):
+            self.update_grid_sensitivity()
+
+    def update_picker_visibility(self):
+        if not hasattr(self, "mainbox"):
+            return
+        # The in-memory item reflects a just-set placement immediately (both modes).
+        has_picture = int(self.effective_item().get_picture_options()) != int(CinnamonBg.Placement.NONE)
+        # A hidden GtkBox child takes no space, so the appearance rows stay
+        # top-aligned; showing it again lets it fill the leftover space as before.
+        self.mainbox.set_visible(has_picture)
+        # Slideshow only makes sense with a picture, so slide its row away for a
+        # colour-only ('no picture') target.
+        if hasattr(self, "_slideshow_revealer"):
+            self._slideshow_revealer.set_reveal_child(has_picture)
+
+    def current_uri(self):
+        # The picture-uri the current target is showing (for highlighting).
+        return self.effective_item().get_picture_uri()
+
+    def current_source(self):
+        # The folder collection to display for the current target: its
+        # slideshow-source if set, else the folder holding its picture. None
+        # when the target has neither (a colour/gradient-only monitor).
+        item = self.effective_item()
+        source = item.get_slideshow_source()
+        if source:
+            return source
+        uri = item.get_picture_uri()
+        if uri:
+            parent = Gio.File.new_for_uri(uri).get_parent()
+            if parent is not None:
+                return self.format_source(BACKGROUND_COLLECTION_TYPE_DIRECTORY, parent.get_path())
+        return None
+
+    def select_folder_source(self, source):
+        # Move the folder tree cursor to the row matching source and load its
+        # thumbnails. Runs guarded so it doesn't write the source back.
+        if not source:
+            return
+        tree_iter = self.collection_store.get_iter_first()
+        while tree_iter is not None:
+            row = self.collection_store[tree_iter]
+            if not row[STORE_IS_SEPARATOR]:
+                row_source = self.format_source(row[STORE_TYPE], row[STORE_PATH])
+                if row_source == source:
+                    tree_path = self.collection_store.get_path(tree_iter)
+                    self.folder_tree.set_cursor(tree_path)
+                    self.remove_folder_button.set_sensitive(row[STORE_TYPE] != BACKGROUND_COLLECTION_TYPE_XML)
+                    self.update_icon_view(row[STORE_PATH], row[STORE_TYPE])
+                    return
+            tree_iter = self.collection_store.iter_next(tree_iter)
+
+    def select_default_source(self):
+        # Move the folder cursor to the first usable collection and let
+        # on_folder_source_changed commit it as this monitor's source.
+        tree_iter = self.collection_store.get_iter_first()
+        while tree_iter is not None:
+            row = self.collection_store[tree_iter]
+            if not row[STORE_IS_SEPARATOR] and os.path.exists(row[STORE_PATH]):
+                self.folder_tree.set_cursor(self.collection_store.get_path(tree_iter))
+                return
+            tree_iter = self.collection_store.iter_next(tree_iter)
+
+    def refresh_picker(self):
+        # Point the folder tree + thumbnail grid at the current target's stored
+        # source and queue a highlight of its picture. With no source (a monitor
+        # that has a placement but no folder yet), clear rather than leave the
+        # previous monitor's folder showing.
+        source = self.current_source()
+        self._loading = True
+        try:
+            if source:
+                self.select_folder_source(source)
+            else:
+                self.folder_tree.get_selection().unselect_all()
+                self.icon_view.set_pictures_list([], None)
+                self.shown_collection = None
+        finally:
+            self._loading = False
+        self.icon_view.set_pending_selection(self.current_uri())
+
+    def build_monitor_switcher(self):
+        for child in self.monitor_stack.get_children():
+            self.monitor_stack.remove(child)
+        model = self.bg_monitors.get_monitors()
+        infos = [model.get_item(i) for i in range(model.get_n_items())]
+        infos.sort(key=lambda mi: mi.get_property("x"))
+        connectors = []
+        for mi in infos:
+            connector = mi.get_property("connector")
+            connectors.append(connector)
+            name = mi.get_property("display-name") or mi.get_property("model") or connector
+            title = "%s  %s" % (name, connector)
+            self.monitor_stack.add_titled(Gtk.Box(), connector, title)
+        self.monitor_stack.show_all()
+        self.monitor_switcher.show_all()
+        if connectors:
+            if self.current_connector not in connectors:
+                self.current_connector = connectors[0]
+            self.monitor_stack.set_visible_child_name(self.current_connector)
+
+    def on_monitors_changed(self, monitors):
+        self.build_monitor_switcher()
+        self.refresh_appearance()
+        self.refresh_picker()
+
+    def on_monitor_switched(self, stack, param):
+        name = stack.get_visible_child_name()
+        if name:
+            self.current_connector = name
+            self.refresh_appearance()
+            self.refresh_picker()
 
     def is_row_separator(self, model, iter, data):
         return model.get_value(iter, 0)
-
-    def on_slideshow_enabled_changed(self, settings, key):
-        if self._slideshow_schema.get_boolean("slideshow-enabled"):
-            self.icon_view.set_sensitive(False)
-            self.icon_view.set_selection_mode(Gtk.SelectionMode.NONE)
-        else:
-            self.icon_view.set_sensitive(True)
-            self.icon_view.set_selection_mode(Gtk.SelectionMode.SINGLE)
 
     def get_system_backgrounds(self):
         picture_list = []
@@ -369,43 +809,47 @@ class Module:
         return f"{type}://{path}"
 
     def get_initial_path(self):
+        # Show the current target's folder if we can match it, else default to
+        # the first collection (display only — guarded so it writes nothing).
         try:
-            image_source = self._slideshow_schema.get_string("image-source")
-            tree_iter = self.collection_store.get_iter_first()
-            collection = self.collection_store[tree_iter]
-            collection_type = collection[STORE_TYPE]
-            collection_path = collection[STORE_PATH]
-            collection_source = self.format_source(collection_type, collection_path)
+            source = self.current_source()
+            self._loading = True
             self.remove_folder_button.set_sensitive(True)
-
-            if image_source != "" and "://" in image_source:
-                while tree_iter is not None:
-                    if collection_source == image_source:
-                        tree_path = self.collection_store.get_path(tree_iter)
-                        self.folder_tree.set_cursor(tree_path)
-                        if collection_type == BACKGROUND_COLLECTION_TYPE_XML:
-                            self.remove_folder_button.set_sensitive(False)
-                        self.update_icon_view(collection_path, collection_type)
-                        return
-                    tree_iter = self.collection_store.iter_next(tree_iter)
-                    collection = self.collection_store[tree_iter]
+            first_iter = self.collection_store.get_iter_first()
+            tree_iter = first_iter
+            matched = False
+            while tree_iter is not None:
+                collection = self.collection_store[tree_iter]
+                if not collection[STORE_IS_SEPARATOR]:
                     collection_type = collection[STORE_TYPE]
                     collection_path = collection[STORE_PATH]
                     collection_source = self.format_source(collection_type, collection_path)
-            else:
-                self._slideshow_schema.set_string("image-source", collection_source)
-                tree_path = self.collection_store.get_path(tree_iter)
-                self.folder_tree.get_selection().select_path(tree_path)
-                if collection_type == BACKGROUND_COLLECTION_TYPE_XML:
-                    self.remove_folder_button.set_sensitive(False)
+                    if source and collection_source == source:
+                        self.folder_tree.set_cursor(self.collection_store.get_path(tree_iter))
+                        self.remove_folder_button.set_sensitive(collection_type != BACKGROUND_COLLECTION_TYPE_XML)
+                        self.update_icon_view(collection_path, collection_type)
+                        matched = True
+                        break
+                tree_iter = self.collection_store.iter_next(tree_iter)
+
+            if not matched and first_iter is not None:
+                collection = self.collection_store[first_iter]
+                collection_type = collection[STORE_TYPE]
+                collection_path = collection[STORE_PATH]
+                self.folder_tree.get_selection().select_path(self.collection_store.get_path(first_iter))
+                self.remove_folder_button.set_sensitive(collection_type != BACKGROUND_COLLECTION_TYPE_XML)
                 self.update_icon_view(collection_path, collection_type)
         except Exception as detail:
             print(detail)
+        finally:
+            self._loading = False
 
     def on_row_activated(self, tree, path, column):
         self.folder_tree.set_selection(path)
 
     def on_folder_source_changed(self, tree):
+        if self._loading:
+            return
         self.remove_folder_button.set_sensitive(True)
         if tree.get_selection() is not None:
             folder_paths, iter = tree.get_selection().get_selected()
@@ -414,8 +858,8 @@ class Module:
                 collection_type = folder_paths[iter][STORE_TYPE]
                 collection_source = self.format_source(collection_type, collection_path)
                 if os.path.exists(collection_path):
-                    if collection_source != self._slideshow_schema.get_string("image-source"):
-                        self._slideshow_schema.set_string("image-source", collection_source)
+                    if self.effective_item().get_slideshow_source() != collection_source:
+                        self.write_property("slideshow-source", collection_source)
                     if collection_type == BACKGROUND_COLLECTION_TYPE_XML:
                         self.remove_folder_button.set_sensitive(False)
                     self.update_icon_view(collection_path, collection_type)
@@ -429,14 +873,24 @@ class Module:
         return None
 
     def on_wallpaper_selection_changed(self, iconview):
+        if self._loading:
+            return
         wallpaper = self.get_selected_wallpaper()
-        if wallpaper:
-            for key in wallpaper:
-                if key == "filename":
-                    gfile = Gio.File.new_for_path(wallpaper[key])
-                    self._background_schema.set_string("picture-uri", gfile.get_uri())
-                elif key == "options":
-                    self._background_schema.set_string("picture-options", wallpaper[key])
+        if not wallpaper:
+            return
+        uri = Gio.File.new_for_path(wallpaper["filename"]).get_uri() if "filename" in wallpaper else None
+        if uri is None:
+            return
+
+        # The async highlight re-selects the current picture; don't persist that.
+        if uri == self.current_uri():
+            return
+
+        self.write_property("picture-uri", uri)
+        # Picking an image implies a picture; only supply a placement when there
+        # was none — never adopt the collection's <options> over the user's choice.
+        if int(self.effective_item().get_picture_options()) == int(CinnamonBg.Placement.NONE):
+            self.write_property("picture-options", CinnamonBg.Placement.ZOOM)
 
     def add_new_folder(self):
         res = self.add_folder_dialog.run()
@@ -504,10 +958,7 @@ class Module:
                     picture_list += self.parse_xml_backgrounds_list(path)
 
             self.icon_view.set_pictures_list(picture_list, path)
-            if self._slideshow_schema.get_boolean("slideshow-enabled"):
-                self.icon_view.set_sensitive(False)
-            else:
-                self.icon_view.set_sensitive(True)
+            self.update_grid_sensitivity()
 
     def splitLocaleCode(self, localeCode):
         try:
@@ -699,6 +1150,31 @@ class ThreadedIconView(Gtk.IconView):
         self._loaded_data = []
         self._loaded_data_lock = thread.allocate_lock()
 
+        self._pending_uri = None
+
+    def set_pending_selection(self, uri):
+        # Remember the picture to highlight, and try now in case its folder is
+        # already loaded; otherwise _check_loading_progress retries as thumbs
+        # arrive.
+        self._pending_uri = uri or None
+        self._try_pending_selection()
+
+    def _try_pending_selection(self):
+        if not self._pending_uri:
+            return
+        model = self.get_model()
+        iter = model.get_iter_first()
+        while iter is not None:
+            data = model.get_value(iter, 0)
+            filename = data.get("filename") if isinstance(data, dict) else None
+            if filename and Gio.File.new_for_path(filename).get_uri() == self._pending_uri:
+                path = model.get_path(iter)
+                self.select_path(path)
+                self.scroll_to_path(path, False, 0, 0)
+                self._pending_uri = None
+                return
+            iter = model.iter_next(iter)
+
     def visible_func(self, model, iter, data=None):
         item_path = model.get_value(iter, 3)
         return item_path == self.current_path
@@ -754,6 +1230,9 @@ class ThreadedIconView(Gtk.IconView):
 
         for i in to_load:
             self._model.append(i)
+
+        if to_load:
+            self._try_pending_selection()
 
         return res
 

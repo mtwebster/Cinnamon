@@ -9,6 +9,15 @@ calendar_generated = gnome.gdbus_codegen('cinnamon-calendar',
   namespace: 'Cinnamon'
 )
 
+# Proxy for csd-background's readiness interface, used to gate the startup
+# animation on the wallpaper actually being on screen.
+background_generated = gnome.gdbus_codegen('cinnamon-background',
+  sources: 'org.cinnamon.SettingsDaemon.Background.xml',
+  interface_prefix: 'org.cinnamon.SettingsDaemon.',
+  namespace: 'Cinnamon',
+  annotations: ['org.cinnamon.SettingsDaemon.Background', 'org.gtk.GDBus.C.Name', 'BackgroundDaemon'],
+)
+
 cinnamon_headers = [
     'cinnamon-action-mode.h',
     'cinnamon-app.h',
@@ -71,7 +80,8 @@ cinnamon_sources = [
     'cinnamon-window-tracker.c',
     'cinnamon-wm.c',
     cinnamon_headers,
-    calendar_generated
+    calendar_generated,
+    background_generated
 ]
 
 cinnamon_enum_types = gnome.mkenums_simple(
