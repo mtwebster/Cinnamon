@@ -270,7 +270,7 @@ class CinnamonSlideshowApplication(Gio.Application):
             is_slideshow = src.get_slideshow()
             current = src.get_picture_uri() or None
 
-            item = self._item_for_connector(conn)
+            item = self.bg_list.get_item_for_connector(conn)
             if item is None:
                 item = CinnamonBg.Item.new()
                 item.set_property("connector", conn)
@@ -283,7 +283,7 @@ class CinnamonSlideshowApplication(Gio.Application):
                 item.set_property("secondary-color", src.get_secondary_color())
                 if current:
                     item.set_property("picture-uri", current)
-                self.bg_list.get_items().append(item)
+                self.bg_list.add_item(item)
             else:
                 item.set_property("index", indices[i])
 
@@ -305,17 +305,9 @@ class CinnamonSlideshowApplication(Gio.Application):
         if mid == "__all__":
             self.bg_list.get_single().set_property("picture-uri", uri)
             return
-        item = self._item_for_connector(mid)
+        item = self.bg_list.get_item_for_connector(mid)
         if item is not None:
             item.set_property("picture-uri", uri)
-
-    def _item_for_connector(self, connector):
-        items = self.bg_list.get_items()
-        for i in range(items.get_n_items()):
-            item = items.get_item(i)
-            if item.get_property("connector") == connector:
-                return item
-        return None
 
     def load_settings(self):
         self.random_order = self.slideshow_settings.get_boolean("random-order")
@@ -337,7 +329,7 @@ class CinnamonSlideshowApplication(Gio.Application):
         # (connectors, indices) left-to-right by x; index is the logical-monitor
         # index used as a cross-session match fallback.
         try:
-            model = self.ensure_monitors().get_monitors()
+            model = self.ensure_monitors()
             infos = [model.get_item(i) for i in range(model.get_n_items())]
             infos.sort(key=lambda mi: mi.get_property("x"))
             pairs = [(mi.get_property("connector"), mi.get_property("index")) for mi in infos]
@@ -366,8 +358,8 @@ class CinnamonSlideshowApplication(Gio.Application):
         return []
 
     def _config_signature(self):
-        items = self.bg_list.get_items()
-        return tuple((items.get_item(i).get_property("connector"),
+        items = self.bg_list
+        return tuple((items.get_item(i).get_connector(),
                       items.get_item(i).get_slideshow_source(),
                       items.get_item(i).get_slideshow())
                      for i in range(items.get_n_items()))

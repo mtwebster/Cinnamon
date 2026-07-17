@@ -530,7 +530,7 @@ class Module:
 
     def _monitor_layout(self):
         # (connectors, indices) left-to-right by x.
-        model = self.bg_monitors.get_monitors()
+        model = self.bg_monitors
         infos = [model.get_item(i) for i in range(model.get_n_items())]
         infos.sort(key=lambda mi: mi.get_property("x"))
         pairs = [(mi.get_property("connector"), mi.get_property("index")) for mi in infos]
@@ -540,7 +540,7 @@ class Module:
     def _index_for(self, connector):
         # The current session's logical-monitor index for a connector (-1 if
         # unknown), stored so the layout survives connector renames next session.
-        model = self.bg_monitors.get_monitors()
+        model = self.bg_monitors
         for i in range(model.get_n_items()):
             mi = model.get_item(i)
             if mi.get_property("connector") == connector:
@@ -558,12 +558,10 @@ class Module:
     def _ensure_entry(self, connector):
         # The live list entry for connector, materialized (seeded from its
         # resolved/displayed value, never blank) if it doesn't exist yet.
-        items = self.bg_list.get_items()
-        for i in range(items.get_n_items()):
-            item = items.get_item(i)
-            if item.get_connector() == connector:
-                item.set_property("index", self._index_for(connector))
-                return item
+        item = self.bg_list.get_item_for_connector(connector)
+        if item is not None:
+            item.set_property("index", self._index_for(connector))
+            return item
         seed = self._resolved_for(connector)
         item = CinnamonBg.Item.new()
         item.set_property("connector", connector)
@@ -571,15 +569,14 @@ class Module:
         for prop in ("picture-uri", "picture-options", "slideshow-source",
                      "slideshow", "color-shading-type", "primary-color", "secondary-color"):
             item.set_property(prop, seed.get_property(prop))
-        items.append(item)
+        self.bg_list.add_item(item)
         return item
 
     def _single_entry(self):
-        items = self.bg_list.get_items()
-        if items.get_n_items() > 0:
-            return items.get_item(0)
+        if self.bg_list.get_n_items() > 0:
+            return self.bg_list.get_item(0)
         item = CinnamonBg.Item.new()
-        items.append(item)
+        self.bg_list.add_item(item)
         return item
 
     def edit_targets(self):
@@ -724,7 +721,7 @@ class Module:
     def build_monitor_switcher(self):
         for child in self.monitor_stack.get_children():
             self.monitor_stack.remove(child)
-        model = self.bg_monitors.get_monitors()
+        model = self.bg_monitors
         infos = [model.get_item(i) for i in range(model.get_n_items())]
         infos.sort(key=lambda mi: mi.get_property("x"))
         connectors = []

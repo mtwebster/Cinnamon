@@ -1,13 +1,39 @@
 // -*- mode: js2; indent-tabs-mode: nil; js2-basic-offset: 4 -*-
 
+const Cinnamon = imports.gi.Cinnamon;
 const CinnamonBg = imports.gi.CinnamonBg;
 const Gio = imports.gi.Gio;
+const GLib = imports.gi.GLib;
 const Meta = imports.gi.Meta;
 
 const LOGGING = false;
 
+// csd-background draws the wallpaper (per-monitor, via layer-shell on Wayland).
+// It is D-Bus activatable; we start it, watch its readiness so the startup
+// reveal can wait for the wallpaper, and restart it if it dies.
+const DAEMON_NAME = 'org.cinnamon.SettingsDaemon.Background';
+const DAEMON_PATH = '/org/cinnamon/SettingsDaemon/Background';
+const DAEMON_STATE_READY = 1;
+const READY_BACKSTOP_MS = 4000;
+
+// Stop restarting a crash-looping daemon: at most this many exits per window.
+const RESTART_LIMIT = 3;
+const RESTART_WINDOW_US = 60 * GLib.USEC_PER_SEC;
+
 var BackgroundManager = class {
     constructor() {
+        this._daemonProxy = null;
+        this._daemonReady = false;
+        this._onDaemonReady = null;
+        this._daemonHadOwner = false;
+        this._daemonExitTimes = [];
+
+        this._startDaemon();
+        Gio.bus_watch_name(Gio.BusType.SESSION, DAEMON_NAME,
+                           Gio.BusNameWatcherFlags.NONE,
+                           () => { this._daemonHadOwner = true; },
+                           this._onDaemonVanished.bind(this));
+
         this._cinnamonSettings = new Gio.Settings({ schema_id: "org.cinnamon.desktop.background" });
         this._bgList = CinnamonBg.List.new();
         this._monitors = CinnamonBg.Monitors.new();
@@ -47,6 +73,95 @@ var BackgroundManager = class {
         }
     }
 
+    _startDaemon() {
+        // Proxy construction alone won't auto-start the service, so activate it
+        // explicitly. A no-op if it is already running (e.g. on a Cinnamon restart).
+        Gio.DBus.session.call('org.freedesktop.DBus', '/org/freedesktop/DBus',
+            'org.freedesktop.DBus', 'StartServiceByName',
+            new GLib.Variant('(su)', [DAEMON_NAME, 0]),
+            null, Gio.DBusCallFlags.NONE, -1, null,
+            (conn, res) => {
+                try { conn.call_finish(res); }
+                catch (e) { global.logWarning('BackgroundManager: could not start csd-background: ' + e.message); }
+            });
+
+        // One proxy is enough for the daemon's whole lifetime: it tracks
+        // name-owner changes, so it follows a restarted daemon by itself.
+        if (this._daemonProxy)
+            return;
+
+        // Track readiness independently of when the reveal asks for it -- the proxy
+        // can finish constructing before or after the startup animation is ready.
+        Cinnamon.BackgroundDaemonProxy.new_for_bus(Gio.BusType.SESSION, Gio.DBusProxyFlags.NONE,
+            DAEMON_NAME, DAEMON_PATH, null,
+            (src, res) => {
+                try { this._daemonProxy = Cinnamon.BackgroundDaemonProxy.new_for_bus_finish(res); }
+                catch (e) { global.logWarning('BackgroundManager: background daemon proxy failed: ' + e.message); return; }
+
+                const checkState = () => {
+                    if (this._daemonProxy.state === DAEMON_STATE_READY)
+                        this._markDaemonReady();
+                };
+                this._daemonProxy.connect('notify::state', checkState);
+                checkState();   // it may already be READY by the time we connect
+            });
+    }
+
+    _markDaemonReady() {
+        if (this._daemonReady)
+            return;
+        this._daemonReady = true;
+        if (this._onDaemonReady) {
+            const cb = this._onDaemonReady;
+            this._onDaemonReady = null;
+            cb();
+        }
+    }
+
+    // Run `callback` once the wallpaper is on screen, or after a short backstop so a
+    // missing or slow background daemon can never hold the desktop hostage.
+    whenReady(callback) {
+        if (this._daemonReady) {
+            callback();
+            return;
+        }
+
+        let done = false;
+        const fire = () => {
+            if (done)
+                return;
+            done = true;
+            callback();
+        };
+
+        this._onDaemonReady = fire;
+
+        GLib.timeout_add(GLib.PRIORITY_DEFAULT, READY_BACKSTOP_MS, () => {
+            if (!done)
+                global.logWarning('BackgroundManager: background not ready in time; revealing anyway');
+            fire();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _onDaemonVanished() {
+        // The watcher reports "vanished" once up front when the name simply has
+        // no owner yet -- that's the daemon not yet activated, not a crash.
+        if (!this._daemonHadOwner)
+            return;
+
+        const now = GLib.get_monotonic_time();
+        this._daemonExitTimes = this._daemonExitTimes.filter(t => now - t < RESTART_WINDOW_US);
+        if (this._daemonExitTimes.length >= RESTART_LIMIT) {
+            global.logError('BackgroundManager: csd-background keeps exiting; giving up on restarting it');
+            return;
+        }
+        this._daemonExitTimes.push(now);
+
+        global.logWarning('BackgroundManager: csd-background exited; restarting it');
+        this._startDaemon();
+    }
+
     _applyExternalUri(uri, source) {
         if (uri == "")
             return;
@@ -75,7 +190,7 @@ var BackgroundManager = class {
     }
 
     _layout() {
-        let model = this._monitors.get_monitors();
+        let model = this._monitors;
         let infos = [];
         for (let i = 0; i < model.get_n_items(); i++)
             infos.push(model.get_item(i));

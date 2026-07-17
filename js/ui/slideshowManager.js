@@ -43,8 +43,7 @@ SlideshowManager.prototype = {
     // because the daemon is D-Bus-activated and won't launch for an unmigrated
     // (empty-list) config, while this manager runs at every Cinnamon startup.
     _migrateLegacy: function() {
-        let items = this._bgList.get_items();
-        if (items.get_n_items() > 0)
+        if (this._bgList.get_n_items() > 0)
             return;
         let sl = new Gio.Settings({ schema_id: "org.cinnamon.desktop.background.slideshow" });
         let enabled = sl.get_boolean("slideshow-enabled");
@@ -55,12 +54,12 @@ SlideshowManager.prototype = {
         if (source != "")
             item.set_property("slideshow-source", source);
         item.set_property("slideshow", enabled);
-        items.append(item);
+        this._bgList.add_item(item);
         this._bgList.save_pictures();
     },
 
     _shouldBeActive: function() {
-        let model = this._monitors.get_monitors();
+        let model = this._monitors;
         let connectors = [], indices = [];
         for (let i = 0; i < model.get_n_items(); i++) {
             let mi = model.get_item(i);

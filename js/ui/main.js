@@ -151,7 +151,6 @@ var panel = null;
 var soundManager = null;
 var backgroundManager = null;
 var slideshowManager = null;
-var backgroundDaemonProxy = null;
 var placesManager = null;
 var panelManager = null;
 var osdWindowManager = null;
@@ -300,82 +299,6 @@ function _reparentActor(actor, newParent) {
         newParent.add_actor(actor);
 }
 
-// csd-background draws the wallpaper (per-monitor, via layer-shell on Wayland).
-// It is D-Bus activatable, so start it as early as possible and watch its
-// readiness, letting us hold the startup animation until the wallpaper is up.
-const BACKGROUND_DAEMON_NAME = 'org.cinnamon.SettingsDaemon.Background';
-const BACKGROUND_DAEMON_PATH = '/org/cinnamon/SettingsDaemon/Background';
-const BACKGROUND_STATE_READY = 1;
-
-let backgroundReady = false;
-let _onBackgroundReady = null;
-
-function _markBackgroundReady() {
-    if (backgroundReady)
-        return;
-    backgroundReady = true;
-    if (_onBackgroundReady) {
-        const cb = _onBackgroundReady;
-        _onBackgroundReady = null;
-        cb();
-    }
-}
-
-function _startBackgroundDaemon() {
-    // Proxy construction alone won't auto-start the service, so activate it
-    // explicitly. A no-op if it is already running (e.g. on a Cinnamon restart).
-    Gio.DBus.session.call('org.freedesktop.DBus', '/org/freedesktop/DBus',
-        'org.freedesktop.DBus', 'StartServiceByName',
-        new GLib.Variant('(su)', [BACKGROUND_DAEMON_NAME, 0]),
-        null, Gio.DBusCallFlags.NONE, -1, null,
-        (conn, res) => {
-            try { conn.call_finish(res); }
-            catch (e) { global.logWarning('Main: could not start csd-background: ' + e.message); }
-        });
-
-    // Track readiness independently of when the reveal asks for it -- the proxy
-    // can finish constructing before or after the startup animation is ready.
-    Cinnamon.BackgroundDaemonProxy.new_for_bus(Gio.BusType.SESSION, Gio.DBusProxyFlags.NONE,
-        BACKGROUND_DAEMON_NAME, BACKGROUND_DAEMON_PATH, null,
-        (src, res) => {
-            try { backgroundDaemonProxy = Cinnamon.BackgroundDaemonProxy.new_for_bus_finish(res); }
-            catch (e) { global.logWarning('Main: background daemon proxy failed: ' + e.message); return; }
-
-            const checkState = () => {
-                if (backgroundDaemonProxy.state === BACKGROUND_STATE_READY)
-                    _markBackgroundReady();
-            };
-            backgroundDaemonProxy.connect('notify::state', checkState);
-            checkState();   // it may already be READY by the time we connect
-        });
-}
-
-// Run `callback` once the wallpaper is on screen, or after a short backstop so a
-// missing or slow background daemon can never hold the desktop hostage.
-function _whenBackgroundReady(callback) {
-    if (backgroundReady) {
-        callback();
-        return;
-    }
-
-    let done = false;
-    const fire = () => {
-        if (done)
-            return;
-        done = true;
-        callback();
-    };
-
-    _onBackgroundReady = fire;
-
-    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 4000, () => {
-        if (!done)
-            global.logWarning('Main: background not ready in time; revealing anyway');
-        fire();
-        return GLib.SOURCE_REMOVE;
-    });
-}
-
 /**
  * start:
  *
@@ -436,9 +359,10 @@ function start() {
 
     setRunState(RunState.STARTUP);
 
-    // Kick off the wallpaper daemon as early as possible so it can preload and
-    // paint before we reveal the desktop.
-    _startBackgroundDaemon();
+    // Constructed this early so it can kick off the wallpaper daemon, which
+    // preloads and paints before we reveal the desktop.
+    backgroundManager = new BackgroundManager.BackgroundManager();
+    backgroundManager.hideBackground();
 
     screenshotService = new Screenshot.ScreenshotService();
 
@@ -470,9 +394,6 @@ function start() {
     themeManager = new ThemeManager.ThemeManager();
 
     settingsManager = new Settings.SettingsManager();
-
-    backgroundManager = new BackgroundManager.BackgroundManager();
-    backgroundManager.hideBackground();
 
     slideshowManager = new SlideshowManager.SlideshowManager();
 
@@ -688,7 +609,7 @@ function start() {
         // This helps to prevent us from running the animation
         // when the system is bogged down
         if (first_login) {
-            _whenBackgroundReady(() => {
+            backgroundManager.whenReady(() => {
                 // Play the login sound as we reveal, not at the start of the wait.
                 if (do_login_sound)
                     soundManager.play('login');
