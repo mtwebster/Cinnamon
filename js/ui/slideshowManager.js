@@ -89,18 +89,25 @@ SlideshowManager.prototype = {
             this.proxy = new proxy(Gio.DBus.session, 'org.Cinnamon.Slideshow', '/org/Cinnamon/Slideshow');
     },
 
+    _logRemoteError: function(method) {
+        return (result, error) => {
+            if (error)
+                global.logWarning("SlideshowManager: " + method + " failed: " + error.message);
+        };
+    },
+
     begin: function() {
         this.ensureProxy();
-        this.proxy.beginRemote();
+        this.proxy.beginRemote(this._logRemoteError("begin"));
     },
 
     end: function() {
         this.ensureProxy();
-        this.proxy.endRemote();
+        this.proxy.endRemote(this._logRemoteError("end"));
     },
 
     getNextImage: function() {
         this.ensureProxy();
-        this.proxy.getNextImageRemote();
+        this.proxy.getNextImageRemote(this._logRemoteError("getNextImage"));
     }
 };

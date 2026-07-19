@@ -1,6 +1,7 @@
 import os
 import random
 import mimetypes
+import sys
 
 
 def parse_source(source):
@@ -12,16 +13,21 @@ def parse_source(source):
 
 
 def list_directory_images(path):
-    """Sorted absolute paths of image files (by mimetype) directly in `path`."""
+    # Sorted absolute paths of image files (by mimetype) directly in `path`.
     out = []
-    if os.path.isdir(path):
-        for name in sorted(os.listdir(path)):
-            full = os.path.join(path, name)
-            if not os.path.isfile(full):
-                continue
-            mime = mimetypes.guess_type(full)[0]
-            if mime and mime.startswith("image/"):
-                out.append(full)
+    try:
+        if os.path.isdir(path):
+            for name in sorted(os.listdir(path)):
+                full = os.path.join(path, name)
+                if not os.path.isfile(full):
+                    continue
+                mime = mimetypes.guess_type(full)[0]
+                if mime and mime.startswith("image/"):
+                    out.append(full)
+    except OSError as e:
+        print("slideshow: cannot read image folder '%s': %s" % (path, e),
+              file=sys.stderr, flush=True)
+        return []
     return out
 
 

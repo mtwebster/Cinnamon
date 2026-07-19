@@ -182,8 +182,8 @@ class CinnamonSlideshowApplication(Gio.Application):
         if not self.should_be_active():
             log("begin: nothing to slideshow; staying idle")
             return
-        self.active = True
         self.setup_slideshow()
+        self.active = True
 
     def stop(self):
         # Stop operating (timer + rotation) but keep the process alive.
@@ -294,6 +294,9 @@ class CinnamonSlideshowApplication(Gio.Application):
             source = src.get_slideshow_source()
             images = self.gather_source_images(source)
             log("  %s: source=%s (%d images) current=%s" % (conn, source, len(images), current))
+            if not images:
+                print("slideshow: %s: no usable images in '%s'; not rotating" % (conn, source),
+                      flush=True)
             descriptors.append({"id": conn, "folder": source,
                                 "images": images, "current": current})
         return descriptors
@@ -502,7 +505,7 @@ class CinnamonSlideshowApplication(Gio.Application):
                             res.append(wallpaperData)
             return res
         except Exception as detail:
-            print(detail)
+            print("slideshow: failed to parse background list '%s': %s" % (filename, detail), flush=True)
             return []
 
 if __name__ == "__main__":
