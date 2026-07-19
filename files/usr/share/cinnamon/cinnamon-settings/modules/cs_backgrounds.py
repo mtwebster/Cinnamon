@@ -510,11 +510,29 @@ class Module:
         return self._background_schema.get_string("background-mode")
 
     def on_background_mode_changed(self, settings, key):
-        # A pure behaviour switch: no data reshaping. Only the monitor switcher
-        # (independent) and the appearance widgets need to react.
+        self._prune_stale_entries()
         self.monitor_revealer.set_reveal_child(self.mode() == "independent")
         self.refresh_appearance()
         self.refresh_picker()
+
+    def _prune_stale_entries(self):
+        # A deliberate mode switch is the natural point to discard entries for
+        # monitors that no longer exist: a connector rename otherwise leaves one
+        # stale entry behind per rename, forever, and a stale duplicate index
+        # can win the resolver's index fallback over the current entry. Entries
+        # with an empty connector (the mirror/spanned representative) are always
+        # kept, and we never sweep before the monitor list has loaded.
+        connected, _indices = self._monitor_layout()
+        if not connected:
+            return
+        items = [self.bg_list.get_item(i) for i in range(self.bg_list.get_n_items())]
+        stale = [item for item in items
+                 if item.get_connector() and item.get_connector() not in connected]
+        if not stale:
+            return
+        for item in stale:
+            self.bg_list.remove_item(item)
+        self.bg_list.save_pictures()
 
     def _resolved_all(self):
         # FULL-set resolve (required invariant): exactly what csd-background
