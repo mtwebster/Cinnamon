@@ -6,6 +6,7 @@ const { Clutter, Gio, GObject, Pango, St } = imports.gi;
 const CheckBox = imports.ui.checkBox;
 const Dialog = imports.ui.dialog;
 const PopupDialog = imports.ui.popupDialog;
+const PlacesManager = imports.ui.placesManager;
 
 const hotplugSnifferIface =
 ' \
@@ -340,7 +341,13 @@ class AutorunDialog extends PopupDialog.PopupDialog {
             this.contentLayout.add_child(this._alwaysCheckBox);
         }
 
-        let canEject = mount.can_eject();
+        let drive = mount.get_drive();
+        let volume = mount.get_volume();
+        // "Eject" covers both a plain eject and a safely-remove (drive stop);
+        // only fall back to "Unmount" when nothing more than an unmount applies.
+        let canEject = (drive && (drive.can_stop() || drive.can_eject())) ||
+                       (volume && volume.can_eject()) ||
+                       mount.can_eject();
         let ejectLabel = canEject ? _("Eject") : _("Unmount");
 
         this.setButtons([
@@ -442,32 +449,7 @@ class AutorunDialog extends PopupDialog.PopupDialog {
     }
 
     _onEject() {
-        if (this.mount.can_eject()) {
-            this.mount.eject_with_operation(
-                Gio.MountUnmountFlags.NONE, null, null,
-                (mount, res) => {
-                    try {
-                        mount.eject_with_operation_finish(res);
-                    } catch (e) {
-                        if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.FAILED_HANDLED))
-                            log(`Failed to eject: ${e}`);
-                    }
-                }
-            );
-        } else {
-            this.mount.unmount_with_operation(
-                Gio.MountUnmountFlags.NONE, null, null,
-                (mount, res) => {
-                    try {
-                        mount.unmount_with_operation_finish(res);
-                    } catch (e) {
-                        if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.FAILED_HANDLED))
-                            log(`Failed to unmount: ${e}`);
-                    }
-                }
-            );
-        }
-
+        PlacesManager.removeDevice(this.mount, this.mount.get_volume(), this.mount.get_drive());
         this.close();
     }
 

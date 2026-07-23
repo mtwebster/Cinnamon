@@ -7,6 +7,7 @@ const Params = imports.misc.params;
 const LoginManager = imports.misc.loginManager;
 const Main = imports.ui.main;
 const CinnamonMountOperation = imports.ui.cinnamonMountOperation;
+const PlacesManager = imports.ui.placesManager;
 
 // GSettings keys
 const SETTINGS_SCHEMA = 'org.cinnamon.desktop.media-handling';
@@ -103,25 +104,10 @@ var AutomountManager = class {
         if (!this._loginManager.sessionIsActive)
             return;
 
-        if (drive.can_stop()) {
-            drive.stop(Gio.MountUnmountFlags.FORCE, null, null,
-                (o, res) => {
-                    try {
-                        drive.stop_finish(res);
-                    } catch (e) {
-                        log(`Unable to stop the drive after drive-eject-button ${e.toString()}`);
-                    }
-                });
-        } else if (drive.can_eject()) {
-            drive.eject_with_operation(Gio.MountUnmountFlags.FORCE, null, null,
-                (o, res) => {
-                    try {
-                        drive.eject_with_operation_finish(res);
-                    } catch (e) {
-                        log(`Unable to eject the drive after drive-eject-button ${e.toString()}`);
-                    }
-                });
-        }
+        // Route through the shared removal path so the hardware eject button
+        // gets the same safely-remove-over-eject behaviour, progress notifier
+        // and busy-processes dialog as the places menu and drives applet.
+        PlacesManager.removeDevice(null, null, drive);
     }
 
     _onVolumeAdded(monitor, volume) {

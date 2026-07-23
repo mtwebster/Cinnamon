@@ -76,6 +76,83 @@ function _makeLaunchContext(params)
     return launchContext;
 }
 
+/*
+ * Shared device-removal routine used by the places menu, the removable-drives
+ * applet and the hardware drive-eject-button handler. Prefers safely removing
+ * (powering off) a drive over a plain eject whenever the drive supports it, per
+ * the udisks2/gvfs contract. A non-forced operation is used so a busy volume
+ * raises the processes dialog, where the user can still choose to force it.
+ */
+function removeDevice(mount, volume, drive) {
+    let mountOp = new CinnamonMountOperation.CinnamonMountOperation();
+    let op = mountOp.mountOp;
+    let flags = Gio.MountUnmountFlags.NONE;
+
+    if (drive &&
+        drive.get_start_stop_type() == Gio.DriveStartStopType.SHUTDOWN &&
+        drive.can_stop()) {
+        drive.stop(flags, op, null,
+            (o, res) => _finishRemoveDevice(() => o.stop_finish(res)));
+    } else if (drive && drive.can_eject()) {
+        drive.eject_with_operation(flags, op, null,
+            (o, res) => _finishRemoveDevice(() => o.eject_with_operation_finish(res)));
+    } else if (volume && volume.can_eject()) {
+        volume.eject_with_operation(flags, op, null,
+            (o, res) => _finishRemoveDevice(() => o.eject_with_operation_finish(res)));
+    } else if (mount && mount.can_eject()) {
+        mount.eject_with_operation(flags, op, null,
+            (o, res) => _finishRemoveDevice(() => o.eject_with_operation_finish(res)));
+    } else if (mount && mount.can_unmount()) {
+        mount.unmount_with_operation(flags, op, null,
+            (o, res) => _finishRemoveDevice(() => o.unmount_with_operation_finish(res)));
+    }
+}
+
+function _finishRemoveDevice(finishFunc) {
+    try {
+        finishFunc();
+    } catch (e) {
+        // The user aborted via the mount-operation dialog - nothing to report.
+        if (e.matches && e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.FAILED_HANDLED))
+            return;
+        global.logError('Failed to remove device: ' + e.message);
+    }
+}
+
+/*
+ * Eject-media-key handler: picks the best ejectable drive (a removable-media
+ * drive such as an optical drive, preferring one that currently has media) and
+ * removes it via the shared path. Mirrors the scoring heuristic previously used
+ * by cinnamon-settings-daemon's media-keys plugin.
+ */
+function ejectMedia() {
+    const SCORE_CAN_EJECT = 50;
+    const SCORE_HAS_MEDIA = 100;
+
+    let drives = Gio.VolumeMonitor.get().get_connected_drives();
+    let favDrive = null;
+    let score = 0;
+
+    for (let drive of drives) {
+        if (!drive.can_eject() || !drive.is_media_removable())
+            continue;
+        if (score < SCORE_CAN_EJECT) {
+            favDrive = drive;
+            score = SCORE_CAN_EJECT;
+        }
+        if (!drive.has_media())
+            continue;
+        if (score < SCORE_HAS_MEDIA) {
+            favDrive = drive;
+            score = SCORE_HAS_MEDIA;
+            break;
+        }
+    }
+
+    if (favDrive)
+        removeDevice(null, null, favDrive);
+}
+
 function PlaceDeviceInfo(mount) {
     this._init(mount);
 }
@@ -126,24 +203,7 @@ PlaceDeviceInfo.prototype = {
         if (!this.isRemovable())
             return;
 
-        let mountOp = new CinnamonMountOperation.CinnamonMountOperation();
-        let drive = this._mount.get_drive();
-        let volume = this._mount.get_volume();
-
-        if (drive &&
-            drive.get_start_stop_type() == Gio.DriveStartStopType.SHUTDOWN &&
-            drive.can_stop()) {
-            drive.stop(0, mountOp.mountOp, null, null);
-        } else {
-            if (drive && drive.can_eject())
-                drive.eject_with_operation(0, mountOp.mountOp, null, null);
-            else if (volume && volume.can_eject())
-                volume.eject_with_operation(0, mountOp.mountOp, null, null);
-            else if (this._mount.can_eject())
-                this._mount.eject_with_operation(0, mountOp.mountOp, null, null);
-            else if (this._mount.can_unmount())
-                this._mount.unmount_with_operation(0, mountOp.mountOp, null, null);
-        }
+        removeDevice(this._mount, this._mount.get_volume(), this._mount.get_drive());
 
         this.busyWaitId = 0;
         return false;

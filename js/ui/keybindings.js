@@ -8,6 +8,7 @@ const Meta = imports.gi.Meta;
 const Cinnamon = imports.gi.Cinnamon;
 const AppletManager = imports.ui.appletManager;
 const DeskletManager = imports.ui.deskletManager;
+const PlacesManager = imports.ui.placesManager;
 
 const MK = imports.gi.CDesktopEnums.MediaKeyType;
 const CinnamonDesktop = imports.gi.CinnamonDesktop;
@@ -439,17 +440,23 @@ KeybindingManager.prototype = {
         if (Main._shouldFilterKeybinding(entry))
             return;
 
-        // The screensaver key always goes through the controller - it resolves
-        // custom-screensaver-command, internal shield, and external daemon modes.
-        if (action === MK.SCREENSAVER) {
-            GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
-                Main.screensaverController.lockScreen(false);
-                return GLib.SOURCE_REMOVE;
-            });
-            return;
+        switch (action) {
+            case MK.SCREENSAVER:
+                // The screensaver key always goes through the controller - it
+                // resolves custom-screensaver-command, internal shield, and
+                // external daemon modes.
+                GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                    Main.screensaverController.lockScreen(false);
+                    return GLib.SOURCE_REMOVE;
+                });
+                break;
+            case MK.EJECT:
+                PlacesManager.ejectMedia();
+                break;
+            default:
+                this._proxy.HandleKeybindingRemote(action);
+                break;
         }
-
-        this._proxy.HandleKeybindingRemote(action);
     },
 
     _onBuiltinKeyPressed: function(display, window, binding, actionId) {
