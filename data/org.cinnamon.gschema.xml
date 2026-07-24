@@ -405,6 +405,12 @@
       <description>A mode for the user to drag and drop applets and modify the look of the desktop</description>
     </key>
 
+    <key type="b" name="panel-raise-in-fullscreen">
+      <default>true</default>
+      <summary>Raise panels over a fullscreen window on Super tap</summary>
+      <description>When enabled, tapping the Super key while a fullscreen window is focused temporarily reveals the panels on that monitor so they can be used, restoring the normal hidden state on dismiss.</description>
+    </key>
+
     <key type="b" name="panel-launchers-draggable">
       <default>true</default>
       <summary>Obsolete</summary>

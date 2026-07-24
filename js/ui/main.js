@@ -107,6 +107,7 @@ const OsdWindow = imports.ui.osdWindow;
 const Overview = imports.ui.overview;
 const Expo = imports.ui.expo;
 const Panel = imports.ui.panel;
+const ChromeRaise = imports.ui.chromeRaise;
 const PlacesManager = imports.ui.placesManager;
 const PolkitAuthenticationAgent = imports.ui.polkitAuthenticationAgent;
 const KeyringPrompt = imports.ui.keyringPrompt;
@@ -153,6 +154,7 @@ var backgroundManager = null;
 var slideshowManager = null;
 var placesManager = null;
 var panelManager = null;
+var chromeRaiseManager = null;
 var osdWindowManager = null;
 var screensaverController = null;
 var lockdownSettings = null;
@@ -429,6 +431,7 @@ function start() {
     Panel.checkPanelUpgrade();
 
     panelManager = new Panel.PanelManager();
+    chromeRaiseManager = new ChromeRaise.ChromeRaiseManager();
 
     let startupAnimationEnabled = global.settings.get_boolean("startup-animation");
 
