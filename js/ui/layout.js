@@ -849,7 +849,8 @@ var Chrome = class {
             else {
                 let monitor = this.findMonitorForActor(actorData.actor);
 
-                if (!actorData.visibleInFullscreen && monitor && monitor.inFullscreen)
+                if (!actorData.visibleInFullscreen && monitor && monitor.inFullscreen &&
+                    !Main.chromeRaiseManager.isPanelRaised(actorData.actor))
                     visible = false;
                 else
                     visible = true;
