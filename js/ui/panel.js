@@ -203,6 +203,31 @@ function getPanelLocFromName(pname) {
 };
 
 /**
+ * parsePanelDef:
+ * @def (string): a panel definition from settings, in the form ID:monitor:panelposition
+ *
+ * Parses and sanity checks a single panel definition. A negative or unparseable index
+ * matches neither a monitor nor a panel id, so such a panel would be registered nowhere
+ * and its definition never cleaned up.
+ *
+ * Returns: [id, monitor index, panel position], or null if the definition is unusable
+ */
+function parsePanelDef(def) {
+    let elements = def.split(":");
+    if (elements.length != 3)
+        return null;
+
+    let id = parseInt(elements[PanelDefElement.ID]);
+    let monitorIndex = parseInt(elements[PanelDefElement.MONITOR]);
+    let panelPosition = getPanelLocFromName(elements[PanelDefElement.POSITION]);
+
+    if (isNaN(id) || id < 0 || isNaN(monitorIndex) || monitorIndex < 0)
+        return null;
+
+    return [id, monitorIndex, panelPosition];
+};
+
+/**
  * toStandardIconSize:
  * @maxSize (integer): the maximum size of the icon
  *
@@ -329,7 +354,6 @@ var PanelManager = GObject.registerClass({
      *                 vertical panels to fit snugly between horizontal ones
      */
     _fullPanelLoad() {
-        let monitor = 0;
         // panel id, monitor, panel type
         let stash = [];
 
@@ -342,15 +366,9 @@ var PanelManager = GObject.registerClass({
         let removals = [];
         for (let i = 0, len = panelDefs.length; i < len; i++) {
             let elements = panelDefs[i].split(":");
-            if (elements.length != 3) {
+            if (!parsePanelDef(panelDefs[i])) {
                 global.log("Invalid panel definition: " + panelDefs[i]);
-                removals.push(i);
-                continue;
-            }
-
-            if (elements[PanelDefElement.MONITOR] >= monitorCount) {
-                // Ignore, but don't remove. Less monitors can be a temporary condition.
-                global.log("Ignoring panel definition for nonexistent monitor: " + panelDefs[i]);
+                removals.push(panelDefs[i]);
                 continue;
             }
 
@@ -378,26 +396,30 @@ var PanelManager = GObject.registerClass({
         }
 
         if (removals.length > 0) {
-            let cleanDefs = panelDefs.filter((def) => !removals.includes(def));
             global.log("Removing invalid panel definitions: " + removals);
-            setPanelsEnabledList(cleanDefs);
+            setPanelsEnabledList(goodDefs);
         }
 
         // set up the list of panels
         for (let i = 0, len = goodDefs.length; i < len; i++) {
-            let elements = goodDefs[i].split(":");
-            // panel orientation
-            let jj = getPanelLocFromName(elements[PanelDefElement.POSITION]);
-
-            monitor = parseInt(elements[PanelDefElement.MONITOR]);
             // load what we are going to use to call loadPanel into an array
-            stash[i] = [parseInt(elements[PanelDefElement.ID]), monitor, jj];
+            stash[i] = parsePanelDef(goodDefs[i]);
+        }
+
+        // Panels belonging to monitors that aren't currently connected can't be created, but
+        // _loadPanel() still records their metadata. Without it _onMonitorsChanged() has no way
+        // of knowing they exist, and can't restore them when the monitor is plugged back in.
+        for (let i = 0, len = stash.length; i < len; i++) {
+            if (stash[i][1] >= monitorCount) {
+                global.log("Ignoring panel definition for nonexistent monitor: " + goodDefs[i]);
+                this._loadPanel(stash[i][0], stash[i][1], stash[i][2]);
+            }
         }
 
         // When using mixed horizontal and vertical panels draw the vertical panels first.
         // This is done so that when using a box shadow on the panel to create a border the border will be drawn over the
         // top of the vertical panel.
-        for (let i = 0; i <= monitorCount; i++) {
+        for (let i = 0; i < monitorCount; i++) {
             let pleft, pright;
             for (let j = 0, len = stash.length; j < len; j++) {
                 if (stash[j][2] == PanelLoc.left && stash[j][1] == i) {
@@ -819,16 +841,14 @@ var PanelManager = GObject.registerClass({
 
         for (let i = 0; i < panelProperties.length; i ++) {
 
-            let elements = panelProperties[i].split(":");
-            if (elements.length != 3) {
+            // each panel is stored as ID:monitor:panelposition
+            let def = parsePanelDef(panelProperties[i]);
+            if (!def) {
                 global.log("Invalid panel definition: " + panelProperties[i]);
                 continue;
             }
 
-            // each panel is stored as ID:monitor:panelposition
-            let ID = parseInt(elements[0]);
-            let mon = parseInt(elements[1]);
-            let ploc = getPanelLocFromName(elements[2]);
+            let [ID, mon, ploc] = def;
 
             // If (existing) panel is moved
             if (this.panels[ID]) {
@@ -906,6 +926,7 @@ var PanelManager = GObject.registerClass({
         let panelProperties = getPanelsEnabledList()
         // adjust any changes to logical/xinerama monitor relationships
         let monitors_changed = updatePanelsMeta(this.panelsMeta, panelProperties) || oldCount !== this.monitorCount;
+        let panelsRestored = false;
 
         for (let i = 0, len = this.panelsMeta.length; i < len; i++) {
             if (!this.panelsMeta[i])
@@ -915,8 +936,10 @@ var PanelManager = GObject.registerClass({
             if (!this.panels[i]) {
                 if (this.panelsMeta[i][0] < this.monitorCount) {
                     let panel = this._loadPanel(i, this.panelsMeta[i][0], this.panelsMeta[i][1]);
-                    if (panel)
+                    if (panel) {
                         AppletManager.loadAppletsOnPanel(panel);
+                        panelsRestored = true;
+                    }
                 }
             } else if (this.panelsMeta[i][0] >= this.monitorCount) {
                 if (this.panels[i]) {
@@ -936,6 +959,17 @@ var PanelManager = GObject.registerClass({
                      // Nothing happens. Re-allocate panel
                     this.panels[i]._moveResizePanel();
                 }
+            }
+        }
+
+        // Restored panels are created in id order, so a vertical panel may have been built before
+        // the horizontal panels it has to fit between. Adjust their heights now that all are present.
+        if (panelsRestored) {
+            for (let i = 0, len = this.panels.length; i < len; i++) {
+                if (!this.panels[i])
+                    continue;
+                if (this.panels[i].panelPosition == PanelLoc.left || this.panels[i].panelPosition == PanelLoc.right)
+                    this.panels[i]._moveResizePanel();
             }
         }
 
