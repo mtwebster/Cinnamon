@@ -35,6 +35,8 @@
 #define CACHE_PREFIX_FILE "file:"
 #define CACHE_PREFIX_FILE_FOR_CAIRO "file-for-cairo:"
 
+#define MAX_INFLIGHT_LOADS 6
+
 struct _StTextureCachePrivate
 {
   GtkIconTheme *icon_theme;
@@ -56,11 +58,16 @@ struct _StTextureCachePrivate
   GHashTable *image_type_table;
 
   GCancellable *cancellable;
+
+  GQueue pending_loads; /* AsyncTextureLoadData * */
+  guint n_inflight_loads;
 };
 
 static void st_texture_cache_dispose (GObject *object);
 static void st_texture_cache_finalize (GObject *object);
 static void load_image_type_table (StTextureCache *cache);
+static void start_pending_loads (StTextureCache *cache);
+static void texture_load_data_free (gpointer p);
 
 enum
 {
@@ -200,6 +207,8 @@ st_texture_cache_init (StTextureCache *self)
                                                      g_object_unref, g_object_unref);
 
   self->priv->image_type_table = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+
+  g_queue_init (&self->priv->pending_loads);
   load_image_type_table (self);
 
   self->priv->cancellable = g_cancellable_new ();
@@ -213,6 +222,8 @@ st_texture_cache_dispose (GObject *object)
   StTextureCache *self = (StTextureCache*)object;
 
   g_cancellable_cancel (self->priv->cancellable);
+
+  g_queue_clear_full (&self->priv->pending_loads, texture_load_data_free);
 
   g_clear_object (&self->priv->settings);
   g_clear_object (&self->priv->icon_theme);
@@ -672,6 +683,9 @@ finish_texture_load (AsyncTextureLoadData *data,
 
 out:
   texture_load_data_free (data);
+
+  cache->priv->n_inflight_loads--;
+  start_pending_loads (cache);
 }
 
 static void
@@ -708,8 +722,8 @@ on_pixbuf_loaded (GObject      *source,
 }
 
 static void
-load_texture_async (StTextureCache       *cache,
-                    AsyncTextureLoadData *data)
+dispatch_texture_load (StTextureCache       *cache,
+                       AsyncTextureLoadData *data)
 {
   if (data->file)
     {
@@ -748,6 +762,35 @@ load_texture_async (StTextureCache       *cache,
     }
   else
     g_assert_not_reached ();
+}
+
+static void
+load_texture_async (StTextureCache       *cache,
+                    AsyncTextureLoadData *data)
+{
+  if (cache->priv->n_inflight_loads >= MAX_INFLIGHT_LOADS)
+    {
+      g_queue_push_tail (&cache->priv->pending_loads, data);
+      return;
+    }
+
+  cache->priv->n_inflight_loads++;
+  dispatch_texture_load (cache, data);
+}
+
+static void
+start_pending_loads (StTextureCache *cache)
+{
+  while (cache->priv->n_inflight_loads < MAX_INFLIGHT_LOADS)
+    {
+      AsyncTextureLoadData *data = g_queue_pop_head (&cache->priv->pending_loads);
+
+      if (data == NULL)
+        break;
+
+      cache->priv->n_inflight_loads++;
+      dispatch_texture_load (cache, data);
+    }
 }
 
 typedef struct {
